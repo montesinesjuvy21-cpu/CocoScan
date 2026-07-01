@@ -930,10 +930,13 @@
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     globalActiveImagePayload = e.target.result;
-                    gatherCameraLocation((position, error) => {
+                    gatherCameraLocation((position, error, status) => {
                         if (error || !position) {
                             console.error('GPS error:', error);
-                            alert('Unable to retrieve GPS location. Please enable location services and try again.');
+                            const userMessage = status === 'timeout'
+                                ? 'Location lookup timed out. Ensure location services are enabled and try again.'
+                                : 'Unable to retrieve GPS location. Please enable location services and try again.';
+                            alert(userMessage);
                             resetWorkflowStateToHome();
                             return;
                         }
@@ -951,21 +954,38 @@
                 return;
             }
 
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const coords = position.coords;
-                    callback({
-                        latitude: coords.latitude,
-                        longitude: coords.longitude,
-                        accuracy: coords.accuracy,
-                        timestamp: new Date(position.timestamp).toISOString()
-                    }, null);
-                },
-                (error) => {
-                    callback(null, error);
-                },
-                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-            );
+            let fallbackAttempted = false;
+            const success = (position) => {
+                const coords = position.coords;
+                callback({
+                    latitude: coords.latitude,
+                    longitude: coords.longitude,
+                    accuracy: coords.accuracy,
+                    timestamp: new Date(position.timestamp).toISOString()
+                }, null);
+            };
+
+            const failure = (error) => {
+                if (!fallbackAttempted && error && error.code === error.TIMEOUT) {
+                    fallbackAttempted = true;
+                    console.warn('High accuracy geolocation timed out; retrying with lower accuracy.');
+                    navigator.geolocation.getCurrentPosition(success, failure, {
+                        enableHighAccuracy: false,
+                        timeout: 15000,
+                        maximumAge: 60000
+                    });
+                    return;
+                }
+
+                const status = error && error.code === error.TIMEOUT ? 'timeout' : 'error';
+                callback(null, error || new Error('Geolocation lookup failed.'), status);
+            };
+
+            navigator.geolocation.getCurrentPosition(success, failure, {
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 0
+            });
         }
 
         function executePseudoInferenceEngine() {
