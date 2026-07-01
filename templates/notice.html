@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<style>
+    .notice-card {
+        text-align: center;
+        padding: 3rem 2rem;
+    }
+    .notice-icon-wrap {
+        background-color: #fef3c7;
+        color: #d97706;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        margin: 0 auto 1.5rem auto;
+        box-shadow: 0 0 0 8px #fef8e6;
+    }
+    .notice-card h3 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        color: var(--text-dark);
+    }
+    .notice-card p {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-card notice-card">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div style="margin-bottom: 1.5rem;">
+                {% for category, message in messages %}
+                    {% if category == 'success' %}
+                        <div style="padding: 1rem; border-radius: 8px; background-color: #d1fae5; color: #065f46; border-left: 4px solid #10b981; font-weight: 500;" role="alert">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div style="padding: 1rem; border-radius: 8px; background-color: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626; font-weight: 500;" role="alert">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fa-solid fa-circle-exclamation"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <div class="notice-icon-wrap">
+        <i class="fa-solid fa-hourglass-half fa-spin" style="animation-duration: 3s;"></i>
+    </div>
+    
+    <h3>Account under review.</h3>
+    <p>Kindly await further instructions, which will be communicated to you via your registered email address shortly.</p>
+    
+    <a href="{{ url_for('login') }}" class="btn-primary" style="text-decoration: none; display: block;">Go to Login</a>
+</div>
+{% endblock %}

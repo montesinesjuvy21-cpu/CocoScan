@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<style>
+    body {
+        background-color: var(--bg-dark-green) !important;
+        overflow: hidden;
+        perspective: 1000px;
+    }
+
+    .creative-splash {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        position: relative;
+    }
+
+    /* Modern Dynamic Scanning Ring */
+    .radar-scanner {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .radar-ring {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border: 2px solid var(--primary-green);
+        border-radius: 50%;
+        opacity: 0;
+        animation: pulseRadar 2s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+    }
+    
+    .radar-ring:nth-child(2) {
+        animation-delay: 0.6s;
+    }
+
+    .logo-glow-icon {
+        font-size: 3.5rem;
+        color: #ffffff;
+        z-index: 2;
+        text-shadow: 0 0 20px rgba(42, 123, 76, 0.6);
+        animation: floatingLogo 3s ease-in-out infinite;
+    }
+
+    /* Typographic Split & Reveal Styling */
+    .title-reveal-wrapper {
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+
+    .logo-title-creative {
+        font-size: 2.8rem;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: 2px;
+        line-height: 1.2;
+        /* Custom cinematic entry animation */
+        animation: textRevealUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+                   letterStretch 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .subtitle-fade {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #a3b18a;
+        text-transform: uppercase;
+        letter-spacing: 6px;
+        margin-top: 8px;
+        opacity: 0;
+        transform: translateY(5px);
+        animation: subFadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+    }
+
+    /* Ambient Environmental Background Lighting Grid */
+    .ambient-glow {
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(42, 123, 76, 0.12) 0%, rgba(0,0,0,0) 70%);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: -1;
+        pointer-events: none;
+        animation: slowAmbientPulse 4s ease-in-out infinite alternate;
+    }
+
+    /* Cinematic Keyframes */
+    @keyframes pulseRadar {
+        0% { transform: scale(0.6); opacity: 0; }
+        20% { opacity: 0.4; }
+        100% { transform: scale(1.5); opacity: 0; }
+    }
+
+    @keyframes floatingLogo {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-6px) rotate(2deg); }
+    }
+
+    @keyframes textRevealUp {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes letterStretch {
+        from { letter-spacing: -3px; }
+        to { letter-spacing: 3px; }
+    }
+
+    @keyframes subFadeIn {
+        to { opacity: 0.85; transform: translateY(0); }
+    }
+
+    @keyframes slowAmbientPulse {
+        from { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+        to { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="creative-splash">
+    <div class="ambient-glow"></div>
+    
+    <div class="radar-scanner">
+        <div class="radar-ring"></div>
+        <div class="radar-ring"></div>
+        <i class="fa-solid fa-tree-city logo-glow-icon"></i>
+    </div>
+    
+    <div class="title-reveal-wrapper">
+        <div class="logo-title-creative">CocoScan</div>
+    </div>
+    <div class="subtitle-fade">Coconut Pest Detection</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Smooth timing matrix matching the cinematic layout transition
+    setTimeout(() => {
+        // Simple subtle fadeout injection just before shifting paths
+        document.querySelector('.creative-splash').style.transition = 'all 0.5s ease';
+        document.querySelector('.creative-splash').style.opacity = '0';
+        document.querySelector('.creative-splash').style.transform = 'scale(0.98)';
+        
+        setTimeout(() => {
+            window.location.href = "{{ url_for('login') }}";
+        }, 500);
+    }, 2800); // 2.8 seconds total presentation time
+</script>
+{% endblock %}

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CocoScan - Saved Drafts</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #f4f7f5;
+            --bg-card: #ffffff;
+            --brand-dark: #0b251a;
+            --brand-accent: #4ac68f;
+            --primary-green: #528265;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-light: rgba(0, 0, 0, 0.05);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .desktop-restriction-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, #0e3021 0%, #04120c 100%);
+            color: #ffffff;
+            z-index: 10000;
+            padding: 24px;
+            text-align: center;
+        }
+        .desktop-card-prompt {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            padding: 44px 30px;
+            border-radius: 28px;
+            width: 100%;
+            max-width: 420px;
+        }
+        .desktop-card-prompt h2 {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            font-weight: 800;
+        }
+        .desktop-card-prompt p {
+            color: #c7d2cd;
+            line-height: 1.6;
+        }
+        .mobile-viewport-container {
+            width: 100%;
+            min-height: 100vh;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .mobile-header {
+            width: 100%;
+            height: 64px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 1000;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo-group { display: flex; align-items: center; gap: 10px; }
+        .logo-img-fallback { width: 32px; height: 32px; background: var(--bg-card); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .mobile-header h2 { font-size: 1.15rem; margin-bottom: 0; }
+        .mobile-header p { font-size: 0.7rem; color: rgba(255,255,255,0.7); margin: 0; }
+        .hamburger-btn { background: none; border: none; color: #ffffff; font-size: 1.35rem; cursor: pointer; }
+        .sidebar-wrapper {
+            width: 290px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            top: 64px; bottom: 0; right: 0;
+            z-index: 999;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .sidebar-wrapper.show-mobile { transform: translateX(0); }
+        .menu-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); padding: 24px 20px 12px; font-weight: 700; }
+        .sidebar-menu-list { list-style: none; padding: 0 10px; }
+        .menu-item-link { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: rgba(255,255,255,0.75); text-decoration: none; border-radius: 10px; margin-bottom: 6px; font-size: 0.95rem; font-weight: 500; }
+        .menu-item-link:hover, .menu-item-link.active { background: rgba(255,255,255,0.08); color: #ffffff; }
+        .sidebar-user-footer { padding: 20px; background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.08); }
+        .user-meta-box { display: flex; align-items: center; gap: 12px; }
+        .user-avatar-circle { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; }
+        .user-identity-text h4 { font-size: 0.9rem; margin: 0; }
+        .user-identity-text p { font-size: 0.75rem; color: rgba(255,255,255,0.6); margin: 0; }
+        .btn-logout-trigger { color: rgba(255,255,255,0.6); font-size: 1.2rem; }
+        .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(11,37,26,0.4); z-index: 950; }
+        .sidebar-backdrop.active { display: block; }
+        .main-content-layout { flex: 1; width: 100%; padding: 88px 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+        .section-title-wrap { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
+        .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+        .drafts-board { display: grid; grid-template-columns: 1fr; gap: 14px; }
+        .draft-card { background: var(--bg-card); border-radius: 18px; border: 1px solid var(--border-light); overflow: hidden; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
+        .draft-card-header { display: grid; grid-template-columns: 96px 1fr; gap: 14px; padding: 16px; align-items: center; }
+        .draft-thumb { width: 96px; height: 96px; border-radius: 16px; background: #f8fafb; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .draft-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .draft-meta { display: flex; flex-direction: column; gap: 4px; }
+        .draft-meta h3 { font-size: 1rem; margin: 0; color: var(--brand-dark); }
+        .draft-meta p { margin: 0; color: var(--text-muted); font-size: 0.82rem; line-height: 1.4; }
+        .draft-card-body { padding: 0 16px 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .draft-stat { background: #f6fbf8; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .draft-stat strong { font-size: 0.95rem; color: var(--brand-dark); }
+        .draft-stat span { font-size: 0.78rem; color: var(--text-muted); }
+        .draft-actions { padding: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .btn-ghost, .btn-solid { flex: 1; min-width: 120px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; padding: 12px 14px; cursor: pointer; border: none; }
+        .btn-ghost { background: #ffffff; color: var(--brand-dark); border: 1px solid rgba(82,130,101,0.18); }
+        .btn-solid { background: var(--primary-green); color: #ffffff; }
+        .status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px; background: #eef7f0; color: #24522f; font-size: 0.8rem; font-weight: 700; }
+        .empty-state { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 18px; padding: 28px 20px; text-align: center; color: var(--text-muted); }
+        .empty-state h2 { font-size: 1.25rem; margin-bottom: 12px; color: var(--brand-dark); }
+        .empty-state p { font-size: 0.92rem; line-height: 1.6; }
+        @media (min-width: 501px) {
+            .desktop-restriction-overlay { display: flex; }
+            .mobile-viewport-container { display: none; }
+        }
+        @media (max-width: 500px) {
+            .desktop-restriction-overlay { display: none; }
+            .mobile-viewport-container { display: flex; }
+            .draft-card-body { grid-template-columns: 1fr; }
+            .draft-actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="desktop-restriction-overlay">
+        <div class="desktop-card-prompt">
+            <h2>Mobile Access Required</h2>
+            <p>The <strong>CocoScan Farmer Platform</strong> is purpose-built for mobile field scanning and draft management.</p>
+        </div>
+    </div>
+
+    <div class="mobile-viewport-container">
+        <header class="mobile-header">
+            <div class="logo-group">
+                <div class="logo-img-fallback"><i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i></div>
+                <div>
+                    <h2>CocoScan</h2>
+                    <p>Saved Drafts</p>
+                </div>
+            </div>
+            <button class="hamburger-btn" onclick="toggleSidebarMenu()"><i class="fa-solid fa-bars" id="toggleIcon"></i></button>
+        </header>
+
+        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
+        <aside class="sidebar-wrapper" id="sidebar">
+            <div>
+                <div class="menu-label">Main Menu</div>
+                <ul class="sidebar-menu-list">
+                    <li><a href="/farmer/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                    <li><a href="/farmer/scan" class="menu-item-link"><i class="fa-solid fa-camera"></i> Scan Pest</a></li>
+                    <li><a href="/farmer/drafts" class="menu-item-link active"><i class="fa-solid fa-file-pen"></i> Drafts</a></li>
+                    <li><a href="/farmer/reports" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> My Reports</a></li>
+                </ul>
+            </div>
+            <div class="sidebar-user-footer">
+                <div class="user-meta-box">
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-identity-text">
+                        <h4>{{ user_name }}</h4>
+                        <p>Farmer</p>
+                    </div>
+                </div>
+                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+        </aside>
+
+        <main class="main-content-layout">
+            <header class="section-title-wrap">
+                <div>
+                    <h1>Saved Drafts</h1>
+                    <p>Resume, submit, or remove your saved field scan reports.</p>
+                </div>
+                <div>
+                    <button class="btn-solid" onclick="loadDrafts()">Refresh</button>
+                </div>
+            </header>
+
+            <div id="drafts-list" class="drafts-board"></div>
+            <div id="empty-state" class="empty-state" style="display:none;">
+                <h2>No saved drafts</h2>
+                <p>You don’t have any draft scans saved yet. Capture a leaf image using Scan Pest to begin your first report.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleSidebarMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            const icon = document.getElementById('toggleIcon');
+            sidebar.classList.toggle('show-mobile');
+            backdrop.classList.toggle('active');
+            icon.className = sidebar.classList.contains('show-mobile') ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+        }
+
+        function openDraftDB() {
+            return new Promise((resolve, reject) => {
+                const request = window.indexedDB.open('cocoscan_farmer_drafts', 1);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('drafts')) {
+                        db.createObjectStore('drafts', { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+                request.onsuccess = (event) => resolve(event.target.result);
+                request.onerror = () => reject(new Error('Unable to access draft storage.'));
+            });
+        }
+
+        function loadDrafts() {
+            openDraftDB().then((db) => {
+                const transaction = db.transaction(['drafts'], 'readonly');
+                const store = transaction.objectStore('drafts');
+                const request = store.getAll();
+                request.onsuccess = () => renderDrafts(request.result || []);
+                request.onerror = () => showEmptyState(true, 'Unable to load saved drafts.');
+            }).catch(() => showEmptyState(true, 'Unable to access saved drafts.'));
+        }
+
+        function formatDateLocal(value) {
+            if (!value) return 'Unknown';
+            try {
+                const dt = new Date(value);
+                return dt.toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return value;
+            }
+        }
+
+        function showEmptyState(show, message) {
+            const empty = document.getElementById('empty-state');
+            const list = document.getElementById('drafts-list');
+            if (show) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                if (message) empty.querySelector('p').textContent = message;
+            } else {
+                empty.style.display = 'none';
+            }
+        }
+
+        function renderDrafts(drafts) {
+            const list = document.getElementById('drafts-list');
+            list.innerHTML = '';
+            if (!drafts || !drafts.length) {
+                showEmptyState(true);
+                return;
+            }
+            showEmptyState(false);
+            drafts.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
+            drafts.forEach((draft) => {
+                const card = document.createElement('article');
+                card.className = 'draft-card';
+                card.innerHTML = `
+                    <div class="draft-card-header">
+                        <div class="draft-thumb"><img src="${draft.primary_image_data || ''}" alt="Draft thumbnail"></div>
+                        <div class="draft-meta">
+                            <h3>${draft.pest || 'Unknown Pest'}</h3>
+                            <p>Severity: ${draft.damage_severity || 'Unknown'}</p>
+                            <p>Captured: ${formatDateLocal(draft.photo_taken_at)}</p>
+                            <p>Saved: ${formatDateLocal(draft.saved_at)}</p>
+                        </div>
+                    </div>
+                    <div class="draft-card-body">
+                        <div class="draft-stat"><strong>GPS</strong><span>${draft.gps?.latitude?.toFixed(5) || 'n/a'}, ${draft.gps?.longitude?.toFixed(5) || 'n/a'}</span></div>
+                        <div class="draft-stat"><strong>Source</strong><span>${draft.location_source || 'camera_gps'}</span></div>
+                    </div>
+                    <div class="draft-actions">
+                        <button class="btn-ghost" onclick='continueDraft(${draft.id})'>Continue/Edit</button>
+                        <button class="btn-solid" onclick='submitDraft(${draft.id})'>Submit</button>
+                        <button class="btn-ghost" onclick='deleteDraft(${draft.id})'>Delete</button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function getDraftById(draftId) {
+            return openDraftDB().then((db) => new Promise((resolve, reject) => {
+                const transaction = db.transaction(['drafts'], 'readonly');
+                const store = transaction.objectStore('drafts');
+                const request = store.get(draftId);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(new Error('Unable to read draft.'));
+            }));
+        }
+
+        function continueDraft(id) {
+            getDraftById(id).then((draft) => {
+                if (!draft) { alert('Draft not found.'); return; }
+                sessionStorage.setItem('cocoscan_resume_draft', JSON.stringify(draft));
+                window.location.href = '/farmer/scan';
+            }).catch(() => alert('Unable to load draft.'));
+        }
+
+        function deleteDraftById(id) {
+            return openDraftDB().then((db) => new Promise((resolve, reject) => {
+                const transaction = db.transaction(['drafts'], 'readwrite');
+                const store = transaction.objectStore('drafts');
+                const request = store.delete(id);
+                request.onsuccess = resolve;
+                request.onerror = reject;
+            }));
+        }
+
+        function deleteDraft(id) {
+            if (!confirm('Are you sure you want to delete this saved draft?')) return;
+            deleteDraftById(id).then(() => { loadDrafts(); }).catch(() => alert('Unable to delete draft.'));
+        }
+
+        function fetchDataURLFile(dataUrl, filename) {
+            return fetch(dataUrl).then((res) => res.blob()).then((blob) => new File([blob], filename, { type: blob.type || 'image/jpeg' }));
+        }
+
+        function submitDraft(id) {
+            getDraftById(id).then(async (draft) => {
+                if (!draft) { alert('Draft not found.'); return; }
+                if (!navigator.onLine) {
+                    alert('Cannot submit draft while offline. Please reconnect and try again.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('pest_type', draft.pest || 'Unknown Pest');
+                formData.append('damage_severity', draft.damage_severity || 'Low');
+                formData.append('location_notes', draft.field_notes || '');
+                formData.append('confidence', draft.confidence_value !== undefined ? draft.confidence_value : parseFloat((draft.confidence || '').replace('%', '')) || 0);
+                formData.append('gps_latitude', draft.gps?.latitude || '');
+                formData.append('gps_longitude', draft.gps?.longitude || '');
+                formData.append('gps_accuracy', draft.gps?.accuracy || '');
+                formData.append('location_source', draft.location_source || 'camera_gps');
+                formData.append('photo_taken_at', draft.photo_taken_at || new Date().toISOString());
+                formData.append('recommendations', JSON.stringify(draft.recommendations || []));
+
+                if (draft.primary_image_data && draft.primary_image_data.startsWith('data:')) {
+                    const file = await fetchDataURLFile(draft.primary_image_data, draft.primary_image_name || 'primary_capture.jpg');
+                    formData.append('image_file', file);
+                } else if (draft.primary_image_data) {
+                    formData.append('image_url', draft.primary_image_data);
+                }
+
+                const supporting = draft.supporting_images || [];
+                for (let index = 0; index < supporting.length; index++) {
+                    const item = supporting[index];
+                    if (item?.dataUrl) {
+                        const file = await fetchDataURLFile(item.dataUrl, item.name || `supporting_${index}.jpg`);
+                        formData.append('supporting_images', file, file.name);
+                    }
+                }
+
+                const response = await fetch('/farmer/submit-report', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    await deleteDraftById(id);
+                    alert('Draft submitted successfully. It has been removed from local drafts.');
+                    loadDrafts();
+                } else {
+                    alert(`Unable to submit draft: ${data.message || data.error || 'Server error'}`);
+                }
+            }).catch(() => alert('Unable to submit draft at this time.'));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDrafts();
+        });
+    </script>
+</body>
+</html>

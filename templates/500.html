@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="auth-card" style="text-align: center; padding: 3rem;">
+    <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.7;">⚠️</div>
+    <h1 style="font-size: 2rem; color: #d32f2f; margin-bottom: 0.5rem;">Server Error</h1>
+    <p style="font-size: 1.1rem; opacity: 0.8; margin-bottom: 2rem;">Something went wrong on our end. Please try again later.</p>
+    <a href="{{ url_for('splash') }}" class="btn-primary" style="display: inline-block;">Go Home</a>
+</div>
+{% endblock %}

@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CocoScan - My Reports</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #f4f7f5;
+            --bg-card: #ffffff;
+            --brand-dark: #0b251a;
+            --brand-accent: #4ac68f;
+            --primary-green: #528265;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-light: rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: #0b251a;
+            color: var(--text-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+       
+        /* ---  DESKTOP RESTRICTION STYLING --- */
+        .desktop-restriction-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, #0e3021 0%, #04120c 100%);
+            color: #ffffff;
+            z-index: 10000;
+            padding: 24px;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .desktop-card-prompt {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 50px 35px;
+            border-radius: 28px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        /* Subtle background glow behind the card */
+        .glow-effect {
+            position: absolute;
+            top: -20%; left: -20%; right: -20%; bottom: -20%;
+            background: radial-gradient(circle at center, rgba(74, 198, 143, 0.08) 0%, transparent 60%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Double Ripple Pulse Animation */
+        .desktop-card-prompt .icon-pulse-container {
+            width: 84px;
+            height: 84px;
+            background: linear-gradient(135deg, rgba(74, 198, 143, 0.2) 0%, rgba(82, 130, 101, 0.2) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 28px auto;
+            border: 1px solid rgba(74, 198, 143, 0.3);
+            position: relative;
+        }
+
+        .desktop-card-prompt i {
+            font-size: 2.4rem;
+            color: #4ac68f;
+            text-shadow: 0 0 15px rgba(74, 198, 143, 0.4);
+            z-index: 2;
+        }
+
+        .ripple-ring {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            border: 1px solid rgba(74, 198, 143, 0.4);
+            animation: rippleEffect 2.5s infinite cubic-bezier(0.25, 0, 0, 1);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .ring-2 {
+            animation-delay: 0.8s;
+        }
+
+        @keyframes rippleEffect {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        .desktop-card-prompt h2 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 14px;
+            letter-spacing: -0.5px;
+            background: linear-gradient(120deg, #ffffff 40%, #c3eede 100%);
+           -webkit-background-clip: text;
+            background-clip: text; 
+            -webkit-text-fill-color: transparent;
+        }
+
+        .desktop-card-prompt p {
+            font-size: 0.95rem;
+            color: #a4c2b3;
+            line-height: 1.6;
+            margin-bottom: 0; /* Removed bottom margin since instruction box is gone */
+        }
+
+        .desktop-card-prompt p strong {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* --- MOBILE VIEWPORT WORKSPACE --- */
+        .mobile-viewport-container {
+            width: 100%;
+            min-height: 100vh;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* --- STICKY APP HEADER --- */
+        .mobile-header {
+            width: 100%;
+            height: 64px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 1000;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-group { display: flex; align-items: center; gap: 10px; }
+        .logo-img-fallback {
+            width: 32px; height: 32px; background: var(--bg-card); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .mobile-header h2 { font-size: 1.15rem; font-weight: 800; }
+        .mobile-header p { font-size: 0.65rem; color: rgba(255, 255, 255, 0.5); }
+        .hamburger-btn { background: none; border: none; color: #ffffff; font-size: 1.35rem; cursor: pointer; }
+
+        /* --- SIDEBAR MENU SYSTEM --- */
+        .sidebar-wrapper {
+            width: 290px; background-color: var(--brand-dark); color: #ffffff;
+            display: flex; flex-direction: column; justify-content: space-between;
+            position: fixed; top: 64px; bottom: 0; right: 0; z-index: 999;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-wrapper.show-mobile { transform: translateX(0); }
+        .menu-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.4); padding: 24px 20px 12px 20px; font-weight: 700; }
+        .sidebar-menu-list { list-style: none; padding: 0 10px; }
+        .menu-item-link { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 0.95rem; font-weight: 500; border-radius: 10px; margin-bottom: 6px; }
+        .menu-item-link:hover, .menu-item-link.active { color: #ffffff; background-color: rgba(255, 255, 255, 0.06); }
+        .sidebar-user-footer { padding: 20px; background-color: rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .user-meta-box { display: flex; align-items: center; gap: 12px; }
+        .user-avatar-circle { width: 42px; height: 42px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; }
+        .user-identity-text h4 { font-size: 0.9rem; color: #ffffff; }
+        .user-identity-text p { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
+        .btn-logout-trigger { color: rgba(255, 255, 255, 0.4); font-size: 1.2rem; }
+        .sidebar-backdrop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 37, 26, 0.4); backdrop-filter: blur(4px); z-index: 950; }
+        .sidebar-backdrop.active { display: block; }
+
+        /* --- MAIN VIEWPORTS LAYOUT --- */
+        .main-content-layout {
+            flex: 1; width: 100%; padding: 88px 16px 24px 16px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+
+        .section-title-wrap { display: flex; justify-content: space-between; align-items: flex-start; }
+        .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
+        .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); }
+
+        /* --- SEARCH AND CHIP INTERACTIVE FILTERS --- */
+        .search-controls-row {
+            display: flex; gap: 8px; align-items: center;
+        }
+        .search-bar-box {
+            width: 100%; position: relative; flex: 1;
+        }
+        .search-input {
+            width: 100%; padding: 12px 16px 12px 40px; border-radius: 25px;
+            border: 1px solid rgba(0,0,0,0.05); background-color: var(--bg-card);
+            font-size: 0.85rem; outline: none; color: var(--text-dark);
+        }
+        .search-bar-box i {
+            position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 0.9rem;
+        }
+        .date-filter-box {
+            position: relative; min-width: 132px;
+        }
+        .date-filter-box input {
+            width: 100%; padding: 12px 14px; border-radius: 25px;
+            border: 1px solid rgba(0,0,0,0.05); background-color: var(--bg-card);
+            font-size: 0.8rem; outline: none; color: var(--text-dark);
+        }
+        .search-highlight {
+            background: rgba(74, 198, 143, 0.28);
+            color: var(--brand-dark);
+            padding: 0 2px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .filter-chips-scrollrow {
+            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+            scrollbar-width: none; -webkit-overflow-scrolling: touch;
+        }
+        .filter-chips-scrollrow::-webkit-scrollbar { display: none; }
+        
+        .chip-filter-btn {
+            background-color: var(--bg-card); border: 1px solid var(--border-light);
+            padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 500;
+            color: var(--text-muted); cursor: pointer; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .chip-filter-btn.active-chip {
+            background-color: #1a4d32; color: #ffffff; border-color: #1a4d32;
+        }
+
+        /* --- REPORTS ITERATION LIST --- */
+        .reports-feed-stack { display: flex; flex-direction: column; gap: 10px; }
+        
+        .report-row-node {
+            background-color: var(--bg-card); padding: 14px 16px; border-radius: 12px;
+            border: 1px solid var(--border-light); display: flex; justify-content: space-between;
+            align-items: center; cursor: pointer; transition: transform 0.2s;
+        }
+        .report-row-node:active { transform: scale(0.99); }
+        
+        .report-main-meta h4 { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
+        .report-main-meta p { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+        /* --- PAGINATION SYSTEM DECK --- */
+        .pagination-container {
+            display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 8px;
+        }
+        .page-btn {
+            min-width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-light);
+            background-color: var(--bg-card); color: var(--text-dark); font-size: 0.8rem;
+            font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .page-btn.active-page { background-color: #1a4d32; color: #ffffff; border-color: #1a4d32; }
+
+        /* --- GLOBAL BACKDROP MODAL WRAPPERS --- */
+        .modal-screen-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(11, 37, 26, 0.4); backdrop-filter: blur(5px);
+            z-index: 2000; align-items: flex-end; justify-content: center;
+        }
+        .modal-screen-overlay.open-modal { display: flex; }
+
+        .modal-sheet-sliding-card {
+            background-color: var(--bg-base); width: 100%; max-height: 90vh;
+            border-top-left-radius: 24px; border-top-right-radius: 24px;
+            display: flex; flex-direction: column; overflow-y: auto;
+            padding: 20px 16px 24px 16px; box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .modal-header-inline {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+        }
+        .modal-header-inline h2 { font-size: 1.25rem; font-weight: 800; color: var(--brand-dark); }
+        .btn-close-modal {
+            background-color: #eb5757; color: #ffffff; border: none; padding: 4px 12px;
+            border-radius: 12px; font-size: 0.72rem; font-weight: 600; cursor: pointer;
+        }
+
+        /* --- MODAL INTERNALS ELEMENTS --- */
+        .status-row-bar { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); margin-bottom: 12px; }
+        .status-row-bar span { font-weight: 700; margin-left: 2px; }
+
+        .severity-pill-header {
+            background-color: #528265; border-radius: 14px; padding: 12px 16px; color: #ffffff;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+        }
+        .severity-pill-header h3 { font-size: 1.05rem; font-weight: 700; }
+        .severity-pill-header p { font-size: 0.72rem; opacity: 0.8; }
+
+        .media-box-card { width: 100%; border-radius: 16px; overflow: hidden; background-color: #fff; margin-bottom: 14px; border: 1px solid var(--border-light); }
+        .media-box-card img { width: 100%; display: block; object-fit: cover; }
+        .media-meta-footer { background-color: #ffffff; padding: 8px; font-size: 0.65rem; color: var(--text-muted); text-align: center; line-height: 1.3; }
+
+        .card-sheet-block { background-color: var(--bg-card); border-radius: 16px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--border-light); }
+        .card-sheet-block h4 { font-size: 0.85rem; font-weight: 700; color: var(--brand-dark); margin-bottom: 6px; }
+        .card-sheet-block p { font-size: 0.8rem; color: var(--text-dark); line-height: 1.4; }
+
+        .card-sheet-block ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .card-sheet-block li { font-size: 0.8rem; color: var(--text-dark); display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; }
+        .card-sheet-block li::before { content: "▪"; color: var(--primary-green); font-size: 0.75rem; margin-top: 1px; }
+
+        /* --- ACTION BOX FOOTERS --- */
+        .modal-action-row { display: flex; gap: 12px; width: 100%; }
+        .btn-modal-action { flex: 1; padding: 14px; border-radius: 12px; font-size: 0.88rem; font-weight: 600; cursor: pointer; border: none; text-align: center; transition: all 0.2s ease; }
+        .btn-modal-action.primary { background-color: var(--brand-dark); color: #ffffff; }
+        .btn-modal-action.primary:hover { background-color: #162f27; transform: translateY(-1px); }
+        .btn-modal-action.secondary { background-color: transparent; border: 1px solid var(--brand-dark); color: var(--brand-dark); }
+        .btn-modal-action.secondary:hover { background-color: #f8fafc; }
+
+        .btn-fup-trigger { flex: 1; padding: 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; }
+        .btn-fup-trigger.dark { background-color: var(--brand-dark); color: #ffffff; }
+        .btn-fup-trigger.dark:hover { background-color: #162f27; transform: translateY(-1px); }
+        .btn-fup-trigger.light { background-color: transparent; border: 1px solid rgba(0,0,0,0.1); color: var(--text-dark); }
+        .btn-fup-trigger.light:hover { background-color: #f8fafc; }
+
+        .page-btn:hover, .chip-filter-btn:hover { transform: translateY(-1px); }
+
+        /* --- HOOK UP INPUT DRAG ZONE FOR MODAL 2 --- */
+        .followup-upload-zone {
+            background-color: var(--bg-card); border: 2px dashed rgba(82, 130, 101, 0.2);
+            border-radius: 16px; padding: 24px 16px; text-align: center;
+            display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 14px;
+        }
+        .followup-upload-zone p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.3; }
+        .followup-btn-row { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
+        .btn-fup-trigger { flex: 1; padding: 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-fup-trigger.dark { background-color: var(--brand-dark); color: #ffffff; }
+        .btn-fup-trigger.light { background-color: transparent; border: 1px solid rgba(0,0,0,0.1); color: var(--text-dark); }
+
+        .fup-textarea { width: 100%; height: 90px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); background-color: #eef3f0; padding: 12px; font-size: 0.82rem; color: var(--text-dark); resize: none; outline: none; }
+
+        /* --- INTEGRATED NOTIFICATION STYLING --- */
+        .bell-notice-wrapper {
+            position: relative; width: 38px; height: 38px; background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; color: #0b251a;
+            font-size: 1.1rem; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .notif-item {
+            display: flex; gap: 10px; padding: 10px; border-radius: 8px;
+            background: #f8fafc; border: 1px solid rgba(0,0,0,0.02); transition: background 0.15s ease; cursor: pointer;
+        }
+        .notif-item.is-unread {
+            background: rgba(22, 70, 48, 0.04); border-left: 3px solid #164630;
+        }
+        .notif-item p { margin: 0; font-size: 0.78rem; line-height: 1.3; color: #334155; }
+        .notif-item span.time { font-size: 0.65rem; color: #94a3b8; display: block; margin-top: 4px; }
+        .notif-filter { transition: all 0.2s ease; }
+        .notif-filter.active { background: #164630 !important; color: #ffffff !important; border-color: #164630 !important; }
+
+        @media (min-width: 501px) { .desktop-restriction-overlay { display: flex; } .mobile-viewport-container { display: none; } }
+        @media (max-width: 500px) { .desktop-restriction-overlay { display: none; } .mobile-viewport-container { display: flex; } }
+    </style>
+</head>
+<body>
+
+      <div class="desktop-restriction-overlay">
+        <div class="desktop-card-prompt">
+            <div class="glow-effect"></div>
+            
+            <div class="icon-pulse-container">
+                <div class="ripple-ring ring-1"></div>
+                <div class="ripple-ring ring-2"></div>
+                <i class="fa-solid fa-mobile-screen-button"></i>
+            </div>
+            
+            <h2>Mobile Access Required</h2>
+            <p>The <strong>CocoScan Farmer Platform</strong> is purpose-built exclusively for mobile smartphone screens to facilitate field scan operations.</p>
+        </div>
+    </div>
+
+    <div class="mobile-viewport-container">
+        
+        <header class="mobile-header">
+            <div class="logo-group">
+                <div class="logo-img-fallback">
+                    <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
+                </div>
+                <div>
+                    <h2>CocoScan</h2>
+                    <p>Coconut Pest Detection</p>
+                </div>
+            </div>
+            <button class="hamburger-btn" onclick="toggleSidebarMenu()">
+                <i class="fa-solid fa-bars" id="toggleIcon"></i>
+            </button>
+        </header>
+
+        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
+
+        <aside class="sidebar-wrapper" id="sidebar">
+            <div>
+                <div class="menu-label">Main Menu</div>
+                <ul class="sidebar-menu-list">
+                    <li><a href="/farmer/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                    <li><a href="/farmer/scan" class="menu-item-link"><i class="fa-solid fa-camera"></i> Scan Pest</a></li>
+                    <li><a href="/farmer/drafts" class="menu-item-link"><i class="fa-solid fa-file-pen"></i> Drafts</a></li>
+                    <li><a href="/farmer/reports" class="menu-item-link active"><i class="fa-solid fa-folder-open"></i> My Reports</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-user-footer">
+                <div class="user-meta-box">
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-identity-text">
+                        <h4 id="sidebar-user-display">Farmer</h4>
+                        <p>Farmer</p>
+                    </div>
+                </div>
+                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+        </aside>
+
+        <main class="main-content-layout">
+            
+            <header class="section-title-wrap">
+                <div>
+                    <h1>My Reports</h1>
+                    <p>Overall submitted reports</p>
+                </div>
+                
+                <div id="notification-container" style="position: relative;">
+                    <div id="bell-trigger" class="bell-notice-wrapper">
+                        <i class="fa-regular fa-bell"></i>
+                        <span id="bell-badge" style="display: none; position: absolute; top: 8px; right: 9px; width: 6px; height: 6px; background-color: #e63946; border-radius: 50%; border: 1.5px solid #ffffff;"></span>
+                    </div>
+
+                    <div id="notif-dropdown" style="display: none; position: absolute; top: 46px; right: 0; width: 320px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 1000; padding: 14px; box-sizing: border-box;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0b251a;">Notifications</h4>
+                            <button id="clear-all-btn" style="background: none; border: none; color: #ef4444; font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0;">Clear All</button>
+                        </div>
+
+                        <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.04); padding-bottom: 8px;">
+                            <button class="notif-filter active" data-filter="all" style="font-size: 0.7rem; border: none; background: #164630; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">All</button>
+                            <button class="notif-filter" data-filter="unread" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Unread</button>
+                            <button class="notif-filter" data-filter="alert" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Risks</button>
+                        </div>
+
+                        <div id="notif-list-wrapper" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="search-controls-row">
+                <div class="search-bar-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="report-search" class="search-input" placeholder="Search by pest name...">
+                </div>
+                    <div class="date-filter-box">
+                    <input type="date" id="report-date-filter" aria-label="Filter by date">
+                </div>
+            </div>
+
+            <div class="filter-chips-scrollrow">
+                <button class="chip-filter-btn active-chip" data-status="all" id="chip-count-label">All (0)</button>
+                <button class="chip-filter-btn" data-status="Recommendation Issued">Recommendation Issued</button>
+                <button class="chip-filter-btn" data-status="Under Review">Under Review</button>
+            </div>
+
+            <div class="reports-feed-stack" id="reports-list-container"></div>
+
+            <div class="pagination-container" id="pagination-wrapper" style="display: none;"></div>
+
+        </main>
+    </div>
+
+    <div class="modal-screen-overlay" id="summary-modal">
+        <div class="modal-sheet-sliding-card">
+            <div class="modal-header-inline">
+                <h2>Report Summary</h2>
+                <button class="btn-close-modal" onclick="closeAllModals()">Close</button>
+            </div>
+            
+            <div class="status-row-bar">Status: <span id="sum-status-text">--</span></div>
+
+            <div class="severity-pill-header" id="sum-severity-banner">
+                <div class="badge-main">
+                    <h3 id="sum-pest-title">--</h3>
+                    <p>Confidence: <span id="sum-confidence">--</span></p>
+                </div>
+                <div style="font-size: 0.75rem; text-align: right;">
+                    <div>Leaf Damage</div>
+                    <strong style="font-size: 0.9rem;" id="sum-damage">--</strong>
+                </div>
+            </div>
+
+            <div class="media-box-card">
+                <img id="sum-media-img" src="" alt="Anomaly Sample">
+                <div class="media-meta-footer">
+                    Farmer: {{ user_name }} | Brgy. San Ignacio, San Pablo City, Laguna | <span id="sum-timestamp">--</span>
+                </div>
+            </div>
+
+            <div class="card-sheet-block">
+                <h4>Additional Notes</h4>
+                <p id="sum-notes-text">--</p>
+            </div>
+
+            <div class="card-sheet-block">
+                <h4>Initial Recommendation</h4>
+                <ul id="sum-initial-list"></ul>
+            </div>
+
+            <div class="card-sheet-block" id="sum-expert-card" style="border-left: 4px solid var(--primary-green);">
+                <h4>Expert Recommendation</h4>
+                <ul id="sum-expert-list"></ul>
+            </div>
+
+            <div class="modal-action-row">
+                <button class="btn-modal-action primary" onclick="transitionToFollowUp()">Update Status</button>
+                <button class="btn-modal-action secondary" onclick="closeAllModals()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-screen-overlay" id="followup-modal">
+        <div class="modal-sheet-sliding-card">
+            <div class="modal-header-inline">
+                <h2>Report Summary</h2>
+                <button class="btn-close-modal" onclick="closeAllModals()">Close</button>
+            </div>
+
+            <div class="media-box-card" style="margin-bottom: 10px;">
+                <img id="fup-mini-img" src="" alt="Mini Preview">
+                <div class="media-meta-footer" style="padding: 6px; font-size: 0.62rem;">
+                    Detected Pest: <strong id="fup-label-title">--</strong> | Confidence: <span id="fup-conf-span">--</span> | Damage: <span id="fup-damage-span">--</span>
+                </div>
+            </div>
+
+            <div class="card-sheet-block" style="padding: 12px; margin-bottom: 10px;">
+                <p style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">
+                    Additional Notes: <span id="fup-notes-fallback" style="color: var(--text-dark); font-style: normal;">--</span>
+                </p>
+            </div>
+
+            <div style="font-size: 0.88rem; font-weight: 700; color: var(--brand-dark); margin-bottom: 10px;">Follow Up Details</div>
+
+            <div class="followup-upload-zone">
+                <div style="font-size: 1.5rem; color: var(--primary-green);"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                <p>Drop your coconut leaf image here<br><span style="font-size: 0.72rem; color: var(--text-muted);">or click the buttons below to upload</span></p>
+                <div class="followup-btn-row">
+                    <button class="btn-fup-trigger dark" onclick="alert('Camera frame simulation initialized.')"><i class="fa-solid fa-camera"></i> Take Photo</button>
+                    <button class="btn-fup-trigger light" onclick="alert('Local file explorer directory access pipeline call.')"><i class="fa-solid fa-upload"></i> Upload Image</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <textarea class="fup-textarea" id="fup-input-text" placeholder="Write your additional notes here..."></textarea>
+            </div>
+
+            <div class="modal-action-row">
+                <button class="btn-modal-action primary" onclick="submitFollowUpData()">Submit</button>
+                <button class="btn-modal-action secondary" onclick="backToSummary()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script id="reports-data" type="application/json">{{ reports_data|tojson|safe }}</script>
+    <script>
+        // Production State Containers (Initialized from the Flask-rendered report payload)
+        let reports = [];
+        try {
+            reports = JSON.parse(document.getElementById("reports-data")?.textContent || "[]");
+        } catch (e) {
+            reports = [];
+        }
+        let notifications = [];
+
+        // Global Active Control Flags Variables
+        let activeSearchQuery = "";
+        let activeStatusFilter = "all";
+        let activeDateFilter = "";
+        let currentPage = 1;
+        const recordsPerPage = 5;
+        let selectedReportRecord = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+        const rawName = "{{ user_name }}".trim();
+        const fullUserName = rawName || "Farmer";
+        document.getElementById("sidebar-user-display").textContent = fullUserName;
+
+        // Register Input & Header Trigger Click Listeners
+        initNotificationsSystem();
+        initSearchAndFilters();
+        
+        // Execute view render evaluation pipelines
+        renderReportsGrid();
+    });
+
+        /* ================== NOTIFICATION OVERLAY ENGINE ================== */
+        function initNotificationsSystem() {
+            const trigger = document.getElementById("bell-trigger");
+            const dropdown = document.getElementById("notif-dropdown");
+            const badge = document.getElementById("bell-badge");
+            const wrapper = document.getElementById("notif-list-wrapper");
+            const clearBtn = document.getElementById("clear-all-btn");
+            let activeFilter = "all";
+
+            trigger.addEventListener("click", (e) => {
+                e.stopPropagation();
+                dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!dropdown.contains(e.target) && e.target !== trigger) dropdown.style.display = "none";
+            });
+
+            function drawNotifications() {
+                wrapper.innerHTML = "";
+                const unread = notifications.filter(n => n.type === "unread").length;
+                badge.style.display = unread > 0 ? "block" : "none";
+
+                let filtered = notifications;
+                if (activeFilter === "unread") filtered = notifications.filter(n => n.type === "unread");
+                if (activeFilter === "alert") filtered = notifications.filter(n => n.tag === "alert");
+
+                if (filtered.length === 0) {
+                    wrapper.innerHTML = `
+                        <div style="text-align: center; padding: 30px 10px;">
+                            <i class="fa-regular fa-bell-slashed" style="font-size: 1.3rem; color: #cbd5e1; margin-bottom: 6px;"></i>
+                            <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">No notifications found.</p>
+                        </div>`;
+                    return;
+                }
+
+                filtered.forEach(item => {
+                    const node = document.createElement("div");
+                    node.className = `notif-item ${item.type === 'unread' ? 'is-unread' : ''}`;
+                    const icon = item.tag === 'alert' ? 'fa-triangle-exclamation' : 'fa-camera';
+                    const col = item.tag === 'alert' ? '#f59e0b' : '#164630';
+
+                    node.innerHTML = `
+                        <i class="fa-solid ${icon}" style="color:${col}; margin-top:2px; font-size:0.85rem;"></i>
+                        <div>
+                            <p>${item.text}</p>
+                            <span class="time">${item.time}</span>
+                        </div>`;
+                    
+                    node.addEventListener("click", () => {
+                        item.type = "read";
+                        drawNotifications();
+                    });
+                    wrapper.appendChild(node);
+                });
+            }
+
+            document.querySelectorAll(".notif-filter").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    document.querySelectorAll(".notif-filter").forEach(b => b.classList.remove("active"));
+                    e.target.classList.add("active");
+                    activeFilter = e.target.getAttribute("data-filter");
+                    drawNotifications();
+                });
+            });
+
+            clearBtn.addEventListener("click", () => {
+                if (notifications.length === 0) return;
+                if (confirm("Are you sure you want to delete all notifications? This action cannot be undone.")) {
+                    notifications = [];
+                    drawNotifications();
+                }
+            });
+
+            drawNotifications();
+        }
+
+        /* ================== SEARCH AND FILTERS ENGINE ================== */
+        function initSearchAndFilters() {
+            const searchInput = document.getElementById("report-search");
+            const dateInput = document.getElementById("report-date-filter");
+
+            searchInput.addEventListener("input", (e) => {
+                activeSearchQuery = e.target.value.toLowerCase().trim();
+                currentPage = 1; 
+                renderReportsGrid();
+            });
+
+            dateInput.addEventListener("change", (e) => {
+                activeDateFilter = e.target.value;
+                currentPage = 1;
+                renderReportsGrid();
+            });
+
+            document.querySelectorAll(".chip-filter-btn").forEach(chip => {
+                chip.addEventListener("click", (e) => {
+                    document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
+                    e.target.classList.add("active-chip");
+                    activeStatusFilter = e.target.getAttribute("data-status");
+                    currentPage = 1;
+                    renderReportsGrid();
+                });
+            });
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function highlightSearchText(text, query) {
+            if (!query) return escapeHtml(text);
+            const escapedText = escapeHtml(text);
+            const escapedQuery = escapeHtml(query);
+            const regex = new RegExp(`(${escapedQuery})`, "ig");
+            return escapedText.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        /* ================== DYNAMIC INTERACTIVE REPORTS ENGINE ================== */
+        function renderReportsGrid() {
+            const container = document.getElementById("reports-list-container");
+            const countLabel = document.getElementById("chip-count-label");
+            container.innerHTML = "";
+
+            // Update baseline full total tracker chip counter text label tracking
+            countLabel.textContent = `All (${reports.length})`;
+
+            // Apply search, date, and status filtering rules sequentially
+            let processedRecords = reports.filter(item => {
+                const matchesSearch = !activeSearchQuery || item.pest.toLowerCase().includes(activeSearchQuery);
+                const matchesDate = !activeDateFilter || item.date === activeDateFilter;
+                const matchesStatus = (activeStatusFilter === "all" || item.status === activeStatusFilter);
+                return matchesSearch && matchesDate && matchesStatus;
+            });
+
+            if (processedRecords.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; background: #fff; border-radius: 16px; border: 1px solid var(--border-light);">
+                        <i class="fa-solid fa-folder-open" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px;"></i>
+                        <h3 style="font-size: 1rem; color: var(--brand-dark); margin-bottom: 4px;">No Reports Found</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">We couldn't find any records matching your criteria.</p>
+                    </div>`;
+                updatePaginationController(0);
+                return;
+            }
+
+            // Client-Side Pagination calculations
+            const totalMatches = processedRecords.length;
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = startIndex + recordsPerPage;
+            const paginatedRecords = processedRecords.slice(startIndex, endIndex);
+
+            // Append compiled records row loop nodes
+            paginatedRecords.forEach(item => {
+                const row = document.createElement("div");
+                row.className = "report-row-node";
+                row.innerHTML = `
+                    <div class="report-main-meta">
+                        <h4>${highlightSearchText(item.pest, activeSearchQuery)}</h4>
+                        <p>${item.timestamp}</p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px; background:${item.status === 'Recommendation Issued' ? 'rgba(5,150,105,0.1)' : 'rgba(217,119,6,0.1)'}; color:${item.status === 'Recommendation Issued' ? '#059669' : '#d97706'}">${item.status}</span>
+                        <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.85rem;"></i>
+                    </div>`;
+                
+                row.onclick = () => openReportSummary(item);
+                container.appendChild(row);
+            });
+
+            updatePaginationController(totalMatches);
+        }
+
+        /* ================== RE-EVALUATED CONDITIONAL PAGINATION ================== */
+        function updatePaginationController(totalMatchedCount) {
+            const paginationBlock = document.getElementById("pagination-wrapper");
+            paginationBlock.innerHTML = "";
+
+            const totalPagesCalculated = Math.ceil(totalMatchedCount / recordsPerPage);
+
+            // Hides the pagination completely if all current records fit cleanly on a single page
+            if (totalPagesCalculated <= 1) {
+                paginationBlock.style.display = "none";
+                return;
+            }
+
+            paginationBlock.style.display = "flex";
+
+            // Left Arrow
+            const leftBtn = document.createElement("button");
+            leftBtn.className = "page-btn";
+            leftBtn.innerHTML = `<i class="fa-solid fa-chevron-left"></i>`;
+            leftBtn.disabled = (currentPage === 1);
+            leftBtn.onclick = () => { if(currentPage > 1) { currentPage--; renderReportsGrid(); }};
+            paginationBlock.appendChild(leftBtn);
+
+            // Sequential Iteration Pages Loop Indices
+            for (let i = 1; i <= totalPagesCalculated; i++) {
+                const pageBtn = document.createElement("button");
+                pageBtn.className = `page-btn ${i === currentPage ? 'active-page' : ''}`;
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => { currentPage = i; renderReportsGrid(); };
+                paginationBlock.appendChild(pageBtn);
+            }
+
+            // Right Arrow
+            const rightBtn = document.createElement("button");
+            rightBtn.className = "page-btn";
+            rightBtn.innerHTML = `<i class="fa-solid fa-chevron-right"></i>`;
+            rightBtn.disabled = (currentPage === totalPagesCalculated);
+            rightBtn.onclick = () => { if(currentPage < totalPagesCalculated) { currentPage++; renderReportsGrid(); }};
+            paginationBlock.appendChild(rightBtn);
+        }
+
+        /* ================== DISPLAY INTERACTION PANEL CONTROLLERS ================== */
+        function openReportSummary(record) {
+            selectedReportRecord = record;
+
+            document.getElementById('sum-pest-title').textContent = record.pest;
+            document.getElementById('sum-timestamp').textContent = record.timestamp;
+            document.getElementById('sum-confidence').textContent = record.confidence || "90%";
+            document.getElementById('sum-damage').textContent = record.damage || "Moderate";
+            document.getElementById('sum-notes-text').textContent = record.notes || "No notes logged.";
+            
+            const imgElement = document.getElementById('sum-media-img');
+            imgElement.src = record.img || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
+
+            // Dynamic Contextual Threshold color styles text handler assignments
+            const statusTarget = document.getElementById('sum-status-text');
+            statusTarget.textContent = record.status;
+            statusTarget.style.color = (record.status === "Recommendation Issued") ? "#059669" : "#d97706";
+
+            const severityBanner = document.getElementById("sum-severity-banner");
+            severityBanner.style.backgroundColor = (record.damage === "High") ? "#b91c1c" : "#528265";
+
+            // Populate recommendations arrays loops structures dynamically
+            const initialList = document.getElementById('sum-initial-list');
+            initialList.innerHTML = "";
+            if(record.initial_recommendations && record.initial_recommendations.length > 0) {
+                record.initial_recommendations.forEach(li => initialList.innerHTML += `<li>${li}</li>`);
+            } else {
+                initialList.innerHTML = `<li>Clean surroundings and verify leaf node structure tracks.</li>`;
+            }
+
+            const expertList = document.getElementById('sum-expert-list');
+            const expertCardBlock = document.getElementById('sum-expert-card');
+            expertList.innerHTML = "";
+
+            if (record.status === "Recommendation Issued" && record.expert_recommendations) {
+                expertCardBlock.style.display = "block";
+                record.expert_recommendations.forEach(li => expertList.innerHTML += `<li>${li}</li>`);
+            } else {
+                expertCardBlock.style.display = "block";
+                expertList.innerHTML = `<li><span style='color:var(--text-muted); font-style:italic;'>Awaiting verified expert recommendation check-in data response...</span></li>`;
+            }
+
+            document.getElementById('summary-modal').classList.add('open-modal');
+        }
+
+        function transitionToFollowUp() {
+            if(!selectedReportRecord) return;
+            document.getElementById('summary-modal').classList.remove('open-modal');
+            
+            document.getElementById('fup-label-title').textContent = selectedReportRecord.pest;
+            document.getElementById('fup-conf-span').textContent = selectedReportRecord.confidence || "90%";
+            document.getElementById('fup-damage-span').textContent = selectedReportRecord.damage || "Moderate";
+            document.getElementById('fup-notes-fallback').textContent = selectedReportRecord.notes || "No notes logged.";
+            document.getElementById('fup-mini-img').src = document.getElementById('sum-media-img').src;
+            document.getElementById('fup-input-text').value = "";
+
+            document.getElementById('followup-modal').classList.add('open-modal');
+        }
+
+        function backToSummary() {
+            document.getElementById('followup-modal').classList.remove('open-modal');
+            document.getElementById('summary-modal').classList.add('open-modal');
+        }
+
+        function closeAllModals() {
+            document.getElementById('summary-modal').classList.remove('open-modal');
+            document.getElementById('followup-modal').classList.remove('open-modal');
+            selectedReportRecord = null;
+        }
+
+        function submitFollowUpData() {
+            const extraNotes = document.getElementById('fup-input-text').value.trim();
+            alert("Follow-up treatment metrics logged successfully.");
+            closeAllModals();
+        }
+
+        function toggleSidebarMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            const icon = document.getElementById('toggleIcon');
+            sidebar.classList.toggle('show-mobile');
+            backdrop.classList.toggle('active');
+            
+            if(sidebar.classList.contains('show-mobile')) {
+                icon.className = "fa-solid fa-xmark";
+            } else { 
+                icon.className = "fa-solid fa-bars"; 
+            }
+        }
+    </script>
+</body>
+</html>

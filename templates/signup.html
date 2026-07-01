@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<style>
+    .dynamic-section {
+        display: none; 
+        background-color: rgba(42, 123, 76, 0.06); 
+        padding: 1.5rem;
+        border-radius: var(--radius-input);
+        margin: 1.5rem 0;
+        transition: background-color 0.3s ease-out;
+        animation: slideInDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .dynamic-section h4 {
+        color: var(--button-base);
+        font-weight: 700; 
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Elegant Multi-Column Layouts for Name Breakdown */
+    .name-grid-top {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 1.35rem;
+    }
+
+    .name-grid-bottom {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 14px;
+        margin-bottom: 1.35rem;
+    }
+    
+    @keyframes slideInDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Password strength meter styling */
+    .strength-bar {
+        flex: 1;
+        height: 6px;
+        background-color: #e0e0e0;
+        border-radius: 3px;
+        transition: background-color 0.3s ease;
+    }
+
+    .strength-bar.weak {
+        background-color: #d32f2f;
+    }
+
+    .strength-bar.fair {
+        background-color: #f57c00;
+    }
+
+    .strength-bar.good {
+        background-color: #fbc02d;
+    }
+
+    .strength-bar.strong {
+        background-color: #388e3c;
+    }
+
+    .requirement-unchecked {
+        display: inline-block;
+        width: 16px;
+        color: #ccc;
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+
+    .requirement-checked {
+        color: var(--primary-green);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-card wide-card">
+    <div class="logo-container">
+        <div class="logo-icon-wrap" style="position: relative; display: inline-block;">
+            <i class="fa-solid fa-shield-halved"></i>
+            <i class="fa-solid fa-seedling" style="position: absolute; bottom: 4px; right: -4px; font-size: 1.5rem; color: #40916c;"></i>
+</div>
+        <div class="logo-title">CocoScan</div>
+        <div class="logo-subtitle">Create Your Account</div>
+    </div>
+
+    <form action="{{ url_for('signup') }}" method="POST">
+        
+        <div class="name-grid-top">
+            <div>
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" placeholder="Maria" required>
+            </div>
+            <div>
+                <label for="middle_name">Middle Name <span style="font-weight: normal; opacity: 0.65;">(Optional)</span></label>
+                <input type="text" id="middle_name" name="middle_name" placeholder="Reyes">
+            </div>
+        </div>
+
+        <div class="form-row form-group" style="grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+            <div>
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" placeholder="Garcia" required>
+            </div>
+            <div>
+                <label for="extension_name">Ext. <span style="font-weight: normal; opacity: 0.65;">(Opt.)</span></label>
+                <input type="text" id="extension_name" name="extension_name" placeholder="Jr., III">
+            </div>
+            <div>
+                <label for="age">Age</label>
+                <input type="number" id="age" name="age" placeholder="28" min="15" max="100" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="address">Complete Address</label>
+            <input type="text" id="address" name="address" placeholder="Street, City, Province" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" placeholder="maria@example.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="role" style="color: var(--primary-green); font-weight: 700;">Select Account Role</label>
+            <select id="role" name="role" onchange="handleRoleChange(this.value)" required style="border-color: var(--primary-green); font-weight: 500;">
+                <option value="" disabled selected>-- Choose your profile type --</option>
+                <option value="farmer">Farmer</option>
+                <option value="lgu">Local Government Unit (LGU)</option>
+                <option value="agri_expert">Agri-Expert</option>
+            </select>
+        </div>
+
+        <div id="section-farmer" class="dynamic-section">
+            <h4><i class="fa-solid fa-tractor document-icon"></i> Farmer Profile Details</h4>
+            <div class="form-group">
+                <label for="farmer_barangay">Barangay <span style="color:red;">*</span></label>
+                <input type="text" id="farmer_barangay" name="farmer_barangay" placeholder="For geo-validation tracking">
+            </div>
+            <div class="form-group">
+                <label for="farm_size">Farm Size <span style="font-weight:normal; opacity:0.7;">(Optional)</span></label>
+                <input type="text" id="farm_size" name="farm_size" placeholder="e.g., 2.5 Hectares">
+            </div>
+        </div>
+
+        <div id="section-lgu" class="dynamic-section">
+            <h4><i class="fa-solid fa-building-shield"></i> LGU Verification Fields</h4>
+            <div class="form-group">
+                <label class="req">Agency / Office</label>
+                <input type="text" id="lgu_agency" name="lgu_agency" placeholder="e.g., DA, Municipal Agriculture Office">
+            </div>
+            <div class="form-row form-group" style="grid-template-columns: 1fr 1fr;">
+                <div>
+                    <label class="req">Position</label>
+                    <input type="text" id="lgu_position" name="lgu_position" placeholder="Officer I">
+                </div>
+                <div>
+                    <label class="req">Employee ID</label>
+                    <input type="text" id="lgu_employee_id" name="lgu_employee_id" placeholder="ID Number">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Office Email <span style="font-weight:normal; opacity:0.7;">(Recommended)</span></label>
+                <input type="email" id="lgu_office_email" name="lgu_office_email" placeholder="office@gov.ph">
+            </div>
+            <div class="form-group">
+                <label class="req">Jurisdiction</label>
+                <input type="text" id="lgu_jurisdiction" name="lgu_jurisdiction" placeholder="City or Municipality scope">
+            </div>
+        </div>
+
+        <div id="section-agri_expert" class="dynamic-section">
+            <h4><i class="fa-solid fa-graduation-cap"></i> Expert Verification Fields</h4>
+            <div class="form-group">
+                <label class="req">LGU Office Name</label>
+                <input type="text" id="agri_office_name" name="agri_office_name" placeholder="Department/Office Assignment">
+            </div>
+            <div class="form-row form-group" style="grid-template-columns: 1fr 1fr;">
+                <div>
+                    <label class="req">Position / Title</label>
+                    <input type="text" id="agri_position" name="agri_position" placeholder="Agronomist / Specialist">
+                </div>
+                <div>
+                    <label class="req">Employee ID / Badge</label>
+                    <input type="text" id="agri_employee_id" name="agri_employee_id" placeholder="Badge Number">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Office Email <span style="font-weight:normal; opacity:0.7;">(Preferred)</span></label>
+                <input type="email" id="agri_office_email" name="agri_office_email" placeholder="expert@gov.ph">
+            </div>
+            <div class="form-group">
+                <label class="req">Assigned Municipality/Province</label>
+                <input type="text" id="agri_jurisdiction" name="agri_jurisdiction" placeholder="Assigned Territory">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="sign_password">Password <span style="color: red;">*</span></label>
+            <div class="input-wrapper">
+                <input type="password" id="sign_password" name="password" placeholder="••••••••" required oninput="validatePasswordStrength()">
+                <i class="fa-regular fa-eye toggle-password" onclick="togglePasswordVisibility('sign_password', this)"></i>
+            </div>
+            <div id="password-strength-meter" style="margin-top: 0.5rem;">
+                <div style="display: flex; gap: 4px; margin-bottom: 0.5rem;">
+                    <div class="strength-bar" id="strength-1"></div>
+                    <div class="strength-bar" id="strength-2"></div>
+                    <div class="strength-bar" id="strength-3"></div>
+                    <div class="strength-bar" id="strength-4"></div>
+                </div>
+                <p id="password-strength-text" style="font-size: 0.8rem; margin: 0.5rem 0; opacity: 0.8;"></p>
+            </div>
+            <div id="password-requirements" style="font-size: 0.75rem; margin-top: 0.75rem; line-height: 1.6;">
+                <p style="font-weight: 600; color: var(--primary-green); margin-bottom: 0.5rem;">Password must contain:</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div><span id="req-length" class="requirement-unchecked">✓</span> At least 8 characters</div>
+                    <div><span id="req-upper" class="requirement-unchecked">✓</span> Uppercase letter (A-Z)</div>
+                    <div><span id="req-lower" class="requirement-unchecked">✓</span> Lowercase letter (a-z)</div>
+                    <div><span id="req-digit" class="requirement-unchecked">✓</span> Number (0-9)</div>
+                    <div style="grid-column: 1 / -1;"><span id="req-special" class="requirement-unchecked">✓</span> Special character (!@#$%^&*)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="confirm_password">Confirm Password <span style="color: red;">*</span></label>
+            <div class="input-wrapper">
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" required oninput="validatePasswordMatch()">
+                <i class="fa-regular fa-eye toggle-password" onclick="togglePasswordVisibility('confirm_password', this)"></i>
+            </div>
+            <p id="password-match-text" style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0;"></p>
+        </div>
+
+        <button type="submit" class="btn-primary">Sign Up</button>
+    </form>
+
+    <div class="auth-footer">
+        Already have an account? <a href="{{ url_for('login') }}">Log In here</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    /**
+     * Toggle password visibility
+     */
+    function togglePasswordVisibility(inputId, icon) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    /**
+     * Validate password strength in real-time
+     * Checks for: length, uppercase, lowercase, digit, special character
+     */
+    function validatePasswordStrength() {
+        const password = document.getElementById('sign_password').value;
+        let strength = 0;
+        const requirements = {
+            length: password.length >= 8,
+            upper: /[A-Z]/.test(password),
+            lower: /[a-z]/.test(password),
+            digit: /\d/.test(password),
+            special: /[!@#$%^&*()_+\-=\[\]{};:\'",.<>?/\\|`~]/.test(password)
+        };
+
+        // Update requirement checkmarks
+        updateRequirement('req-length', requirements.length);
+        updateRequirement('req-upper', requirements.upper);
+        updateRequirement('req-lower', requirements.lower);
+        updateRequirement('req-digit', requirements.digit);
+        updateRequirement('req-special', requirements.special);
+
+        // Calculate strength
+        strength = Object.values(requirements).filter(Boolean).length;
+
+        // Update strength meter
+        updateStrengthMeter(strength);
+
+        // Validate password match if confirm field has value
+        if (document.getElementById('confirm_password').value) {
+            validatePasswordMatch();
+        }
+    }
+
+    /**
+     * Update visual indicator for requirement
+     */
+    function updateRequirement(elementId, isMet) {
+        const element = document.getElementById(elementId);
+        if (isMet) {
+            element.classList.remove('requirement-unchecked');
+            element.classList.add('requirement-checked');
+        } else {
+            element.classList.remove('requirement-checked');
+            element.classList.add('requirement-unchecked');
+        }
+    }
+
+    /**
+     * Update strength meter bars
+     */
+    function updateStrengthMeter(strength) {
+        const bars = document.querySelectorAll('.strength-bar');
+        const strengthText = document.getElementById('password-strength-text');
+        
+        // Reset all bars
+        bars.forEach(bar => {
+            bar.classList.remove('weak', 'fair', 'good', 'strong');
+        });
+
+        // Determine strength level
+        let strengthLevel = '';
+        let strengthColor = '';
+        
+        if (strength === 0) {
+            strengthLevel = 'Enter a password';
+            strengthColor = '';
+        } else if (strength < 3) {
+            strengthLevel = 'Weak password';
+            strengthColor = 'weak';
+            bars[0].classList.add('weak');
+        } else if (strength < 4) {
+            strengthLevel = 'Fair password';
+            strengthColor = 'fair';
+            bars[0].classList.add('fair');
+            bars[1].classList.add('fair');
+        } else if (strength < 5) {
+            strengthLevel = 'Good password';
+            strengthColor = 'good';
+            bars[0].classList.add('good');
+            bars[1].classList.add('good');
+            bars[2].classList.add('good');
+        } else {
+            strengthLevel = 'Strong password';
+            strengthColor = 'strong';
+            bars[0].classList.add('strong');
+            bars[1].classList.add('strong');
+            bars[2].classList.add('strong');
+            bars[3].classList.add('strong');
+        }
+
+        strengthText.textContent = strengthLevel;
+        strengthText.style.color = strengthColor === 'weak' ? '#d32f2f' : 
+                                   strengthColor === 'fair' ? '#f57c00' : 
+                                   strengthColor === 'good' ? '#fbc02d' : 
+                                   strengthColor === 'strong' ? '#388e3c' : '#666';
+    }
+
+    /**
+     * Validate that both passwords match
+     */
+    function validatePasswordMatch() {
+        const password = document.getElementById('sign_password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        const matchText = document.getElementById('password-match-text');
+
+        if (!confirmPassword) {
+            matchText.style.opacity = '0';
+            return true;
+        }
+
+        if (password === confirmPassword) {
+            matchText.textContent = '✓ Passwords match';
+            matchText.style.color = '#388e3c';
+            matchText.style.opacity = '1';
+            return true;
+        } else {
+            matchText.textContent = '✗ Passwords do not match';
+            matchText.style.color = '#d32f2f';
+            matchText.style.opacity = '1';
+            return false;
+        }
+    }
+
+    /**
+     * Handle role selection and show/hide role-specific fields
+     */
+    function handleRoleChange(selectedRole) {
+        document.querySelectorAll('.dynamic-section').forEach(element => {
+            element.style.display = 'none';
+            element.querySelectorAll('input').forEach(input => input.disabled = true);
+            element.querySelectorAll('input').forEach(input => input.removeAttribute('required'));
+        });
+
+        if(selectedRole) {
+            const targetSection = document.getElementById(`section-${selectedRole}`);
+            if(targetSection) {
+                targetSection.style.display = 'block';
+                targetSection.querySelectorAll('input').forEach(input => input.disabled = false);
+                
+                if(selectedRole === 'farmer') {
+                    document.getElementById('farmer_barangay').setAttribute('required', 'true');
+                } else if(selectedRole === 'lgu') {
+                    document.getElementById('lgu_agency').setAttribute('required', 'true');
+                    document.getElementById('lgu_position').setAttribute('required', 'true');
+                    document.getElementById('lgu_employee_id').setAttribute('required', 'true');
+                    document.getElementById('lgu_jurisdiction').setAttribute('required', 'true');
+                } else if(selectedRole === 'agri_expert') {
+                    document.getElementById('agri_office_name').setAttribute('required', 'true');
+                    document.getElementById('agri_position').setAttribute('required', 'true');
+                    document.getElementById('agri_employee_id').setAttribute('required', 'true');
+                    document.getElementById('agri_jurisdiction').setAttribute('required', 'true');
+                }
+            }
+        }
+    }
+
+    /**
+     * Initialize password strength display on page load
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+        validatePasswordStrength();
+    });
+</script>
+{% endblock %}

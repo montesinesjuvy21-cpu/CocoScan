@@ -1,0 +1,941 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<style>
+    :root {
+        --pca-dark-green: #1b4332;
+        --pca-mid-green: #2d6a4f;
+        --pca-accent: #40916c;
+        --table-header-bg: #6d8c7d;
+        --text-main: #111827;
+        --text-muted: #6b7280;
+        --btn-approve-hover: #1b4d3e;
+        --btn-reject-hover: #dc2626;
+    }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #ffffff;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .admin-viewport-wrapper {
+        display: flex;
+        width: 100vw;
+        min-height: 100vh;
+        align-items: stretch;
+    }
+
+    /* --- 📱 MOBILE HAMBURGER TOP BAR --- */
+    .mobile-header-bar {
+        display: none;
+        width: 100%;
+        background-color: var(--pca-dark-green);
+        color: #ffffff;
+        padding: 1rem;
+        box-sizing: border-box;
+        justify-content: space-between;
+        align-items: center;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .hamburger-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+
+    /* --- 📂 SIDEBAR ARCHITECTURE --- */
+    .pca-sidebar {
+        width: 280px;
+        min-width: 280px;
+        background-color: var(--pca-dark-green);
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 2rem 1.25rem;
+        box-sizing: border-box;
+        flex-shrink: 0;
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar-brand-block {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 2.5rem;
+    }
+
+    .brand-logo-container {
+        width: 46px;
+        height: 46px;
+        background: #224d38;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
+    }
+
+    .brand-logo-svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .brand-title-wrap h2 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.5px;
+    }
+
+    .brand-title-wrap p {
+        font-size: 0.72rem;
+        margin: 1px 0 0 0;
+        color: #a3b899;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .sidebar-menu-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .menu-item-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: rgba(255, 255, 255, 0.75);
+        text-decoration: none;
+        padding: 0.8rem 1rem;
+        border-radius: 10px;
+        font-weight: 500;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+
+    .menu-item-link:hover, .menu-item-link.active {
+        color: #ffffff;
+        background-color: var(--pca-mid-green);
+    }
+
+    .sidebar-footer-profile {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 1.25rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-logout-trigger {
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 1.15rem;
+        transition: color 0.2s ease, transform 0.2s ease;
+        padding: 6px;
+        border-radius: 6px;
+    }
+
+    .btn-logout-trigger:hover {
+        color: #ff4d4d !important;
+        transform: scale(1.1);
+    }
+
+    /* --- 📊 CENTRAL PANEL PANES --- */
+    .pca-main-panel {
+        flex-grow: 1;
+        background-color: #ffffff;
+        padding: 2.5rem;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .board-header h1 {
+        font-size: 1.85rem;
+        color: var(--text-main);
+        margin: 0 0 6px 0;
+        font-weight: 700;
+    }
+
+    .board-header p {
+        color: var(--text-muted);
+        margin: 0 0 2rem 0;
+        font-size: 0.95rem;
+    }
+
+    /* --- 🔍 SEARCH & FILTER BAR --- */
+    .control-actions-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        width: 100%;
+    }
+
+    .search-input-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .search-box-wrapper {
+        position: relative;
+        flex-grow: 1;
+    }
+
+    .search-box-wrapper input {
+        width: 100%;
+        padding: 0.8rem 1rem 0.8rem 2.7rem;
+        border: 1px solid #c4cbd4;
+        border-radius: 30px;
+        background-color: #ffffff;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-box-wrapper input:focus {
+        border-color: var(--pca-mid-green);
+        box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
+    }
+
+    .search-box-wrapper i {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #8a94a6;
+    }
+
+    .btn-clear-filters {
+        background-color: #f3f4f6;
+        color: #4b5563;
+        border: 1px solid #d1d5db;
+        padding: 0.8rem 1.5rem;
+        border-radius: 30px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-clear-filters:hover {
+        background-color: #e5e7eb;
+        color: #111827;
+    }
+
+    .filter-pill-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .pill-radio-label {
+        cursor: pointer;
+    }
+
+    .pill-radio-label input[type="radio"] {
+        display: none;
+    }
+
+    .pill-btn {
+        display: inline-block;
+        padding: 0.55rem 1.4rem;
+        border-radius: 30px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #4b5563;
+        transition: all 0.2s ease;
+    }
+
+    .pill-radio-label input[type="radio"]:checked + .pill-btn {
+        background-color: var(--pca-dark-green);
+        color: #ffffff;
+        border-color: var(--pca-dark-green);
+    }
+
+    mark.ux-highlight {
+        background-color: #ffeb3b;
+        color: #000000;
+        padding: 0 2px;
+        border-radius: 2px;
+        font-weight: 600;
+    }
+
+    /* --- 🗂️ FLAT DATA TABLE GRID --- */
+    .table-scroll-container {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+    }
+
+    .pca-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 0.9rem;
+    }
+
+    .pca-data-table th {
+        background-color: var(--table-header-bg);
+        color: #ffffff;
+        padding: 1rem 1.25rem;
+        font-weight: 600;
+    }
+
+    .pca-data-table tr {
+        transition: background-color 0.15s ease;
+    }
+
+    /* Table row highlight hover state */
+    .pca-data-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .pca-data-table td {
+        padding: 1.1rem 1.25rem;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+
+    .role-badge-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+    }
+
+    .status-tag {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .status-tag.pending { background-color: #fef3c7; color: #d97706; }
+    .status-tag.approved { background-color: #d1fae5; color: #065f46; }
+    .status-tag.rejected { background-color: #fee2e2; color: #991b1b; }
+
+    /* 🌟 IMPROVED INTERACTIVE HOVER BUTTON STYLES */
+    .btn-action-approve {
+        background-color: var(--pca-dark-green);
+        color: #ffffff;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.8rem;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .btn-action-approve:hover {
+        background-color: var(--btn-approve-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-action-reject {
+        background: transparent;
+        color: #b70909;
+        border: 1px solid #b70909;
+        padding: 5px 13px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.8rem;
+        transition: all 0.2s ease, transform 0.1s ease;
+    }
+
+    .btn-action-reject:hover {
+        background-color: #fee2e2;
+        border-color: var(--btn-reject-hover);
+        color: var(--btn-reject-hover);
+        transform: translateY(-1px);
+    }
+
+    /* --- ⏱️ 5-SECOND COUNTDOWN UNDO TOAST NOTIFICATION BANNER --- */
+    .undo-toast-wrapper {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background-color: #1f2937;
+        color: #ffffff;
+        padding: 14px 22px;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        z-index: 2000;
+        transform: translateY(150%);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        overflow: hidden;
+    }
+
+    .undo-toast-wrapper.visible {
+        transform: translateY(0);
+    }
+
+    .btn-undo-trigger {
+        background-color: #FEF3C7;
+        color: #111827;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+    .btn-undo-trigger:hover {
+        background-color: #d0c28d;
+    }
+
+    .toast-countdown-slider {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 4px;
+        background-color: #10b981;
+        width: 100%;
+        transition: width 5s linear;
+    }
+
+    /* --- 🔒 LIGHTWEIGHT CONFIRMATION DIALOG MODAL --- */
+    .modal-overlay-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(17, 24, 39, 0.4);
+        backdrop-filter: blur(3px);
+        z-index: 3000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay-container.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .modal-dialog-box {
+        background: #ffffff;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 420px;
+        padding: 1.5rem;
+        box-sizing: border-box;
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        text-align: center;
+        transform: scale(0.9);
+        transition: transform 0.2s ease;
+    }
+
+    .modal-overlay-container.active .modal-dialog-box {
+        transform: scale(1);
+    }
+
+    .modal-title-text {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin: 0 0 8px 0;
+    }
+
+    .modal-body-desc {
+        font-size: 0.92rem;
+        color: var(--text-muted);
+        margin: 0 0 1.5rem 0;
+        line-height: 1.4;
+    }
+
+    .modal-btn-row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .btn-modal-dismiss {
+        background-color: #f3f4f6;
+        color: #4b5563;
+        border: 1px solid #d1d5db;
+        padding: 8px 18px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    .btn-modal-dismiss:hover { background-color: #e5e7eb; }
+
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 6px;
+        margin-top: auto;
+        padding-top: 2rem;
+    }
+
+    .page-link-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        height: 36px;
+        border: 1px solid #e5e7eb;
+        background-color: #ffffff;
+        color: #374151;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 0.875rem;
+    }
+
+    .page-link-btn.active {
+        background-color: var(--pca-dark-green);
+        color: #ffffff;
+        border-color: var(--pca-dark-green);
+    }
+
+    @media (max-width: 991px) {
+        .mobile-header-bar { display: flex; }
+        .pca-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            height: calc(100vh - 60px);
+            z-index: 999;
+            transform: translateX(-100%);
+            width: 280px;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+        .pca-sidebar.open { transform: translateX(0); }
+        .pca-main-panel { padding: 5.5rem 1.25rem 1.5rem 1.25rem; width: 100vw; }
+        .search-input-row { flex-direction: column; align-items: stretch; }
+        .btn-clear-filters { justify-content: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mobile-header-bar">
+    <button class="hamburger-btn" id="sidebarToggle" onclick="toggleMobileSidebar()">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+</div>
+
+<div class="admin-viewport-wrapper">
+    
+    <aside class="pca-sidebar" id="adminSidebar">
+        <div>
+           <div class="sidebar-brand-block">
+            <div class="brand-logo-container">
+                <svg class="brand-logo-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="display: block; width: 100%; height: 100%;">
+                    <circle cx="32" cy="32" r="28" fill="none" stroke="#4ac68f" stroke-width="1.5" stroke-dasharray="2 2"/>
+                    
+                    <foreignObject x="16" y="16" width="32" height="32">
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-tree-city" style="font-size: 1.35rem; color: #ffffff; line-height: 1;"></i>
+                        </div>
+                    </foreignObject>
+                </svg>
+            </div>
+            <div class="brand-title-wrap">
+                <h2>CocoScan</h2>
+                <p>Coconut Pest Detection</p>
+            </div>
+        </div>
+            
+            <nav>
+                <ul class="sidebar-menu-list">
+                    <li><a href="{{ url_for('admin_dashboard') }}" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                    <li><a href="#" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+                    <li><a href="#" class="menu-item-link"><i class="fa-solid fa-file-invoice-dollar"></i> Reports</a></li>
+                    <li><a href="#" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                    <li><a href="{{ url_for('admin_user_management') }}" class="menu-item-link active"><i class="fa-solid fa-users-gear"></i> User Management</a></li>
+                </ul>
+            </nav>
+        </div>
+
+        <div class="sidebar-footer-profile">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fa-solid fa-circle-user" style="font-size:2rem; color: rgba(255,255,255,0.85);"></i>
+                <div>
+                    <div style="font-size:0.85rem; font-weight:700; color:#ffffff;">
+                        {{ session.get('user_name', 'Warren De Guzman') }}
+                    </div>
+                    <div style="font-size:0.75rem; color: #a3b899;">PCA Administrator</div>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn-logout-trigger" title="Log Out System"><i class="fa-solid fa-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <main class="pca-main-panel">
+        <div class="board-header">
+            <h1>User Management</h1>
+            <p>Overview of all registered users and pending applications for system access verification.</p>
+        </div>
+
+        <form method="GET" action="{{ url_for('admin_user_management') }}" class="control-actions-form" id="filterForm">
+            <div class="search-input-row">
+                <div class="search-box-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" name="search" id="searchInput" placeholder="Search users name or email..." value="{{ search }}" onchange="document.getElementById('filterForm').submit();">
+                </div>
+                <a href="{{ url_for('admin_user_management', status='All', search='') }}" class="btn-clear-filters">
+                    <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+                </a>
+            </div>
+
+            <div class="filter-pill-group">
+                <label class="pill-radio-label">
+                    <input type="radio" name="status" value="All" {% if current_status == 'All' %}checked{% endif %} onchange="document.getElementById('filterForm').submit();">
+                    <span class="pill-btn">All</span>
+                </label>
+                <label class="pill-radio-label">
+                    <input type="radio" name="status" value="Under Review" {% if current_status == 'Under Review' %}checked{% endif %} onchange="document.getElementById('filterForm').submit();">
+                    <span class="pill-btn">Pending</span>
+                </label>
+                <label class="pill-radio-label">
+                    <input type="radio" name="status" value="Approved" {% if current_status == 'Approved' %}checked{% endif %} onchange="document.getElementById('filterForm').submit();">
+                    <span class="pill-btn">Approved</span>
+                </label>
+                <label class="pill-radio-label">
+                    <input type="radio" name="status" value="Rejected" {% if current_status == 'Rejected' %}checked{% endif %} onchange="document.getElementById('filterForm').submit();">
+                    <span class="pill-btn">Rejected</span>
+                </label>
+            </div>
+        </form>
+
+        <div class="table-scroll-container">
+            <table class="pca-data-table">
+    <thead>
+        <tr>
+            <th>Role</th>
+            <th>Full Name</th>
+            <th>Agency / Jurisdiction / Barangay</th>
+            <th>Email</th>
+            <th>Account Status</th>
+            <th>Email Delivery Notice</th> <th style="text-align: center;">Action</th>
+        </tr>
+    </thead>
+    <tbody id="userTableBody">
+        {% if users %}
+            {% for user in users %}
+            <tr id="row-{{ user.id }}">
+                <td>
+                    <div class="role-badge-cell">
+                        {% if user.role == 'farmer' %}
+                            <i class="fa-solid fa-tractor" style="color:#2a7b4c;"></i> Farmer
+                        {% elif user.role == 'lgu' %}
+                            <i class="fa-solid fa-building-shield" style="color:#023e8a;"></i> LGU
+                        {% else %}
+                            <i class="fa-solid fa-graduation-cap" style="color:#7209b7;"></i> Expert
+                        {% endif %}
+                    </div>
+                </td>
+
+                <td><strong class="user-display-name">{{ user.highlighted_first | safe }} {{ user.highlighted_last | safe }}</strong></td>
+
+                <td>
+                    {% if user.role == 'farmer' and user.profiles %}
+                        <span style="font-size:0.85rem;">Brgy: <strong>{{ user.profiles.farmer_barangay or 'N/A' }}</strong></span>
+                    {% elif user.profiles %}
+                        <span style="font-size:0.85rem; display:block;"> {{ user.profiles.agency_office or 'N/A' }}</span>
+                        <small style="color:#6b7280;">Scope: {{ user.profiles.jurisdiction or 'N/A' }}</small>
+                    {% else %}
+                        <span style="color:#9ca3af; font-style:italic;">No profile details</span>
+                    {% endif %}
+                </td>
+
+                <td>{{ user.highlighted_email | safe }}</td>
+                
+                <td class="account-status-cell">
+                    <span class="status-tag {% if user.status == 'Under Review' %}pending{% elif user.status == 'Approved' %}approved{% else %}rejected{% endif %}">
+                        {{ user.status }}
+                    </span>
+                </td>
+
+                <td class="email-status-cell">
+                    {% if user.email_status == 'Sent Successfully' %}
+                        <span style="color: #1b4332; background-color: #d8f3dc; border: 1px solid #b7e4c7; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-circle-check" style="color: #40916c; font-size: 0.85rem;"></i>
+                            Email Sent
+                        </span>
+                    {% elif user.email_status == 'Delivery Failed' %}
+                        <span style="color: #7a1919; background-color: #ffe3e3; border: 1px solid #ffb3b3; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-circle-xmark" style="color: #c92a2a; font-size: 0.85rem;"></i>
+                            Delivery Failed
+                        </span>
+                    {% else %}
+                        <span style="color: #4a5568; background-color: #edf2f7; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-circle-exclamation" style="color: #a0aec0; font-size: 0.85rem;"></i>
+                            Pending Action
+                        </span>
+                    {% endif %}
+                </td>
+
+                <td class="action-cell" style="text-align: center;">
+                    {% if user.status == 'Under Review' %}
+                        <div style="display: flex; gap: 6px; justify-content: center;">
+                            <button type="button" class="btn-action-approve" onclick="triggerStatusConfirmation('{{ user.id }}', 'approve')">Approve</button>
+                            <button type="button" class="btn-action-reject" onclick="triggerStatusConfirmation('{{ user.id }}', 'reject')">Reject</button>
+                        </div>
+                    {% else %}
+                        <small style="color:#9ca3af;">Handled by:<br><strong>{{ user.approved_by or 'System' }}</strong></small>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 3rem; color: #9ca3af;">
+                    <i class="fa-solid fa-users-slash" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                    No matching records found.
+                </td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="pagination-container">
+            <a href="{{ url_for('admin_user_management', page=current_page-1, status=current_status, search=search) }}" class="page-link-btn {% if current_page == 1 %}disabled{% endif %}">« Prev</a>
+            {% for p in range(1, total_pages + 1) %}
+                <a href="{{ url_for('admin_user_management', page=p, status=current_status, search=search) }}" class="page-link-btn {% if current_page == p %}active{% endif %}">{{ p }}</a>
+            {% endfor %}
+            <a href="{{ url_for('admin_user_management', page=current_page+1, status=current_status, search=search) }}" class="page-link-btn {% if current_page == total_pages %}disabled{% endif %}">Next »</a>
+        </div>
+        {% endif %}
+    </main>
+</div>
+
+<div class="modal-overlay-container" id="confirmationModal">
+    <div class="modal-dialog-box">
+        <div class="modal-title-text" id="modalTitle">Confirm Status Change</div>
+        <div class="modal-body-desc" id="modalDescription">Are you sure you want to proceed with executing this profile verification action?</div>
+        <div class="modal-btn-row">
+            <button type="button" class="btn-modal-dismiss" onclick="closeConfirmationModal()">Cancel</button>
+            <button type="button" id="modalConfirmBtn" style="padding: 8px 18px; border-radius: 6px; font-weight:600; cursor:pointer; font-size:0.85rem; border:none; color:white;">Proceed</button>
+        </div>
+    </div>
+</div>
+
+<div class="undo-toast-wrapper" id="undoToast">
+    <div>Action staged. Changes will apply automatically...</div>
+    <button type="button" class="btn-undo-trigger" onclick="executeActionUndo()">Undo</button>
+    <div class="toast-countdown-slider" id="toastSlider"></div>
+</div>
+
+<script>
+    // System operational queues variables
+    let pendingExecutionTimeout = null;
+    let targetUserId = null;
+    let targetAction = null;
+    let originalRowHTML = null;
+
+    function toggleMobileSidebar() {
+        const sidebar = document.getElementById('adminSidebar');
+        sidebar.classList.toggle('open');
+        const toggleBtn = document.getElementById('sidebarToggle').querySelector('i');
+        toggleBtn.className = sidebar.classList.contains('open') ? "fa-solid fa-xmark" : "fa-solid fa-bars";
+    }
+
+    /* --- STEP 1: OPEN CONFIRMATION DIALOG MODAL --- */
+   function triggerStatusConfirmation(userId, action) {
+    targetUserId = userId;
+    targetAction = action;
+    
+    const modal = document.getElementById('confirmationModal');
+    const title = document.getElementById('modalTitle');
+    const desc = document.getElementById('modalDescription');
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    const row = document.getElementById(`row-${userId}`);
+    const userName = row.querySelector('.user-display-name').textContent.trim();
+
+    if (action === 'approve') {
+        title.textContent = "Approve User Access";
+        desc.textContent = `Are you sure you want to approve system access credentials for ${userName}?`;
+        confirmBtn.textContent = "Approve User";
+        confirmBtn.style.backgroundColor = "var(--pca-dark-green)";
+    } else {
+        title.textContent = "Reject User Application";
+        desc.textContent = `Are you sure you want to reject and decline the system registration access request from ${userName}?`;
+        confirmBtn.textContent = "Reject User";
+        confirmBtn.style.backgroundColor = "var(--btn-reject-hover)";
+    }
+
+    
+    confirmBtn.onclick = function() {
+        closeConfirmationModal();
+        
+        
+        if (typeof initializeUndoStage === "function") {
+            initializeUndoStage();
+        }
+
+        // Fire Asynchronous payload request directly to Flask API
+        fetch('/admin/update-user-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: targetUserId,
+                action: targetAction
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Instantly reloads the page so Jinja can render the fresh database 'email_status' column values!
+                window.location.reload();
+            } else {
+                alert("Error processing changes: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error("Critical communications breakdown:", err);
+            alert("Network connection error. Database was not updated.");
+        });
+    };
+
+    modal.classList.add('active');
+}
+
+    function closeConfirmationModal() {
+        document.getElementById('confirmationModal').classList.remove('active');
+    }
+
+    /* --- STEP 2: STAGE TEMPORARY UI STATE WITH 5s COUNTDOWN --- */
+    function initializeUndoStage() {
+        // If an operation is already pending in the queue, run it immediately before starting a new one
+        if (pendingExecutionTimeout) {
+            clearTimeout(pendingExecutionTimeout);
+            commitStatusToDatabase();
+        }
+
+        const row = document.getElementById(`row-${targetUserId}`);
+        originalRowHTML = row.innerHTML; // Back up row layout state in case user cancels
+
+        // Optimistically change row elements locally
+        const statusCell = row.querySelector('.status-cell');
+        const actionCell = row.querySelector('.action-cell');
+        
+        if (targetAction === 'approve') {
+            statusCell.innerHTML = `<span class="status-tag approved">Approved</span>`;
+        } else {
+            statusCell.innerHTML = `<span class="status-tag rejected">Rejected</span>`;
+        }
+        actionCell.innerHTML = `<small style="color:#f59e0b; font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Staged...</small>`;
+
+        // Trigger the 5-second slide banner
+        const toast = document.getElementById('undoToast');
+        const slider = document.getElementById('toastSlider');
+        
+        slider.style.transition = 'none';
+        slider.style.width = '100%';
+        // Force layout redraw
+        toast.offsetHeight; 
+        
+        toast.classList.add('visible');
+        slider.style.transition = 'width 5s linear';
+        slider.style.width = '0%';
+
+        // Start background operation countdown timer thread
+        pendingExecutionTimeout = setTimeout(() => {
+            commitStatusToDatabase();
+        }, 5000);
+    }
+
+    /* --- STEP 3: UNDO ACTION CHANNELS --- */
+    function executeActionUndo() {
+        if (pendingExecutionTimeout) {
+            clearTimeout(pendingExecutionTimeout);
+            pendingExecutionTimeout = null;
+        }
+
+        // Revert table elements to their original state
+        const row = document.getElementById(`row-${targetUserId}`);
+        if (row && originalRowHTML) {
+            row.innerHTML = originalRowHTML;
+        }
+
+        // Hide notification toast banner
+        document.getElementById('undoToast').classList.remove('visible');
+        
+        targetUserId = null;
+        targetAction = null;
+        originalRowHTML = null;
+    }
+
+    /* --- STEP 4: SAVE PERMANENT CHANGES TO DATABASE --- */
+    function commitStatusToDatabase() {
+        document.getElementById('undoToast').classList.remove('visible');
+        
+        const currentUserId = targetUserId;
+        const currentAction = targetAction;
+
+        pendingExecutionTimeout = null;
+
+        fetch('/admin/update-user-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUserId, action: currentAction })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const row = document.getElementById(`row-${currentUserId}`);
+                if (row) {
+                    const actionCell = row.querySelector('.action-cell');
+                    actionCell.innerHTML = `<small style="color:#9ca3af;">Handled by:<br>${data.admin_name}</small>`;
+                }
+            } else {
+                alert(`Error processing changes: ${data.message}`);
+                location.reload();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            location.reload();
+        });
+    }
+</script>
+{% endblock %}

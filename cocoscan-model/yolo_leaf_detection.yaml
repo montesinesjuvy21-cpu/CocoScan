@@ -1,0 +1,6 @@
+path: yolo_dataset
+train: images/train
+val: images/valid
+test: images/test
+nc: 1
+names: ['coconut_leaf']
