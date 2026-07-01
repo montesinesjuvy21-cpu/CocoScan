@@ -398,6 +398,8 @@ def dashboard():
         
     if user_role == 'farmer':
         return redirect(url_for('farmer_dashboard'))
+    elif user_role == 'agri_expert':
+        return redirect(url_for('agriculturist_dashboard'))
     elif user_role == 'admin':
         return redirect(url_for('admin_user_management'))
         
@@ -718,6 +720,74 @@ def farmer_drafts():
         logger.warning(f"Unable to load farmer profile for drafts page: {str(e)}")
 
     return render_template('farmer_drafts.html', user_name=user_name)
+
+# Agriculturist
+@app.route('/agriculturist/dashboard')
+def agriculturist_dashboard():
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role != 'agri_expert':
+        flash("Unauthorized access path.", "error")
+        return redirect(url_for('login'))
+        
+    try:
+        # Fetch the real profile name details
+        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
+        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
+        
+        # Fetch metrics (reusing farmer dashboard logic)
+        total_res = supabase.table('reports').select('*', count='exact', head=True).execute()
+        total_cases = total_res.count if hasattr(total_res, 'count') else 0
+
+        pending_res = supabase.table('reports').select('*', count='exact', head=True).eq('status', 'Pending').execute()
+        pending_cases = pending_res.count if hasattr(pending_res, 'count') else 0
+
+        resolved_res = supabase.table('reports').select('*', count='exact', head=True).eq('status', 'Recommendation Issued').execute()
+        resolved_cases = resolved_res.count if hasattr(resolved_res, 'count') else 0
+
+        metrics = {
+            "total_cases": total_cases, 
+            "pending_cases": pending_cases, 
+            "resolved_cases": resolved_cases,
+            "affected_areas": 3  # Sample: number of affected areas
+        }
+        
+        weather = {
+            "location": "San Pablo City, Laguna",
+            "temp": "--",
+            "humidity": "--",
+            "rainfall": "--",
+            "wind": "--",
+            "is_down": False
+        }
+        
+        latitude = 14.0708
+        longitude = 121.3256
+        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m"
+        
+        try:
+            response = requests.get(weather_url, timeout=4)
+            if response.status_code == 200:
+                data = response.json()
+                current_data = data.get("current", {})
+                weather["temp"] = round(current_data.get("temperature_2m"))
+                weather["humidity"] = current_data.get("relative_humidity_2m")
+                weather["rainfall"] = current_data.get("precipitation", 0.0)
+                weather["wind"] = round(current_data.get("wind_speed_10m"))
+            else:
+                weather["is_down"] = True
+        except Exception as weather_err:
+            weather["is_down"] = True
+            logger.error(f"Weather diagnostic error: {str(weather_err)}")
+
+        risk = calculate_environmental_risk(weather["temp"], weather["humidity"], weather["rainfall"])
+
+        return render_template('agriculturist_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk)
+        
+    except Exception as e:
+        logger.error(f"Agriculturist dashboard routing exception: {str(e)}")
+        return redirect(url_for('logout'))
 
 @app.route('/farmer/submit-report', methods=['POST'])
 def farmer_submit_report():

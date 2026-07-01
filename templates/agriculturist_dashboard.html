@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CocoScan - Agriculturist Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-base: #f4f7f5;
+            --bg-card: #ffffff;
+            --brand-dark: #0b251a;
+            --brand-accent: #4ac68f;
+            --primary-green: #528265;
+            --badge-green-bg: #8ba888;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-light: rgba(0, 0, 0, 0.05);
+            --sidebar-width: 260px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        html, body { height: 100%; }
+        body { background-color: var(--bg-base); color: var(--text-dark); }
+
+        /* Sidebar - adapted from farmer dashboard but visible on desktop */
+        .sidebar-wrapper {
+            width: var(--sidebar-width);
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            z-index: 999;
+            padding-top: 20px;
+            border-right: 1px solid rgba(0,0,0,0.06);
+        }
+        .menu-label { font-size: 0.75rem; color: rgba(255,255,255,0.6); padding: 18px 20px 10px 20px; font-weight:700; }
+        .sidebar-menu-list { list-style: none; padding: 0 8px; }
+        .menu-item-link { display:flex; gap:12px; align-items:center; padding:12px 14px; color: rgba(255,255,255,0.85); text-decoration:none; border-radius:10px; margin-bottom:6px; }
+        .menu-item-link.active, .menu-item-link:hover { background: rgba(255,255,255,0.04); color: #fff; }
+        .sidebar-user-footer { padding: 18px; display:flex; align-items:center; justify-content:space-between; border-top: 1px solid rgba(255,255,255,0.04); }
+        .user-meta-box { display:flex; gap:10px; align-items:center; }
+        .user-avatar-circle { width:42px; height:42px; border-radius:50%; background: rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; }
+        .user-identity-text h4 { font-size:0.9rem; color:#fff; }
+        .user-identity-text p { font-size:0.75rem; color: rgba(255,255,255,0.5); }
+
+        /* Top header for mobile and narrow screens */
+        .topbar {
+            height: 64px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; background: transparent;
+            position: fixed; top:0; left:0; right:0; z-index: 800; border-bottom: 1px solid rgba(0,0,0,0.03);
+            background-color: rgba(255,255,255,0.98);
+        }
+        .logo-group { display:flex; gap:10px; align-items:center; }
+        .logo-img-fallback { width:40px; height:40px; background:#e8f6ec; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--primary-green); }
+        .hamburger-btn { background:none; border:none; font-size:1.25rem; cursor:pointer; }
+
+        /* Main content area with left offset for desktop */
+        .main-content-layout {
+            margin-left: 0; /* mobile-first */
+            padding: 88px 16px 24px 16px;
+            transition: margin-left 0.2s ease;
+            max-width: 1200px;
+            margin-right: auto; margin-left: auto; /* centered on wide screens when sidebar hidden */
+        }
+
+        /* Inner layout cards */
+        .dashboard-header-container { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px; }
+        .dashboard-header-container h1 { font-size:1.6rem; font-weight:800; color:var(--brand-dark); }
+        .dashboard-header-container p { color:var(--text-muted); margin-top:4px; }
+
+        /* Metrics grid: 4 across on desktop, responsive on mobile */
+        .metrics-grid { display:grid; gap:12px; grid-template-columns: 1fr; }
+        .metric-card-node { background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; box-shadow:0 6px 18px rgba(16,24,24,0.04); }
+        .metric-data h5 { font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; }
+        .metric-count { font-size:1.8rem; font-weight:800; color:var(--brand-dark); margin:6px 0; }
+        .metric-icon-box { width:46px; height:46px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.15rem; }
+
+        .weather-analytics-card { background: linear-gradient(135deg, #528265 0%, #3b604a 100%); border-radius:14px; padding:18px; color:#fff; margin-top:10px; }
+        .chart-visual-card { background:var(--bg-card); border-radius:12px; padding:14px; border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(16,24,24,0.03); }
+        .chart-box-render-frame { width:100%; height:240px; }
+
+        /* Quick action card (scan) */
+        .quick-action-card { background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border-light); text-align:center; }
+
+        /* Responsive behavior */
+        @media (min-width: 900px) {
+            /* show permanent sidebar */
+            .sidebar-wrapper { transform:none; }
+            .topbar { display:none; }
+            .main-content-layout { margin-left: calc(var(--sidebar-width) + 40px); padding: 32px; max-width: calc(100% - var(--sidebar-width) - 80px); }
+            .metrics-grid { grid-template-columns: repeat(4, 1fr); }
+            .chart-box-render-frame { height: 240px; }
+        }
+
+        @media (max-width: 899px) {
+            .sidebar-wrapper { position: fixed; top: 64px; right: 0; transform: translateX(100%); width: 290px; box-shadow: -6px 0 40px rgba(0,0,0,0.25); }
+            .sidebar-wrapper.show-mobile { transform: translateX(0); }
+            .sidebar-backdrop { display:none; }
+            .main-content-layout { margin-left: 0; padding-top: 88px; }
+            .metrics-grid { grid-template-columns: 1fr; }
+            .chart-box-render-frame { height: 180px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar (permanent on desktop, slide-over on mobile) -->
+    <aside class="sidebar-wrapper" id="sidebar">
+        <div>
+            <div class="menu-label">MAIN MENU</div>
+            <ul class="sidebar-menu-list">
+                <li><a href="/agriculturist/dashboard" class="menu-item-link active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-check"></i> Pending Reports</a></li>
+                <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Reviewed</a></li>
+                <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-user-footer">
+            <div class="user-meta-box">
+                <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size:0.95rem;"></i></div>
+                <div class="user-identity-text">
+                    <h4>{{ user_name }}</h4>
+                    <p>Agriculturist</p>
+                </div>
+            </div>
+            <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Topbar for mobile -->
+    <div class="topbar">
+        <div class="logo-group">
+            <div class="logo-img-fallback"><i class="fa-solid fa-seedling"></i></div>
+            <div>
+                <div style="font-weight:700;">CocoScan</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">Coconut Pest Detection</div>
+            </div>
+        </div>
+        <button class="hamburger-btn" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
+    </div>
+
+    <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index: 900;"></div>
+
+    <main class="main-content-layout">
+        <header class="dashboard-header-container">
+            <div>
+                <h1>Dashboard</h1>
+                <p>Overview of reported and detected pests</p>
+            </div>
+            <div id="notification-container" style="position:relative;">
+                <div id="bell-trigger" class="bell-notice-wrapper" style="position:relative; width:38px; height:38px; background:#ffffff; border:1px solid rgba(0,0,0,0.06); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-regular fa-bell"></i>
+                    <span id="bell-badge" style="display:none; position:absolute; top:8px; right:9px; width:6px; height:6px; background-color:#e63946; border-radius:50%; border:1.5px solid #fff;"></span>
+                </div>
+                <div id="notif-dropdown" style="display:none; position:absolute; top:46px; right:0; width:320px; background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:12px; padding:12px; box-shadow:0 8px 28px rgba(0,0,0,0.08); z-index:1000;"></div>
+            </div>
+        </header>
+
+        <div id="greeting-banner" style="font-weight:700; color:#164630; margin-bottom:8px;"></div>
+
+        <section class="metrics-grid" style="margin-bottom:12px;">
+            <div class="metric-card-node cases">
+                <div>
+                    <h5>Total Reported Cases</h5>
+                    <div class="metric-count">{{ metrics.total_cases }}</div>
+                    <p style="color:var(--text-muted); font-size:0.85rem;">This Month</p>
+                </div>
+                <div class="metric-icon-box" style="background:#f0f4f2; color:var(--brand-dark);"><i class="fa-solid fa-bug"></i></div>
+            </div>
+
+            <div class="metric-card-node pending">
+                <div>
+                    <h5>Pending Reports</h5>
+                    <div class="metric-count">{{ metrics.pending_cases }}</div>
+                    <p style="color:var(--text-muted); font-size:0.85rem;">Requires Attention</p>
+                </div>
+                <div class="metric-icon-box" style="background:#fffbeb; color:#d97706;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            </div>
+
+            <div class="metric-card-node resolved">
+                <div>
+                    <h5>Resolved Cases</h5>
+                    <div class="metric-count">{{ metrics.resolved_cases }}</div>
+                    <p style="color:var(--text-muted); font-size:0.85rem;">This Month</p>
+                </div>
+                <div class="metric-icon-box" style="background:#ecfdf5; color:#059669;"><i class="fa-solid fa-circle-check"></i></div>
+            </div>
+
+            <div class="metric-card-node affected">
+                <div>
+                    <h5>Affected Areas</h5>
+                    <div class="metric-count">{{ metrics.affected_areas }}</div>
+                    <p style="color:var(--text-muted); font-size:0.85rem;">Farms</p>
+                </div>
+                <div class="metric-icon-box" style="background:#fff6ed; color:#92400e;"><i class="fa-solid fa-location-dot"></i></div>
+            </div>
+        </section>
+
+        <div style="display:grid; grid-template-columns: 1fr 380px; gap: 16px; align-items:start; margin-bottom:16px;">
+            <div>
+                <div class="weather-analytics-card">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <h4 style="margin:0; font-size:0.75rem; text-transform:uppercase; opacity:0.85;">Current Weather</h4>
+                            <h3 style="margin:6px 0 0 0;">{{ weather.location }}</h3>
+                        </div>
+                        {% if weather.is_down %}
+                        <span style="font-size:0.7rem; background-color: rgba(239,68,68,0.12); color:#ef4444; padding:6px 10px; border-radius:10px; font-weight:700;">Offline</span>
+                        {% endif %}
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-top:14px;">
+                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
+                            <div style="font-size:0.75rem; opacity:0.8;">Temperature</div>
+                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.temp }}<span style="font-size:0.85rem; font-weight:600;">°C</span></div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
+                            <div style="font-size:0.75rem; opacity:0.8;">Humidity</div>
+                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.humidity }}<span style="font-size:0.85rem; font-weight:600;">%</span></div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
+                            <div style="font-size:0.75rem; opacity:0.8;">Rainfall</div>
+                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.rainfall }}<span style="font-size:0.85rem; font-weight:600;">mm</span></div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
+                            <div style="font-size:0.75rem; opacity:0.8;">Wind</div>
+                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.wind }}<span style="font-size:0.85rem; font-weight:600;">km/h</span></div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:12px; background: rgba(255,255,255,0.06); padding:10px; border-radius:8px; font-size:0.85rem;">
+                        <strong>Environmental Risk:</strong> <span>{{ risk.level }}</span> — {{ risk.text }}
+                    </div>
+                </div>
+
+                <div style="height:16px;"></div>
+
+                <div class="chart-visual-card" style="margin-bottom:12px;">
+                    <div style="font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-chart-line" style="margin-right:8px; color:var(--primary-green);"></i> Pest Trends</div>
+                    <div class="chart-box-render-frame"><canvas id="trendChart"></canvas></div>
+                </div>
+
+                <div class="chart-visual-card">
+                    <div style="font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-chart-pie" style="margin-right:8px; color:var(--primary-green);"></i> Pest Distribution</div>
+                    <div class="chart-box-render-frame"><canvas id="distributionChart"></canvas></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="quick-action-card" style="margin-bottom:12px;">
+                    <h3 style="margin:0 0 8px 0;">Quick Actions</h3>
+                    <p style="color:var(--text-muted); margin-bottom:12px;">Launch scanning or review recent reports quickly.</p>
+                    <a href="{{ url_for('farmer_scan') }}" class="btn-primary-scan" style="text-decoration:none; display:inline-block; width:100%;"> <i class="fa-solid fa-camera"></i> Scan Now</a>
+                </div>
+
+                <div class="chart-visual-card" style="margin-bottom:12px;">
+                    <div style="font-weight:700; margin-bottom:10px;">Recent Activity</div>
+                    <div style="min-height:120px; display:flex; align-items:center; justify-content:center; color:var(--text-muted);">No recent activity</div>
+                </div>
+
+                <div class="chart-visual-card">
+                    <div style="font-weight:700; margin-bottom:10px;">Alerts</div>
+                    <div id="notif-list-wrapper" style="min-height:120px; display:flex; flex-direction:column; gap:8px;"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+<script>
+    // Reuse much of the farmer dashboard JS (greetings, notifications, charts)
+    document.addEventListener('DOMContentLoaded', () => {
+        setupMenuToggle();
+        setupGreeting();
+        initNotificationUiEngine();
+        initCharts();
+    });
+
+    function setupMenuToggle() {
+        const toggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('backdrop');
+        if (!toggle) return;
+        toggle.addEventListener('click', () => {
+            if (sidebar.classList.contains('show-mobile')) {
+                sidebar.classList.remove('show-mobile');
+                backdrop.style.display = 'none';
+            } else {
+                sidebar.classList.add('show-mobile');
+                backdrop.style.display = 'block';
+            }
+        });
+    }
+
+    function toggleSidebarMenu() { // called by backdrop
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('backdrop');
+        sidebar.classList.remove('show-mobile');
+        backdrop.style.display = 'none';
+    }
+
+    function setupGreeting() {
+        const banner = document.getElementById('greeting-banner');
+        const fullName = "{{ user_name }}".trim();
+        const firstName = fullName.split(' ')[0] || 'Agriculturist';
+        const hour = new Date().getHours();
+        let welcome = 'Dashboard';
+        if (hour < 12) welcome = `Good Morning, ${firstName}!`;
+        else if (hour < 18) welcome = `Good Afternoon, ${firstName}!`;
+        else welcome = `Good Evening, ${firstName}!`;
+        if (banner) banner.textContent = welcome;
+    }
+
+    let notifications = [{ text: 'High vector populations identified near Brgy. San Ignacio.', time: '10 mins ago', type: 'unread', tag: 'alert' }];
+
+    function initNotificationUiEngine() {
+        const bellTrigger = document.getElementById('bell-trigger');
+        const dropdown = document.getElementById('notif-dropdown');
+        const badge = document.getElementById('bell-badge');
+        const listWrapper = document.getElementById('notif-list-wrapper');
+
+        if (!bellTrigger) return;
+        bellTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+        document.addEventListener('click', (e) => {
+            if (dropdown && !dropdown.contains(e.target) && e.target !== bellTrigger) dropdown.style.display = 'none';
+        });
+
+        function renderNotifications() {
+            if (!listWrapper) return;
+            listWrapper.innerHTML = '';
+            notifications.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'notif-item ' + (item.type === 'unread' ? 'is-unread' : '');
+                div.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b; margin-top:4px;"></i><div><p style="margin:0;">${item.text}</p><span style="font-size:0.72rem;color:var(--text-muted);">${item.time}</span></div>`;
+                listWrapper.appendChild(div);
+            });
+            if (badge) badge.style.display = notifications.filter(n => n.type === 'unread').length > 0 ? 'block' : 'none';
+        }
+
+        renderNotifications();
+    }
+
+     function initCharts() {
+        const trendEl = document.getElementById('trendChart');
+        if (trendEl) {
+            const ctxTrend = trendEl.getContext('2d');
+            new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [
+                        {
+                            label: 'Rhinoceros Beetle',
+                            data: [8, 12, 11, 18, 14, 22],
+                            borderColor: '#0b251a',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.2,
+                            pointRadius: 3
+                        },
+                        {
+                            label: 'Brontispa',
+                            data: [4, 7, 4, 7, 8, 8],
+                            borderColor: '#4ac68f',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.2,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10, weight: '600' } } } 
+                    },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        const distEl = document.getElementById('distributionChart');
+        if (distEl) {
+            const ctxDist = distEl.getContext('2d');
+            new Chart(ctxDist, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Rhinoceros Beetle', 'Brontispa'],
+                    datasets: [{
+                        data: [65, 35],
+                        backgroundColor: ['#0b251a', '#528265'],
+                        borderWidth: 3,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11, weight: '500' } } }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+    }
+
+</script>
+</body>
+</html>
