@@ -29,35 +29,95 @@
             min-height: 100vh;
             overflow-x: hidden;
         }
+             /* --- DESKTOP RESTRICTION STYLING --- */
         .desktop-restriction-overlay {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             position: fixed;
-            inset: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: radial-gradient(circle at center, #0e3021 0%, #04120c 100%);
             color: #ffffff;
             z-index: 10000;
             padding: 24px;
             text-align: center;
+            overflow: hidden;
         }
+
         .desktop-card-prompt {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(16px);
-            padding: 44px 30px;
+            -webkit-backdrop-filter: blur(16px);
+            padding: 50px 35px;
             border-radius: 28px;
-            width: 100%;
             max-width: 420px;
+            width: 100%;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
         }
+
+        .glow-effect {
+            position: absolute;
+            top: -20%; left: -20%; right: -20%; bottom: -20%;
+            background: radial-gradient(circle at center, rgba(74, 198, 143, 0.08) 0%, transparent 60%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .desktop-card-prompt .icon-pulse-container {
+            width: 84px;
+            height: 84px;
+            background: linear-gradient(135deg, rgba(74, 198, 143, 0.2) 0%, rgba(82, 130, 101, 0.2) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 28px auto;
+            border: 1px solid rgba(74, 198, 143, 0.3);
+            position: relative;
+        }
+
+        .desktop-card-prompt i {
+            font-size: 2.4rem;
+            color: #4ac68f;
+            text-shadow: 0 0 15px rgba(74, 198, 143, 0.4);
+            z-index: 2;
+        }
+
+        .ripple-ring {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            border: 1px solid rgba(74, 198, 143, 0.4);
+            animation: rippleEffect 2.5s infinite cubic-bezier(0.25, 0, 0, 1);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .ring-2 { animation-delay: 0.8s; }
+
+        @keyframes rippleEffect {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
         .desktop-card-prompt h2 {
-            font-size: 1.5rem;
-            margin-bottom: 12px;
+            font-size: 1.6rem;
             font-weight: 800;
+            margin-bottom: 14px;
+            letter-spacing: -0.5px;
+            background: linear-gradient(120deg, #ffffff 40%, #c3eede 100%);
+            -webkit-background-clip: text;
+            background-clip: text; 
+            -webkit-text-fill-color: transparent;
         }
+
         .desktop-card-prompt p {
-            color: #c7d2cd;
+            font-size: 0.95rem;
+            color: #a4c2b3;
             line-height: 1.6;
         }
         .mobile-viewport-container {
@@ -149,10 +209,16 @@
     </style>
 </head>
 <body>
-    <div class="desktop-restriction-overlay">
+     <div class="desktop-restriction-overlay">
         <div class="desktop-card-prompt">
+            <div class="glow-effect"></div>
+            <div class="icon-pulse-container">
+                <div class="ripple-ring ring-1"></div>
+                <div class="ripple-ring ring-2"></div>
+                <i class="fa-solid fa-mobile-screen-button"></i>
+            </div>
             <h2>Mobile Access Required</h2>
-            <p>The <strong>CocoScan Farmer Platform</strong> is purpose-built for mobile field scanning and draft management.</p>
+            <p>The <strong>CocoScan Farmer Platform</strong> is purpose-built exclusively for mobile smartphone screens to facilitate field scan operations.</p>
         </div>
     </div>
 
