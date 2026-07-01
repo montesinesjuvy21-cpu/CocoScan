@@ -55,3 +55,23 @@ cocoscan-model/runs/
 # Logs
 *.log
 *.out
+
+# ======================================
+# CocoScan Training Assets (Not for deployment)
+# ======================================
+
+# Training datasets
+cocoscan-model/dataset/
+cocoscan-model/severity_dataset/
+cocoscan-model/yolo_dataset/
+
+# Training outputs
+cocoscan-model/runs/
+
+# Training weights (ignore ONLY if not used by app.py)
+cocoscan-model/yolov8n.pt
+cocoscan-model/yolov8s.pt
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
