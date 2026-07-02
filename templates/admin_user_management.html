@@ -582,7 +582,7 @@
             
             <nav>
                 <ul class="sidebar-menu-list">
-                    <li><a href="{{ url_for('admin_dashboard') }}" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                    <li><a href="{{ url_for('admin_user_management') }}" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
                     <li><a href="#" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
                     <li><a href="#" class="menu-item-link"><i class="fa-solid fa-file-invoice-dollar"></i> Reports</a></li>
                     <li><a href="#" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
@@ -855,7 +855,7 @@
         originalRowHTML = row.innerHTML; // Back up row layout state in case user cancels
 
         // Optimistically change row elements locally
-        const statusCell = row.querySelector('.status-cell');
+       const statusCell = row.querySelector('.account-status-cell');
         const actionCell = row.querySelector('.action-cell');
         
         if (targetAction === 'approve') {

@@ -231,6 +231,13 @@
             position: relative;
         }
 
+        .responsive-dashboard-shell {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
         /* --- FIXED FIXED HEADER (PREVENTS SPILLING) --- */
         .mobile-header {
             width: 100%;
@@ -576,6 +583,24 @@
             height: 190px;
         }
 
+        .chart-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            color: var(--text-muted);
+            gap: 8px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .chart-empty-state i {
+            font-size: 1.1rem;
+            color: var(--primary-green);
+        }
+
         /* Action Launch Control Card */
         .quick-action-card {
             background-color: var(--bg-card);
@@ -635,9 +660,17 @@
             .desktop-restriction-overlay { display: none; }
             .mobile-viewport-container { display: flex; }
         }
+
+        @media (max-width: 600px) {
+            .main-content-layout { padding: 88px 12px 20px 12px; }
+            .dashboard-header-container { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .metrics-sub-split { grid-template-columns: 1fr; }
+            #notif-dropdown { width: min(320px, calc(100vw - 24px)); right: -8px; }
+        }
     </style>
 </head>
 <body>
+    {% from "components/dashboard_components.html" import sidebar, notification_panel, weather_card, chart_card, responsive_page_shell %}
 
     <div class="desktop-restriction-overlay">
         <div class="desktop-card-prompt">
@@ -654,6 +687,7 @@
         </div>
     </div>
 
+    {% call responsive_page_shell() %}
     <div class="mobile-viewport-container">
         
         <header class="mobile-header">
@@ -666,38 +700,14 @@
                     <p>Coconut Pest Detection</p>
                 </div>
             </div>
-            <button class="hamburger-btn" onclick="toggleSidebarMenu()">
+            <button class="hamburger-btn" id="menuToggle" type="button" aria-label="Toggle menu">
                 <i class="fa-solid fa-bars" id="toggleIcon"></i>
             </button>
         </header>
 
         <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
 
-        <aside class="sidebar-wrapper" id="sidebar">
-           <div>
-            <div class="menu-label">Main Menu</div>
-            <ul class="sidebar-menu-list">
-                <li><a href="/farmer/dashboard" class="menu-item-link active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-                
-                <li><a href="/farmer/scan" class="menu-item-link"><i class="fa-solid fa-camera"></i> Scan Pest</a></li>
-                
-                <li><a href="/farmer/drafts" class="menu-item-link"><i class="fa-solid fa-file-pen"></i> Drafts</a></li>
-                
-                <li><a href="/farmer/reports" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> My Reports</a></li>
-            </ul>
-        </div>
-
-            <div class="sidebar-user-footer">
-                <div class="user-meta-box">
-                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
-                    <div class="user-identity-text">
-                        <h4>{{ user_name }}</h4>
-                        <p>Farmer</p>
-                    </div>
-                </div>
-                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
-            </div>
-        </aside>
+        {{ sidebar('/farmer/dashboard', user_name, 'Farmer', sidebar_items) }}
 
         <main class="main-content-layout">
                         <header class="dashboard-header-container" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-bottom: 12px; position: relative;">
@@ -706,28 +716,7 @@
                     <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview of reported and detected pests</p>
                 </div>
 
-                <div id="notification-container" style="position: relative;">
-                    <div id="bell-trigger" class="bell-notice-wrapper" style="position: relative; margin-top: 6px; width: 38px; height: 38px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; color: #0b251a; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                        <i class="fa-regular fa-bell"></i>
-                        <span id="bell-badge" style="display: none; position: absolute; top: 8px; right: 9px; width: 6px; height: 6px; background-color: #e63946; border-radius: 50%; border: 1.5px solid #ffffff;"></span>
-                    </div>
-
-                    <div id="notif-dropdown" style="display: none; position: absolute; top: 46px; right: 0; width: 320px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 1000; padding: 14px; box-sizing: border-box;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0b251a;">Notifications</h4>
-                            <button id="clear-all-btn" style="background: none; border: none; color: #ef4444; font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0;">Clear All</button>
-                        </div>
-
-                        <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.04); padding-bottom: 8px;">
-                            <button class="notif-filter active" data-filter="all" style="font-size: 0.7rem; border: none; background: #164630; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">All</button>
-                            <button class="notif-filter" data-filter="unread" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Unread</button>
-                            <button class="notif-filter" data-filter="alert" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Risks</button>
-                        </div>
-
-                        <div id="notif-list-wrapper" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-                            </div>
-                    </div>
-                </div>
+                {{ notification_panel() }}
             </header>
             
             <div>
@@ -772,290 +761,23 @@
                 </a>
             </div>
 
-          <div class="weather-analytics-card">
-            <div class="weather-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
-                <div>
-                    <h4>Current Weather</h4>
-                    <h3>{{ weather.location }}</h3>
-                </div>
-                {% if weather.is_down %}
-                <span style="font-size: 0.65rem; background-color: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px;">
-                    <i class="fa-solid fa-circle-exclamation" style="margin-right: 2px;"></i> Offline
-                </span>
-                {% endif %}
-            </div>
-            
-            <div class="weather-stats-grid">
-                <div class="weather-stat-node">
-                    <h6>Temperature</h6>
-                    <p>{{ weather.temp }}{% if weather.temp != '--' %}<span>°C</span>{% endif %}</p>
-                </div>
-                <div class="weather-stat-node">
-                    <h6>Humidity</h6>
-                    <p>{{ weather.humidity }}{% if weather.humidity != '--' %}<span>%</span>{% endif %}</p>
-                </div>
-                <div class="weather-stat-node">
-                    <h6>Rainfall</h6>
-                    <p>{{ weather.rainfall }}{% if weather.rainfall != '--' %}<span>mm</span>{% endif %}</p>
-                </div>
-                <div class="weather-stat-node">
-                    <h6>Wind</h6>
-                    <p>{{ weather.wind }}{% if weather.wind != '--' %}<span>km/h</span>{% endif %}</p>
-                </div>
-            </div>
+          {{ weather_card(weather, risk) }}
 
-            {% if weather.is_down %}
-            <div class="weather-alert-banner" style="background-color: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.1); color: #ef4444;">
-                <i class="fa-solid fa-triangle-exclamation" style="margin-top:1px; flex-shrink: 0; color: #ef4444;"></i>
-                <span>Unable to fetch real-time atmospheric updates. Please check your connection.</span>
-            </div>
-            {% else %}
-           
-            <div class="weather-alert-banner dynamic-risk-card" 
-            style="--risk-bg: {{ risk.bg }}; --risk-border: {{ risk.border or 'rgba(0,0,0,0.04)' }}; --risk-color: {{ risk.color }};">
-            
-            {% if risk.level == 'High Risk' %}
-                <i class="fa-solid fa-triangle-exclamation risk-icon"></i>
-            {% elif risk.level == 'Moderate Risk' %}
-                <i class="fa-solid fa-circle-exclamation risk-icon"></i>
-            {% elif risk.level == 'Low Risk' %}
-                <i class="fa-solid fa-circle-check" style="color: #10b981;" class="risk-icon"></i>
-            {% else %}
-                <i class="fa-solid fa-circle-info risk-icon"></i>
-            {% endif %}
+            {{ chart_card('trendChart', 'Pest Trend Analytics', 'fa-chart-line', trend_chart_data) }}
 
-            <span class="risk-text">
-                {{ risk.text | safe }}
-            </span>
-        </div>
-
-            {% endif %}
-        </div>
-
-            <div class="chart-visual-card">
-                <div class="chart-header-inline"><i class="fa-solid fa-chart-line"></i> Pest Trend Analytics</div>
-                <div class="chart-box-render-frame">
-                    <canvas id="trendChart"></canvas>
-                </div>
-            </div>
-
-            <div class="chart-visual-card">
-                <div class="chart-header-inline"><i class="fa-solid fa-chart-pie"></i> System Scope Distribution</div>
-                <div class="chart-box-render-frame">
-                    <canvas id="distributionChart"></canvas>
-                </div>
-            </div>
+            {{ chart_card('distributionChart', 'System Scope Distribution', 'fa-chart-pie', distribution_chart_data) }}
 
         </main>
     </div>
+    {% endcall %}
 
-  <script>
-    // Initialize global state arrays
-    let notifications = [];
+  <div id="dashboard-config"
+       data-user-name="{{ user_name }}"
+       data-notifications='{{ notifications | tojson if notifications is defined else '[]' }}'
+       data-trend='{{ trend_chart_data | tojson if trend_chart_data is not none else 'null' }}'
+       data-distribution='{{ distribution_chart_data | tojson if distribution_chart_data is not none else 'null' }}'></div>
 
-    document.addEventListener("DOMContentLoaded", async () => {
-        // 1. Setup greeting banner values
-        const hour = new Date().getHours();
-        const banner = document.getElementById("greeting-banner");
-        const fullName = "{{ user_name }}".trim();
-        const firstName = fullName.split(" ")[0] || "Farmer";
-        
-        let welcome = "Dashboard";
-        if (hour < 12) welcome = `Good Morning, ${firstName}!`;
-        else if (hour < 18) welcome = `Good Afternoon, ${firstName}!`;
-        else welcome = `Good Evening, ${firstName}!`;
-        if (banner) banner.textContent = welcome;
-
-        // 2. Hydrate dashboard values from the server-rendered metrics
-        await loadDynamicDashboardMetrics();
-
-        // 3. Initialize visual presentation graphs
-        initCharts();
-        
-        // 4. Setup operational navigation event bindings
-        initNotificationUiEngine();
-    });
-
-    async function loadDynamicDashboardMetrics() {
-        try {
-            notifications = [{
-                text: "Dashboard metrics are currently being served from your latest report snapshot.",
-                time: "Now",
-                type: "unread",
-                tag: "info"
-            }];
-        } catch (err) {
-            console.error("Dashboard initialization failed:", err.message);
-        }
-    }
-
-    function initNotificationUiEngine() {
-        const bellTrigger = document.getElementById("bell-trigger");
-        const dropdown = document.getElementById("notif-dropdown");
-        const badge = document.getElementById("bell-badge");
-        const listWrapper = document.getElementById("notif-list-wrapper");
-        const clearBtn = document.getElementById("clear-all-btn");
-        
-        let currentFilter = "all";
-
-        bellTrigger.addEventListener("click", (e) => {
-            e.stopPropagation();
-            dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
-        });
-
-        document.addEventListener("click", (e) => {
-            if (!dropdown.contains(e.target) && e.target !== bellTrigger) {
-                dropdown.style.display = "none";
-            }
-        });
-
-        function renderNotifications() {
-            if (!listWrapper) return;
-            listWrapper.innerHTML = "";
-            
-            const unreadCount = notifications.filter(n => n.type === "unread").length;
-            if(badge) badge.style.display = unreadCount > 0 ? "block" : "none";
-
-            let filtered = notifications;
-            if (currentFilter === "unread") filtered = notifications.filter(n => n.type === "unread");
-            if (currentFilter === "alert") filtered = notifications.filter(n => n.tag === "alert");
-
-            if (filtered.length === 0) {
-                listWrapper.innerHTML = `
-                    <div style="text-align: center; padding: 30px 10px;">
-                        <i class="fa-regular fa-bell-slashed" style="font-size: 1.3rem; color: #cbd5e1; margin-bottom: 6px;"></i>
-                        <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">No notifications found.</p>
-                    </div>`;
-                return;
-            }
-
-            filtered.forEach(item => {
-                const div = document.createElement("div");
-                div.className = `notif-item ${item.type === 'unread' ? 'is-unread' : ''}`;
-                
-                const icon = item.tag === 'alert' ? 'fa-triangle-exclamation' : 'fa-camera';
-                const iconColor = item.tag === 'alert' ? '#f59e0b' : '#164630';
-
-                div.innerHTML = `
-                    <i class="fa-solid ${icon}" style="color:${iconColor}; margin-top:2px; font-size:0.85rem;"></i>
-                    <div>
-                        <p>${item.text}</p>
-                        <span class="time">${item.time}</span>
-                    </div>`;
-                
-                div.addEventListener("click", () => {
-                    item.type = "read";
-                    renderNotifications();
-                });
-
-                listWrapper.appendChild(div);
-            });
-        }
-
-        document.querySelectorAll(".notif-filter").forEach(btn => {
-            btn.addEventListener("click", (e) => {
-                document.querySelectorAll(".notif-filter").forEach(b => b.classList.remove("active"));
-                e.target.classList.add("active");
-                currentFilter = e.target.getAttribute("data-filter");
-                renderNotifications();
-            });
-        });
-
-        clearBtn.addEventListener("click", () => {
-            if (notifications.length === 0) return;
-            if (confirm("Are you sure you want to delete all notifications? This action cannot be undone.")) {
-                notifications = [];
-                renderNotifications();
-            }
-        });
-
-        renderNotifications();
-    }
-
-    function toggleSidebarMenu() {
-        const sidebar = document.getElementById('sidebar');
-        const backdrop = document.getElementById('backdrop');
-        const icon = document.getElementById('toggleIcon');
-        
-        sidebar.classList.toggle('show-mobile');
-        backdrop.classList.toggle('active');
-        
-        if(sidebar.classList.contains('show-mobile')) {
-            icon.className = "fa-solid fa-xmark";
-        } else {
-            icon.className = "fa-solid fa-bars";
-        }
-    }
-
-    function initCharts() {
-        const trendEl = document.getElementById('trendChart');
-        if (trendEl) {
-            const ctxTrend = trendEl.getContext('2d');
-            new Chart(ctxTrend, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    datasets: [
-                        {
-                            label: 'Rhinoceros Beetle',
-                            data: [8, 12, 11, 18, 14, 22],
-                            borderColor: '#0b251a',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            tension: 0.2,
-                            pointRadius: 3
-                        },
-                        {
-                            label: 'Brontispa',
-                            data: [4, 7, 4, 7, 8, 8],
-                            borderColor: '#4ac68f',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            tension: 0.2,
-                            pointRadius: 3
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10, weight: '600' } } } 
-                    },
-                    scales: { 
-                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        }
-
-        const distEl = document.getElementById('distributionChart');
-        if (distEl) {
-            const ctxDist = distEl.getContext('2d');
-            new Chart(ctxDist, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Rhinoceros Beetle', 'Brontispa'],
-                    datasets: [{
-                        data: [65, 35],
-                        backgroundColor: ['#0b251a', '#528265'],
-                        borderWidth: 3,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11, weight: '500' } } }
-                    },
-                    cutout: '65%'
-                }
-            });
-        }
-    }
-</script>
+  <script src="{{ url_for('static', filename='js/dashboard_shared.js') }}"></script>
 
 </body>
 </html>
