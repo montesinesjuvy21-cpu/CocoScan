@@ -8,187 +8,501 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <style>
-        :root {
-            --bg-base: #f4f7f5;
-            --bg-card: #ffffff;
-            --brand-dark: #0b251a;
-            --brand-accent: #4ac68f;
-            --primary-green: #528265;
-            --text-dark: #1e293b;
-            --text-muted: #64748b;
-            --border-light: rgba(0, 0, 0, 0.05);
-        }
+  <style>
+    /* ==========================================================================
+       1. VARIABLES & BASE STYLES
+       ========================================================================== */
+    :root {
+        --bg-base: #f4f7f5;
+        --bg-card: #ffffff;
+        --brand-dark: #0b251a;
+        --brand-accent: #4ac68f;
+        --primary-green: #528265;
+        --text-dark: #1e293b;
+        --text-muted: #64748b;
+        --border-light: rgba(0, 0, 0, 0.05);
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Inter', sans-serif;
+    }
 
-        body {
-            background-color: #0b251a; /* Base dark background to avoid white flashes on load */
-            color: var(--text-dark);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
+    body {
+        background-color: var(--brand-dark); /* Prevents white flashes on load */
+        color: var(--text-dark);
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
 
-        /* ---  DESKTOP RESTRICTION STYLING --- */
-        .desktop-restriction-overlay {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(circle at center, #0e3021 0%, #04120c 100%);
-            color: #ffffff;
-            z-index: 10000;
-            padding: 24px;
-            text-align: center;
-            overflow: hidden;
-        }
+    /* ==========================================================================
+       2. FIXED HEADER & NAVIGATION
+       ========================================================================== */
+    .mobile-header {
+        width: 100%;
+        height: 64px;
+        background-color: var(--brand-dark);
+        color: #ffffff;
+        position: fixed;
+        top: 0; 
+        left: 0;
+        z-index: 1000;
+        padding: 0 max(16px, calc((100% - 1400px) / 2 + 24px)); 
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
 
-        .desktop-card-prompt {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            padding: 50px 35px;
-            border-radius: 28px;
-            max-width: 420px;
-            width: 100%;
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            position: relative;
-        }
+    .mobile-header .logo-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
 
-        /* Subtle background glow behind the card */
-        .glow-effect {
-            position: absolute;
-            top: -20%; left: -20%; right: -20%; bottom: -20%;
-            background: radial-gradient(circle at center, rgba(74, 198, 143, 0.08) 0%, transparent 60%);
-            z-index: -1;
-            pointer-events: none;
-        }
+    .mobile-header .logo-img-fallback {
+        width: 32px;
+        height: 32px;
+        background: var(--bg-card);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-        /* Double Ripple Pulse Animation */
-        .desktop-card-prompt .icon-pulse-container {
-            width: 84px;
-            height: 84px;
-            background: linear-gradient(135deg, rgba(74, 198, 143, 0.2) 0%, rgba(82, 130, 101, 0.2) 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 28px auto;
-            border: 1px solid rgba(74, 198, 143, 0.3);
-            position: relative;
-        }
+    .mobile-header h2 {
+        font-size: 1.15rem;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+    }
 
-        .desktop-card-prompt i {
-            font-size: 2.4rem;
-            color: #4ac68f;
-            text-shadow: 0 0 15px rgba(74, 198, 143, 0.4);
-            z-index: 2;
-        }
+    .mobile-header p {
+        font-size: 0.65rem;
+        color: rgba(255, 255, 255, 0.5);
+        font-weight: 500;
+    }
 
-        .ripple-ring {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: 50%;
-            border: 1px solid rgba(74, 198, 143, 0.4);
-            animation: rippleEffect 2.5s infinite cubic-bezier(0.25, 0, 0, 1);
-            pointer-events: none;
-            z-index: 1;
-        }
+    .hamburger-btn {
+        background: none;
+        border: none;
+        color: #ffffff;
+        font-size: 1.35rem;
+        cursor: pointer;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
 
-        .ring-2 {
-            animation-delay: 0.8s;
-        }
+    /* ==========================================================================
+       3. SIDEBAR DRAWER MENU
+       ========================================================================== */
+    .sidebar-wrapper {
+        width: 290px;
+        background-color: var(--brand-dark);
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: fixed;
+        top: 64px; 
+        bottom: 0; 
+        right: 0;
+        z-index: 999;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: -5px 0 25px rgba(0,0,0,0.25);
+    }
 
-        @keyframes rippleEffect {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.4); opacity: 0; }
-        }
+    .sidebar-wrapper.show-mobile {
+        transform: translateX(0);
+    }
 
-        .desktop-card-prompt h2 {
-            font-size: 1.6rem;
-            font-weight: 800;
-            margin-bottom: 14px;
-            letter-spacing: -0.5px;
-            background: linear-gradient(120deg, #ffffff 40%, #c3eede 100%);
-           -webkit-background-clip: text;
-            background-clip: text; 
-            -webkit-text-fill-color: transparent;
-        }
+    .menu-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: rgba(255, 255, 255, 0.4);
+        padding: 24px 20px 12px 20px;
+        font-weight: 700;
+    }
 
-        .desktop-card-prompt p {
-            font-size: 0.95rem;
-            color: #a4c2b3;
-            line-height: 1.6;
-            margin-bottom: 0; /* Removed bottom margin since instruction box is gone */
-        }
+    .sidebar-menu-list {
+        list-style: none;
+        padding: 0 10px;
+    }
 
-        .desktop-card-prompt p strong {
-            color: #ffffff;
-            font-weight: 600;
-        }
+    .menu-item-link {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 16px;
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        font-size: 0.95rem;
+        font-weight: 500;
+        border-radius: 10px;
+        transition: all 0.2s ease;
+        margin-bottom: 6px;
+    }
 
-         /* --- LINKING IN SCAN PEST --- */
-        .btn-primary-scan {
-            width: 100%;
-            background-color: var(--brand-dark);
-            color: #ffffff;
-            border: none;
-            padding: 14px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            border-radius: 12px;
-            cursor: pointer;
+    .menu-item-link:hover, 
+    .menu-item-link.active {
+        color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.06);
+    }
 
-            display: inline-flex;     
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            text-decoration: none; 
-        }
+    .sidebar-user-footer {
+        padding: 20px;
+        background-color: rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
 
-        /* High-Contrast Dynamic Risk Card Rules */
-        .dynamic-risk-card {
-            background-color: var(--risk-bg, #ffffff) !important;
-            border: 1px solid var(--risk-border, rgba(0, 0, 0, 0.08)) !important;
-            color: var(--risk-color, #0b251a) !important;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 12px 14px;
-            border-radius: 12px;
-            margin-top: 14px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        }
+    .user-meta-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
 
-        .dynamic-risk-card .risk-icon {
-            margin-top: 2px;
-            flex-shrink: 0;
-            font-size: 1.1rem;
-            color: var(--risk-color) !important;
-        }
+    .user-avatar-circle {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
 
-        .dynamic-risk-card .risk-text {
-            font-size: 0.82rem;
-            line-height: 1.4;
-            color: #1e293b; /* Clean charcoal text readability on light alert backgrounds */
-        }
+    .user-identity-text h4 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #ffffff;
+    }
 
-        .dynamic-risk-card .risk-text strong {
-            color: var(--risk-color) !important;
-            font-weight: 700;
-        }
+    .user-identity-text p {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.4);
+    }
 
-        /* Notification Items */
-        .notif-item {
+    .btn-logout-trigger {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 1.2rem;
+        transition: color 0.2s ease;
+        padding: 4px;
+    }
+
+    .btn-logout-trigger:hover {
+        color: #ef4444 !important;
+    }
+
+    .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(11, 37, 26, 0.4);
+        backdrop-filter: blur(4px);
+        z-index: 950;
+    }
+    
+    .sidebar-backdrop.active { 
+        display: block; 
+    }
+
+    /* ==========================================================================
+       4. CORE MAIN LAYOUT & TITLES
+       ========================================================================== */
+    .mobile-viewport-container {
+        width: 100%;
+        min-height: 100vh;
+        background-color: var(--bg-base);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .main-content-layout {
+        flex: 1;
+        width: 100%;
+        max-width: 1400px; 
+        margin: 0 auto;    
+        padding: 88px 24px 24px 24px; 
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .dashboard-header-container {
+        margin-bottom: 4px;
+    }
+
+    .dashboard-header-container h1 {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: var(--brand-dark);
+        letter-spacing: -0.5px;
+    }
+
+    .dashboard-header-container p {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       5. METRIC CARDS GRID
+       ========================================================================== */
+    .metrics-row-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .metrics-sub-split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .metric-card-node {
+        background-color: var(--bg-card);
+        border-radius: 16px;
+        padding: 16px;
+        border: 1px solid var(--border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        width: 100%;
+    }
+
+    .metric-data h5 {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+    }
+
+    .metric-data .metric-count {
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: var(--brand-dark);
+        margin: 2px 0;
+        line-height: 1.1;
+    }
+
+    .metric-data p {
+        font-size: 0.68rem;
+        color: var(--text-muted);
+    }
+
+    .metric-icon-box {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+    }
+
+    .metric-card-node.cases .metric-icon-box { color: var(--brand-dark); background-color: #f0f4f2; }
+    .metric-card-node.pending .metric-icon-box { color: #d97706; background-color: #fffbeb; }
+    .metric-card-node.resolved .metric-icon-box { color: #059669; background-color: #ecfdf5; }
+
+    /* ==========================================================================
+       6. WEATHER WIDGET SECTION
+       ========================================================================== */
+    .weather-analytics-card {
+        background: linear-gradient(135deg, #528265 0%, #3b604a 100%);
+        border-radius: 18px;
+        padding: 20px;
+        color: #ffffff;
+        box-shadow: 0 8px 20px rgba(59, 96, 74, 0.15);
+        width: 100%;
+    }
+
+    .weather-card-header h4 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        opacity: 0.75;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .weather-card-header h3 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-top: 1px;
+    }
+
+  .weather-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin: 16px 0;
+    }
+
+    .weather-stat-node {
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 12px;
+        border-radius: 12px;
+        /* Inigitna ang data at metrics dito base sa hiling mo */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .weather-stat-node h6 {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        font-weight: 400;
+    }
+
+    .weather-stat-node p {
+        font-size: 1.45rem;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .weather-stat-node p span {
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-left: 1px;
+    }
+
+    .weather-alert-banner {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 0.75rem;
+        line-height: 1.4;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    /* ==========================================================================
+       7. GRAPH & CHARTS
+       ========================================================================== */
+    .chart-visual-card {
+        background-color: var(--bg-card);
+        border-radius: 16px;
+        padding: 16px;
+        border: 1px solid var(--border-light);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+        width: 100%;
+    }
+
+    .chart-header-inline {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--brand-dark);
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .chart-header-inline i {
+        color: var(--primary-green);
+    }
+
+    .chart-box-render-frame {
+        position: relative;
+        width: 100%;
+        height: 190px;
+    }
+
+    /* ==========================================================================
+       8. QUICK ACTION SCAN BUTTON
+       ========================================================================== */
+    .quick-action-card {
+        background-color: var(--bg-card);
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid var(--border-light);
+        text-align: center;
+        width: 100%;
+    }
+
+    .quick-action-card h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--brand-dark);
+    }
+
+    .quick-action-card p {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin: 6px 0 16px 0;
+        line-height: 1.4;
+    }
+
+    .btn-primary-scan {
+        width: 100%;
+        background-color: var(--brand-dark);
+        color: #ffffff;
+        border: none;
+        padding: 14px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        border-radius: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    /* ==========================================================================
+       9. NOTIFICATIONS & RISKS
+       ========================================================================== */
+    .dynamic-risk-card {
+        background-color: var(--risk-bg, #ffffff) !important;
+        border: 1px solid var(--risk-border, rgba(0, 0, 0, 0.08)) !important;
+        color: var(--risk-color, #0b251a) !important;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        margin-top: 14px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .dynamic-risk-card .risk-icon {
+        margin-top: 2px;
+        flex-shrink: 0;
+        font-size: 1.1rem;
+        color: var(--risk-color) !important;
+    }
+
+    .dynamic-risk-card .risk-text {
+        font-size: 0.82rem;
+        line-height: 1.4;
+        color: #1e293b;
+    }
+
+    .dynamic-risk-card .risk-text strong {
+        color: var(--risk-color) !important;
+        font-weight: 700;
+    }
+
+    .notif-item {
         display: flex;
         gap: 10px;
         padding: 10px;
@@ -196,463 +510,158 @@
         background: #f8fafc;
         border: 1px solid rgba(0,0,0,0.02);
         transition: background 0.15s ease;
-        }
-        .notif-item.is-unread {
-            background: rgba(22, 70, 48, 0.04);
-            border-left: 3px solid #164630;
-        }
-        .notif-item p {
-            margin: 0;
-            font-size: 0.78rem;
-            line-height: 1.3;
-            color: #334155;
-        }
-        .notif-item span.time {
-            font-size: 0.65rem;
-            color: #94a3b8;
-            display: block;
-            margin-top: 4px;
-        }
-        .notif-filter {
-            transition: all 0.2s ease;
-        }
-        .notif-filter.active {
-            background: #164630 !important;
-            color: #ffffff !important;
-            border-color: #164630 !important;
-        }
-        /* --- MOBILE DEVICE VIEWPORT ENFORCING CONTAINER --- */
-        .mobile-viewport-container {
-            width: 100%;
-            min-height: 100vh;
-            background-color: var(--bg-base);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
+    }
+    
+    .notif-item.is-unread {
+        background: rgba(22, 70, 48, 0.04);
+        border-left: 3px solid #164630;
+    }
+    
+    .notif-item p {
+        margin: 0;
+        font-size: 0.78rem;
+        line-height: 1.3;
+        color: #334155;
+    }
+    
+    .notif-item span.time {
+        font-size: 0.65rem;
+        color: #94a3b8;
+        display: block;
+        margin-top: 4px;
+    }
+    
+    .notif-filter {
+        transition: all 0.2s ease;
+    }
+    
+    .notif-filter.active {
+        background: #164630 !important;
+        color: #ffffff !important;
+        border-color: #164630 !important;
+    }
 
-        /* --- FIXED FIXED HEADER (PREVENTS SPILLING) --- */
-        .mobile-header {
-            width: 100%;
-            height: 64px;
-            background-color: var(--brand-dark);
-            color: #ffffff;
-            position: fixed;
-            top: 0; left: 0;
-            z-index: 1000;
-            padding: 0 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .mobile-header .logo-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .mobile-header .logo-img-fallback {
-            width: 32px;
-            height: 32px;
-            background: var(--bg-card);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .mobile-header h2 {
-            font-size: 1.15rem;
-            font-weight: 800;
-            letter-spacing: 0.2px;
-        }
-
-        .mobile-header p {
-            font-size: 0.65rem;
-            color: rgba(255, 255, 255, 0.5);
-            font-weight: 500;
-        }
-
-        .hamburger-btn {
-            background: none;
-            border: none;
-            color: #ffffff;
-            font-size: 1.35rem;
-            cursor: pointer;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-        }
-
-        /* --- MOBILE SLIDE DRAWER MENU --- */
-        .sidebar-wrapper {
-            width: 290px;
-            background-color: var(--brand-dark);
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: fixed;
-            top: 64px; bottom: 0; right: 0;
-            z-index: 999;
-            transform: translateX(100%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: -5px 0 25px rgba(0,0,0,0.25);
-        }
-
-        .sidebar-wrapper.show-mobile {
-            transform: translateX(0);
-        }
-
-        .menu-label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: rgba(255, 255, 255, 0.4);
-            padding: 24px 20px 12px 20px;
-            font-weight: 700;
-        }
-
-        .sidebar-menu-list {
-            list-style: none;
-            padding: 0 10px;
-        }
-
-        .menu-item-link {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 14px 16px;
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-size: 0.95rem;
-            font-weight: 500;
-            border-radius: 10px;
-            transition: all 0.2s ease;
-            margin-bottom: 6px;
-        }
-
-        .menu-item-link:hover, .menu-item-link.active {
-            color: #ffffff;
-            background-color: rgba(255, 255, 255, 0.06);
-        }
-
-        .sidebar-user-footer {
-            padding: 20px;
-            background-color: rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .user-meta-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-avatar-circle {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
-
-        .user-identity-text h4 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .user-identity-text p {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.4);
-        }
-
-        .btn-logout-trigger {
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 1.2rem;
-            transition: color 0.2s ease;
-            padding: 4px;
-        }
-
-        .btn-logout-trigger:hover {
-            color: #ef4444 !important;
-        }
-
-        /* --- MAIN SCROLL CONTENT AREA --- */
+    /* ==========================================================================
+       10. RESPONSIVE MEDIA QUERIES
+       ========================================================================== */
+    @media (max-width: 500px) {
         .main-content-layout {
-            flex: 1;
-            width: 100%;
-            padding: 88px 16px 24px 16px; /* 88px clear top padding avoids content clipping */
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+            padding: 88px 16px 24px;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .main-content-layout {
+            max-width: 1400px;
+            padding: 108px 32px 32px 32px; 
+            gap: 24px; 
         }
 
-        .dashboard-header-container {
-            margin-bottom: 4px;
+        .mobile-header {
+            height: 72px; 
+            padding: 0 max(32px, calc((100% - 1400px) / 2 + 32px));
+        }
+        
+        .sidebar-wrapper {
+            top: 72px;
+        }
+
+        /* Pinalaki ang Notification Icon wrapper at Dashboard text base sa request mo */
+        .notif-item {
+            padding: 14px;
+            gap: 14px;
+        }
+        
+        /* Kung gumagamit ka ng klase o element para sa bell icon container */
+        .notif-icon-wrapper, .mobile-header .notif-trigger-btn {
+            font-size: 1.4rem; 
+            padding: 6px;
         }
 
         .dashboard-header-container h1 {
-            font-size: 1.45rem;
-            font-weight: 800;
-            color: var(--brand-dark);
-            letter-spacing: -0.5px;
+            font-size: 1.95rem; /* Mas bold at prominente */
         }
-
+        
         .dashboard-header-container p {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 2px;
-    }
-
-        /* --- THE GRID FIX (FORCES CARDS BOXES TO STAY FLUSH ACCORDING TO SPECS) --- */
-        .metrics-row-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            width: 100%;
+            font-size: 0.98rem;
+            margin-top: 4px;
         }
 
-        /* Side-by-side sub-row for Pending and Resolved layout balancing */
-        .metrics-sub-split {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            width: 100%;
-        }
-
+        /* Pag-scale ng Metric Cards */
         .metric-card-node {
-            background-color: var(--bg-card);
-            border-radius: 16px;
-            padding: 16px;
-            border: 1px solid var(--border-light);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-            width: 100%;
+            padding: 24px; 
+            border-radius: 20px;
         }
-
+        
         .metric-data h5 {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 0.2px;
+            font-size: 0.8rem; 
         }
-
+        
         .metric-data .metric-count {
-            font-size: 1.85rem;
-            font-weight: 800;
-            color: var(--brand-dark);
-            margin: 2px 0;
-            line-height: 1.1;
+            font-size: 2.3rem; 
+            margin: 6px 0;
         }
-
+        
         .metric-data p {
-            font-size: 0.68rem;
-            color: var(--text-muted);
+            font-size: 0.78rem;
         }
-
+        
         .metric-icon-box {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
+            width: 52px;
+            height: 52px;
+            font-size: 1.4rem;
         }
 
-        .metric-card-node.cases .metric-icon-box { color: var(--brand-dark); background-color: #f0f4f2; }
-        .metric-card-node.pending .metric-icon-box { color: #d97706; background-color: #fffbeb; }
-        .metric-card-node.resolved .metric-icon-box { color: #059669; background-color: #ecfdf5; }
-
-        /* --- RESTORED WEATHER CARD (PROPER SPACING CONSTRAINTS) --- */
+        /* Pag-scale ng Weather & Charts */
         .weather-analytics-card {
-            background: linear-gradient(135deg, #528265 0%, #3b604a 100%);
-            border-radius: 18px;
-            padding: 20px;
-            color: #ffffff;
-            box-shadow: 0 8px 20px rgba(59, 96, 74, 0.15);
-            width: 100%;
+            padding: 28px;
+            border-radius: 22px;
         }
-
-        .weather-card-header h4 {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            opacity: 0.75;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
+        
         .weather-card-header h3 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-top: 1px;
+            font-size: 1.5rem;
         }
-
+        
+        .weather-stat-node p {
+            font-size: 1.8rem;
+        }
+             
         .weather-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin: 16px 0;
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 16px;
         }
 
         .weather-stat-node {
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 12px;
-            border-radius: 12px;
+            padding: 18px 12px; 
+            min-height: 100px;  
         }
 
         .weather-stat-node h6 {
-            font-size: 0.75rem;
-            opacity: 0.7;
-            font-weight: 400;
+            font-size: 0.85rem; 
+            margin-bottom: 4px;
         }
 
         .weather-stat-node p {
-            font-size: 1.45rem;
-            font-weight: 800;
-            margin-top: 2px;
+            font-size: 1.95rem; 
+            line-height: 1.2;
         }
-
-        .weather-stat-node p span {
-            font-size: 0.85rem;
-            font-weight: 500;
-            margin-left: 1px;
-        }
-
-        .weather-alert-banner {
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 10px 12px;
-            font-size: 0.75rem;
-            line-height: 1.4;
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        /* --- VISUAL INTERACTIVE GRAPH CHIPS --- */
         .chart-visual-card {
-            background-color: var(--bg-card);
-            border-radius: 16px;
-            padding: 16px;
-            border: 1px solid var(--border-light);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
-            width: 100%;
+            padding: 24px;
+            border-radius: 20px;
         }
-
+        
         .chart-header-inline {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: var(--brand-dark);
-            margin-bottom: 14px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .chart-header-inline i {
-            color: var(--primary-green);
-        }
-
-        .chart-box-render-frame {
-            position: relative;
-            width: 100%;
-            height: 190px;
-        }
-
-        /* Action Launch Control Card */
-        .quick-action-card {
-            background-color: var(--bg-card);
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid var(--border-light);
-            text-align: center;
-            width: 100%;
-        }
-
-        .quick-action-card h3 {
             font-size: 1rem;
-            font-weight: 700;
-            color: var(--brand-dark);
+            margin-bottom: 20px;
         }
-
-        .quick-action-card p {
-            font-size: 0.78rem;
-            color: var(--text-muted);
-            margin: 6px 0 16px 0;
-            line-height: 1.4;
+        
+        .chart-box-render-frame {
+            height: 260px; 
         }
-
-        .btn-primary-scan {
-            width: 100%;
-            background-color: var(--brand-dark);
-            color: #ffffff;
-            border: none;
-            padding: 14px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            border-radius: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        /* Backdrop Fog Overlay */
-        .sidebar-backdrop {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(11, 37, 26, 0.4);
-            backdrop-filter: blur(4px);
-            z-index: 950;
-        }
-        .sidebar-backdrop.active { display: block; }
-
-        /* --- MEDIATYPE CHECK (RESPONSIVENESS HANDLING) --- */
-        @media (min-width: 501px) {
-            .desktop-restriction-overlay { display: flex; }
-            .mobile-viewport-container { display: none; }
-        }
-        @media (max-width: 500px) {
-            .desktop-restriction-overlay { display: none; }
-            .mobile-viewport-container { display: flex; }
-        }
-    </style>
+    }
+</style>
 </head>
 <body>
-
-    <div class="desktop-restriction-overlay">
-        <div class="desktop-card-prompt">
-            <div class="glow-effect"></div>
-            
-            <div class="icon-pulse-container">
-                <div class="ripple-ring ring-1"></div>
-                <div class="ripple-ring ring-2"></div>
-                <i class="fa-solid fa-mobile-screen-button"></i>
-            </div>
-            
-            <h2>Mobile Access Required</h2>
-            <p>The <strong>CocoScan Farmer Platform</strong> is purpose-built exclusively for mobile smartphone screens to facilitate field scan operations.</p>
-        </div>
-    </div>
 
     <div class="mobile-viewport-container">
         
