@@ -14,6 +14,7 @@
             --brand-dark: #0b251a;
             --brand-accent: #4ac68f;
             --primary-green: #528265;
+            --badge-green-bg: #8ba888;
             --text-dark: #1e293b;
             --text-muted: #64748b;
             --border-light: rgba(0, 0, 0, 0.05);
@@ -178,7 +179,7 @@
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            display: none; /* Dynamic control via JavaScript */
+            display: none; 
             align-items: center;
             gap: 6px;
             box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2);
@@ -231,7 +232,7 @@
         .report-main-meta h4 { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
         .report-main-meta p { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
 
-        /* --- EMPTY STATE (COPIED STYLE FROM IMAGE_7D2CDA.PNG) --- */
+        /* --- EMPTY STATE --- */
         .premium-empty-state-card {
             background-color: var(--bg-card);
             border-radius: 24px;
@@ -293,6 +294,233 @@
             cursor: not-allowed;
         }
 
+       /* --- PREMIUM UNIFORM MODAL OVERLAYS & FORMS (EXACTLY MATCHED TO SCAN RESULTS) --- */
+        .diagnostic-result-badge {
+            background-color: var(--badge-green-bg);
+            border-radius: 14px;
+            padding: 14px 18px;
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            width: 100%;
+        }
+
+        .badge-main h3 { font-size: 1.2rem; font-weight: 700; color: #ffffff; letter-spacing: -0.2px; }
+        .badge-main p { font-size: 0.82rem; opacity: 0.95; margin-top: 2px; }
+        .badge-side-meta { font-size: 0.82rem; text-align: right; opacity: 0.95; }
+
+        .preview-media-frame {
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            background-color: #eaeaea;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .preview-media-frame img {
+            width: 100%;
+            display: block;
+            object-fit: cover;
+            aspect-ratio: 16 / 9;
+            max-height: 280px;
+        }
+
+        .image-timestamp-footer {
+            padding: 10px 4px 2px 4px;
+            font-size: 0.68rem;
+            color: #475569;
+            line-height: 1.5;
+            text-align: left;
+            word-break: break-word;
+        }
+
+        /* --- PREMIUM SUGGESTIONS CONTAINER CARD --- */
+        .premium-reco-card {
+            background-color: var(--bg-card);
+            border-radius: 20px;
+            padding: 24px 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.015);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .premium-reco-card h4, .premium-form-card h4 { 
+            font-size: 1.02rem; 
+            font-weight: 700; 
+            color: var(--brand-dark); 
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .premium-reco-card h4 i, .premium-form-card h4 i {
+            color: var(--primary-green);
+            font-size: 1.1rem;
+        }
+
+        .premium-reco-card ul, .expert-reco-clean-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px; 
+            padding: 2px 0;
+        }
+
+        .premium-reco-card li, .expert-reco-clean-list li {
+            font-size: 0.9rem;
+            color: #334155;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            line-height: 1.5;
+        }
+
+        .premium-reco-card li i, .expert-reco-clean-list li i {
+            color: #2e7d32; 
+            font-size: 0.95rem;
+            margin-top: 3px; 
+            flex-shrink: 0;
+        }
+
+        .premium-reco-card li span, .expert-reco-clean-list li span {
+            flex: 1;
+        }
+
+        /* --- MODERN DISCLAIMER CALLOUT BOX --- */
+        .modern-disclaimer-box {
+            background-color: #fef8f2; 
+            border: 1px solid #f973161c; 
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .modern-disclaimer-box i {
+            color: #d97706; 
+            font-size: 0.95rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .disclaimer-text-note {
+            font-size: 0.78rem;
+            color: #b45309; 
+            line-height: 1.45;
+            margin: 0;
+        }
+
+        /* --- CLEAN AND ORGANIZED PREMIUM FORMS WRAPPERS --- */
+        .premium-form-card {
+            background-color: var(--bg-card);
+            border-radius: 18px;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .notes-input-box {
+            width: 100%;
+            height: 110px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            background-color: #f8faf9;
+            padding: 14px;
+            font-size: 0.88rem;
+            color: var(--text-dark);
+            resize: none;
+            outline: none;
+        }
+
+        .modern-micro-upload-zone {
+            border: 2px dashed rgba(82, 130, 101, 0.2);
+            background-color: #f8faf9;
+            border-radius: 14px;
+            padding: 20px 16px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .modern-micro-upload-zone i { font-size: 1.35rem; color: var(--primary-green); }
+        .modern-micro-upload-zone span { font-size: 0.82rem; font-weight: 600; color: var(--brand-dark); }
+        .modern-micro-upload-zone p { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* --- PRECISE HIERARCHY BUTTON CONSOLE PANEL --- */
+        .control-action-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            margin-top: 16px; 
+        }
+
+        .secondary-actions-row {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .btn-control {
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+        }
+
+        /* Primary Action: Full Highlight Solid Layout Button */
+        .btn-control.submit-primary { 
+            background-color: #164630; 
+            color: #ffffff; 
+            box-shadow: 0 4px 12px rgba(22, 70, 48, 0.18);
+        }
+        .btn-control.submit-primary:hover { 
+            background-color: #1e5c3f; 
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(30, 92, 63, 0.25);
+        }
+
+        /* Secondary Actions: Sophisticated Ghost Borders Outlines Buttons */
+        .btn-control.draft-secondary { 
+            background-color: #ffffff; 
+            border: 1px solid rgba(82, 130, 101, 0.25); 
+            color: var(--brand-dark); 
+        }
+        .btn-control.draft-secondary:hover { 
+            background-color: #e8f2f0; 
+            border-color: var(--primary-green);
+        }
+
+        .btn-control.cancel-secondary { 
+            background-color: #fff5f5; 
+            border: 1px solid rgba(239, 68, 68, 0.15); 
+            color: #e53e3e; 
+        }
+        .btn-control.cancel-secondary:hover { 
+            background-color: #fee2e2; 
+            color: #9b1c1c; 
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+
         /* --- GLOBAL BACKDROP MODAL WRAPPERS --- */
         .modal-screen-overlay {
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -314,62 +542,8 @@
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
         }
         .modal-header-inline h2 { font-size: 1.25rem; font-weight: 800; color: var(--brand-dark); }
-        .btn-close-modal {
-            background-color: #eb5757; color: #ffffff; border: none; padding: 4px 12px;
-            border-radius: 12px; font-size: 0.72rem; font-weight: 600; cursor: pointer;
-        }
-
-        /* --- MODAL INTERNALS ELEMENTS --- */
         .status-row-bar { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); margin-bottom: 12px; }
         .status-row-bar span { font-weight: 700; margin-left: 2px; }
-
-        .severity-pill-header {
-            background-color: #528265; border-radius: 14px; padding: 12px 16px; color: #ffffff;
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
-        }
-        .severity-pill-header h3 { font-size: 1.05rem; font-weight: 700; }
-        .severity-pill-header p { font-size: 0.72rem; opacity: 0.8; }
-
-        .media-box-card { width: 100%; border-radius: 16px; overflow: hidden; background-color: #fff; margin-bottom: 14px; border: 1px solid var(--border-light); }
-        .media-box-card img { width: 100%; display: block; object-fit: cover; }
-        .media-meta-footer { background-color: #ffffff; padding: 8px; font-size: 0.65rem; color: var(--text-muted); text-align: center; line-height: 1.3; }
-
-        .card-sheet-block { background-color: var(--bg-card); border-radius: 16px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--border-light); }
-        .card-sheet-block h4 { font-size: 0.85rem; font-weight: 700; color: var(--brand-dark); margin-bottom: 6px; }
-        .card-sheet-block p { font-size: 0.8rem; color: var(--text-dark); line-height: 1.4; }
-
-        .card-sheet-block ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
-        .card-sheet-block li { font-size: 0.8rem; color: var(--text-dark); display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; }
-        .card-sheet-block li::before { content: "▪"; color: var(--primary-green); font-size: 0.75rem; margin-top: 1px; }
-
-        /* --- ACTION BOX FOOTERS --- */
-        .modal-action-row { display: flex; gap: 12px; width: 100%; }
-        .btn-modal-action { flex: 1; padding: 14px; border-radius: 12px; font-size: 0.88rem; font-weight: 600; cursor: pointer; border: none; text-align: center; transition: all 0.2s ease; }
-        .btn-modal-action.primary { background-color: var(--brand-dark); color: #ffffff; }
-        .btn-modal-action.primary:hover { background-color: #162f27; transform: translateY(-1px); }
-        .btn-modal-action.secondary { background-color: transparent; border: 1px solid var(--brand-dark); color: var(--brand-dark); }
-        .btn-modal-action.secondary:hover { background-color: #f8fafc; }
-
-        .fup-textarea { width: 100%; height: 90px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); background-color: #eef3f0; padding: 12px; font-size: 0.82rem; color: var(--text-dark); resize: none; outline: none; }
-
-        /* --- INTEGRATED NOTIFICATION STYLING --- */
-        .bell-notice-wrapper {
-            position: relative; width: 38px; height: 38px; background: #ffffff;
-            border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; color: #0b251a;
-            font-size: 1.1rem; cursor: pointer; display: flex; align-items: center;
-            justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-        .notif-item {
-            display: flex; gap: 10px; padding: 10px; border-radius: 8px;
-            background: #f8fafc; border: 1px solid rgba(0,0,0,0.02); transition: background 0.15s ease; cursor: pointer;
-        }
-        .notif-item.is-unread {
-            background: rgba(22, 70, 48, 0.04); border-left: 3px solid #164630;
-        }
-        .notif-item p { margin: 0; font-size: 0.78rem; line-height: 1.3; color: #334155; }
-        .notif-item span.time { font-size: 0.65rem; color: #94a3b8; display: block; margin-top: 4px; }
-        .notif-filter { transition: all 0.2s ease; }
-        .notif-filter.active { background: #164630 !important; color: #ffffff !important; border-color: #164630 !important; }
 
         /* ==========================================================================
            7. RESPONSIVE MEDIA QUERIES (DESKTOP ENHANCEMENTS & ALIGNMENT)
@@ -603,51 +777,74 @@
     </div>
 
     <!-- Modals Layout Block -->
+    <!-- ==========================================================================
+        MODAL OVERLAYS (PERFECTLY SYNCED WITH DETECT PEST VISUAL PARITY)
+        ========================================================================== -->
     <div class="modal-screen-overlay" id="summary-modal">
         <div class="modal-sheet-sliding-card">
             <div class="modal-header-inline">
                 <h2>Report Summary</h2>
-                <button class="btn-close-modal" onclick="closeAllModals()">Close</button>
+                <!-- Tinanggal ang siksik na Close button dito dahil may Cancel na sa ilalim -->
             </div>
             
-            <div class="status-row-bar">Status: <span id="sum-status-text">--</span></div>
+            <div class="status-row-bar" style="margin-bottom: 4px;">Status: <span id="sum-status-text">--</span></div>
 
-            <div class="severity-pill-header" id="sum-severity-banner">
+            <div class="diagnostic-result-badge" id="sum-severity-banner">
                 <div class="badge-main">
                     <h3 id="sum-pest-title">--</h3>
                     <p>Confidence: <span id="sum-confidence">--</span></p>
                 </div>
-                <div style="font-size: 0.75rem; text-align: right;">
-                    <div>Leaf Damage</div>
-                    <strong style="font-size: 0.9rem;" id="sum-damage">--</strong>
+                <div class="badge-side-meta">
+                    <div>Leaf Damage:</div>
+                    <strong style="font-weight: 600;" id="sum-damage">--</strong>
                 </div>
             </div>
 
-            <div class="media-box-card">
-                <img id="sum-media-img" src="" alt="Anomaly Sample">
-                <div class="media-meta-footer">
-                    Farmer: {{ user_name }} | Brgy. San Ignacio, San Pablo City, Laguna | <span id="sum-timestamp">--</span>
-                </div>
+            <!-- Binalik ang nawawalang lagayan ng imahe katulad ng sa scan page -->
+            <div class="preview-media-frame">
+                <img id="sum-media-img" src="" alt="Coconut Leaf Scan Target Frame">
+            </div>
+            
+            <div class="image-timestamp-footer">
+                Farmer: <span style="font-weight: 600;">Alezer Boyore</span> 
+                <br> Brgy. San Ignacio, San Pablo City, Laguna <br>
+                <span id="sum-timestamp">--</span>
             </div>
 
-            <div class="card-sheet-block">
-                <h4>Additional Notes</h4>
-                <p id="sum-notes-text">--</p>
-            </div>
-
-            <div class="card-sheet-block">
-                <h4>Initial Recommendation</h4>
+            <!-- Premium Initial Suggestion Card -->
+            <div class="premium-reco-card">
+                <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Initial Recommendation</h4>
                 <ul id="sum-initial-list"></ul>
+                
+                <div class="modern-disclaimer-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <p class="disclaimer-text-note">
+                        <strong>Initial Suggestion Only:</strong> An agricultural expert will thoroughly review and confirm the final treatment metrics.
+                    </p>
+                </div>
             </div>
 
-            <div class="card-sheet-block" id="sum-expert-card" style="border-left: 4px solid var(--primary-green);">
-                <h4>Expert Recommendation</h4>
-                <ul id="sum-expert-list"></ul>
+            <!-- Verified Expert Validation Card -->
+            <div class="premium-reco-card" id="sum-expert-card" style="border-left: 4px solid #164630;">
+                <h4><i class="fa-solid fa-user-shield"></i> Expert Recommendation</h4>
+                <ul id="sum-expert-list" class="expert-reco-clean-list"></ul>
             </div>
 
-            <div class="modal-action-row">
-                <button class="btn-modal-action primary" onclick="transitionToFollowUp()">Update Status</button>
-                <button class="btn-modal-action secondary" onclick="closeAllModals()">Cancel</button>
+            <div class="premium-form-card">
+                <h4><i class="fa-solid fa-pen-to-square"></i> Additional Notes</h4>
+                <p id="sum-notes-text" style="font-size: 0.88rem; color: var(--text-dark); line-height: 1.5; padding: 2px 0;">--</p>
+            </div>
+
+            <!-- Minimalist Actions Console Layout (Inalis ang kalituhang icons sa secondary rows) -->
+            <div class="control-action-bar">
+                <button class="btn-control submit-primary" onclick="transitionToFollowUp()">
+                    <i class="fa-solid fa-rotate"></i> Update Status
+                </button>
+                <div class="secondary-actions-row">
+                    <button class="btn-control cancel-secondary" onclick="closeAllModals()">
+                        Cancel
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -655,93 +852,86 @@
     <div class="modal-screen-overlay" id="followup-modal">
         <div class="modal-sheet-sliding-card">
             <div class="modal-header-inline">
-                <h2>Report Summary</h2>
-                <button class="btn-close-modal" onclick="closeAllModals()">Close</button>
+                <h2>Follow Up Details</h2>
             </div>
 
-            <div class="media-box-card" style="margin-bottom: 10px;">
-                <img id="fup-mini-img" src="" alt="Mini Preview">
-                <div class="media-meta-footer" style="padding: 6px; font-size: 0.62rem;">
-                    Detected Pest: <strong id="fup-label-title">--</strong> | Confidence: <span id="fup-conf-span">--</span> | Damage: <span id="fup-damage-span">--</span>
-                </div>
+            <div class="preview-media-frame">
+                <img id="fup-mini-img" src="" alt="Coconut Leaf Scan Target Frame">
             </div>
 
-            <div class="card-sheet-block" style="padding: 12px; margin-bottom: 10px;">
-                <p style="font-size: 0.72rem; color: var(--text-muted); font-style: italic;">
-                    Additional Notes: <span id="fup-notes-fallback" style="color: var(--text-dark); font-style: normal;">--</span>
+            <div class="image-timestamp-footer" style="padding-bottom: 0;">
+                Detected Pest: <strong id="fup-label-title">--</strong> &nbsp;|&nbsp; Confidence: <span id="fup-conf-span">--</span> &nbsp;|&nbsp; Damage: <span id="fup-damage-span">--</span>
+            </div>
+
+            <div class="premium-form-card" style="padding: 14px 16px; background-color: #f8faf9;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); font-style: italic; line-height: 1.4;">
+                    <strong>Original Notes:</strong> <span id="fup-notes-fallback" style="color: var(--text-dark); font-style: normal;">--</span>
                 </p>
             </div>
 
-            <div style="font-size: 0.88rem; font-weight: 700; color: var(--brand-dark); margin-bottom: 10px;">Follow Up Details</div>
-
-            <div class="followup-upload-zone">
-                <div style="font-size: 1.5rem; color: var(--primary-green);"><i class="fa-solid fa-cloud-arrow-up"></i></div>
-                <p>Drop your coconut leaf image here<br><span style="font-size: 0.72rem; color: var(--text-muted);">or click the buttons below to upload</span></p>
-                <div class="followup-btn-row">
-                    <button class="btn-fup-trigger dark" onclick="alert('Camera frame simulation initialized.')"><i class="fa-solid fa-camera"></i> Take Photo</button>
-                    <button class="btn-fup-trigger light" onclick="alert('Local file explorer directory access pipeline call.')"><i class="fa-solid fa-upload"></i> Upload Image</button>
+            <div class="premium-form-card">
+                <h4><i class="fa-solid fa-images"></i> Upload Follow Up Image</h4>
+                <div class="modern-micro-upload-zone">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Capture New Update Leaf Frame</span>
+                    <div class="followup-btn-row" style="display: flex; gap: 8px; width: 100%; margin-top: 8px;" onclick="event.stopPropagation();">
+                        <button class="btn-control submit-primary" style="padding: 10px; font-size: 0.8rem; border-radius: 10px;" onclick="alert('Camera frame simulation initialized.')"><i class="fa-solid fa-camera"></i> Take Photo</button>
+                        <button class="btn-control draft-secondary" style="padding: 10px; font-size: 0.8rem; border-radius: 10px;" onclick="alert('Local file explorer directory access pipeline call.')">Upload Image</button>
+                    </div>
                 </div>
             </div>
 
-            <div style="margin-bottom: 16px;">
-                <textarea class="fup-textarea" id="fup-input-text" placeholder="Write your additional notes here..."></textarea>
+            <div class="premium-form-card">
+                <h4><i class="fa-solid fa-comment-medical"></i> Progress Notes</h4>
+                <textarea class="notes-input-box" id="fup-input-text" placeholder="Write your additional treatment notes here..."></textarea>
             </div>
 
-            <div class="modal-action-row">
-                <button class="btn-modal-action primary" onclick="submitFollowUpData()">Submit</button>
-                <button class="btn-modal-action secondary" onclick="backToSummary()">Cancel</button>
+            <div class="control-action-bar">
+                <button class="btn-control submit-primary" onclick="submitFollowUpData()">
+                    <i class="fa-solid fa-paper-plane"></i> Submit Follow Up
+                </button>
+                <div class="secondary-actions-row">
+                    <button class="btn-control cancel-secondary" onclick="backToSummary()">
+                        Cancel
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- REPLACEME: Alisin ang buong script block na ito kapag isasalpak mo na ang iyong totoong Flask dynamic context rendering payload -->
+    <!-- REPLACEME: Synced Mock Data Array to match exact Scan types parameters -->
     <script id="reports-data" type="application/json">
         [
             {
-                "pest": "Coconut Scale Insect (Asipidotus destructor)",
+                "pest": "Rhinoceros Beetle",
                 "date": "2026-07-01",
                 "timestamp": "Jul 01, 2026 • 09:15 AM",
                 "status": "Recommendation Issued",
-                "confidence": "94.5%",
-                "damage": "High",
+                "confidence": "87%",
+                "damage": "Moderate",
                 "notes": "Spreading heavily across the lower layer leaf structures of the sector 3 trees.",
                 "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
                 "initial_recommendations": [
-                    "Isolate the sector framework perimeter.",
-                    "Prune completely dried up yellow leaf structures down safely."
+                    "Clean surroundings and remove decaying coconut materials.",
+                    "Check and remove beetles if seen.",
+                    "Use pheromone traps to reduce population.",
+                    "Inspect trees regularly for damage."
                 ],
                 "expert_recommendations": [
-                    "Apply neat organic soap-oil water emulsion directly on leaf underscores.",
-                    "Schedule release of predatory coccinellid beetles next week cycle."
+                    "Apply localized neem extract directly onto target tree crowns."
                 ]
             },
             {
-                "pest": "Rhinoceros Beetle (Oryctes rhinoceros)",
+                "pest": "Brontispa",
                 "date": "2026-06-28",
                 "timestamp": "Jun 28, 2026 • 04:30 PM",
                 "status": "Under Review",
-                "confidence": "88.2%",
-                "damage": "Moderate",
+                "confidence": "92%",
+                "damage": "High",
                 "notes": "V-shaped holes cut into fronds noticed near the central spear leaf area.",
                 "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
                 "initial_recommendations": [
-                    "Extract beetles manually from entry boring tunnels using wire iron hooks."
-                ]
-            },
-            {
-                "pest": "Coconut Scale Insect (Asipidotus destructor)",
-                "date": "2026-06-25",
-                "timestamp": "Jun 25, 2026 • 11:20 AM",
-                "status": "Recommendation Issued",
-                "confidence": "91.0%",
-                "damage": "Moderate",
-                "notes": "Light yellow spotting discovered on newly matured leaflets.",
-                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "initial_recommendations": [
-                    "Check nearby intercrop lines for alternative pest breeding grounds."
-                ],
-                "expert_recommendations": [
-                    "Perform overhead high-pressure water spraying checks to dislodge colonies cleanly."
+                    "Prune off heavily infested lower fronds showing advanced linear scorching, then burn immediately."
                 ]
             }
         ]
@@ -885,10 +1075,12 @@
         /* Pag-evaluate kung dapat bang itago o ipakita ang Clear Filters button */
         function evaluateClearFilterButtonState() {
             const clearBtn = document.getElementById("clear-filters-btn");
-            if (activeSearchQuery !== "" || activeDateFilter !== "" || activeStatusFilter !== "all") {
-                clearBtn.style.display = "inline-flex";
-            } else {
-                clearBtn.style.display = "none";
+            if (clearBtn) {
+                if (activeSearchQuery !== "" || activeDateFilter !== "" || activeStatusFilter !== "all") {
+                    clearBtn.style.display = "inline-flex";
+                } else {
+                    clearBtn.style.display = "none";
+                }
             }
         }
 
@@ -1037,24 +1229,34 @@
             const severityBanner = document.getElementById("sum-severity-banner");
             severityBanner.style.backgroundColor = (record.damage === "High") ? "#b91c1c" : "#528265";
 
-            const initialList = document.getElementById('sum-initial-list');
-            initialList.innerHTML = "";
-            if(record.initial_recommendations && record.initial_recommendations.length > 0) {
-                record.initial_recommendations.forEach(li => initialList.innerHTML += `<li>${li}</li>`);
+            // Initial Recommendations Loop
+            const initialListElement = document.getElementById('sum-initial-list');
+            initialListElement.innerHTML = "";
+            if (record.initial_recommendations && record.initial_recommendations.length > 0) {
+                record.initial_recommendations.forEach(rec => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${rec}</span>`;
+                    initialListElement.appendChild(li);
+                });
             } else {
-                initialList.innerHTML = `<li>Clean surroundings and verify leaf node structure tracks.</li>`;
+                initialListElement.innerHTML = `<li><i class="fa-solid fa-circle-check"></i> <span>Clean surroundings and verify leaf node structure tracks.</span></li>`;
             }
 
-            const expertList = document.getElementById('sum-expert-list');
+            // Expert Recommendations Loop
+            const expertListElement = document.getElementById('sum-expert-list');
             const expertCardBlock = document.getElementById('sum-expert-card');
-            expertList.innerHTML = "";
+            expertListElement.innerHTML = "";
 
             if (record.status === "Recommendation Issued" && record.expert_recommendations) {
-                expertCardBlock.style.display = "block";
-                record.expert_recommendations.forEach(li => expertList.innerHTML += `<li>${li}</li>`);
+                expertCardBlock.style.display = "flex";
+                record.expert_recommendations.forEach(rec => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${rec}</span>`;
+                    expertListElement.appendChild(li);
+                });
             } else {
-                expertCardBlock.style.display = "block";
-                expertList.innerHTML = `<li><span style='color:var(--text-muted); font-style:italic;'>Awaiting verified expert recommendation check-in data response...</span></li>`;
+                expertCardBlock.style.display = "flex";
+                expertListElement.innerHTML = `<li><i class="fa-solid fa-circle-info" style="color: #d97706;"></i> <span><span style='color:var(--text-muted); font-style:italic;'>Awaiting verified expert recommendation check-in data response...</span></span></li>`;
             }
 
             document.getElementById('summary-modal').classList.add('open-modal');
