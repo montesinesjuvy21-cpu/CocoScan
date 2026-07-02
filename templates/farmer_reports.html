@@ -27,116 +27,13 @@
         }
 
         body {
-            background-color: #0b251a;
+            background-color: var(--brand-dark);
             color: var(--text-dark);
             min-height: 100vh;
             overflow-x: hidden;
         }
 
-       
-        /* ---  DESKTOP RESTRICTION STYLING --- */
-        .desktop-restriction-overlay {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(circle at center, #0e3021 0%, #04120c 100%);
-            color: #ffffff;
-            z-index: 10000;
-            padding: 24px;
-            text-align: center;
-            overflow: hidden;
-        }
-
-        .desktop-card-prompt {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            padding: 50px 35px;
-            border-radius: 28px;
-            max-width: 420px;
-            width: 100%;
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            position: relative;
-        }
-
-        /* Subtle background glow behind the card */
-        .glow-effect {
-            position: absolute;
-            top: -20%; left: -20%; right: -20%; bottom: -20%;
-            background: radial-gradient(circle at center, rgba(74, 198, 143, 0.08) 0%, transparent 60%);
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        /* Double Ripple Pulse Animation */
-        .desktop-card-prompt .icon-pulse-container {
-            width: 84px;
-            height: 84px;
-            background: linear-gradient(135deg, rgba(74, 198, 143, 0.2) 0%, rgba(82, 130, 101, 0.2) 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 28px auto;
-            border: 1px solid rgba(74, 198, 143, 0.3);
-            position: relative;
-        }
-
-        .desktop-card-prompt i {
-            font-size: 2.4rem;
-            color: #4ac68f;
-            text-shadow: 0 0 15px rgba(74, 198, 143, 0.4);
-            z-index: 2;
-        }
-
-        .ripple-ring {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: 50%;
-            border: 1px solid rgba(74, 198, 143, 0.4);
-            animation: rippleEffect 2.5s infinite cubic-bezier(0.25, 0, 0, 1);
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .ring-2 {
-            animation-delay: 0.8s;
-        }
-
-        @keyframes rippleEffect {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.4); opacity: 0; }
-        }
-
-        .desktop-card-prompt h2 {
-            font-size: 1.6rem;
-            font-weight: 800;
-            margin-bottom: 14px;
-            letter-spacing: -0.5px;
-            background: linear-gradient(120deg, #ffffff 40%, #c3eede 100%);
-           -webkit-background-clip: text;
-            background-clip: text; 
-            -webkit-text-fill-color: transparent;
-        }
-
-        .desktop-card-prompt p {
-            font-size: 0.95rem;
-            color: #a4c2b3;
-            line-height: 1.6;
-            margin-bottom: 0; /* Removed bottom margin since instruction box is gone */
-        }
-
-        .desktop-card-prompt p strong {
-            color: #ffffff;
-            font-weight: 600;
-        }
-
-        /* --- MOBILE VIEWPORT WORKSPACE --- */
+        /* --- GLOBAL LAYOUT CONTAINER --- */
         .mobile-viewport-container {
             width: 100%;
             min-height: 100vh;
@@ -157,6 +54,13 @@
             z-index: 1000;
             padding: 0 16px;
             display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-content-wrapper {
+            display: flex;
+            width: 100%;
             align-items: center;
             justify-content: space-between;
         }
@@ -193,38 +97,98 @@
 
         /* --- MAIN VIEWPORTS LAYOUT --- */
         .main-content-layout {
-            flex: 1; width: 100%; padding: 88px 16px 24px 16px;
-            display: flex; flex-direction: column; gap: 16px;
+            flex: 1; 
+            width: 100%; 
+            padding: 88px 16px 24px 16px;
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px;
         }
 
         .section-title-wrap { display: flex; justify-content: space-between; align-items: flex-start; }
         .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
         .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); }
 
-        /* --- SEARCH AND CHIP INTERACTIVE FILTERS --- */
+        /* --- SEARCH AND RESPONSIVE CALENDAR FILTER ROW --- */
         .search-controls-row {
-            display: flex; gap: 8px; align-items: center;
+            display: flex; 
+            flex-wrap: wrap;
+            gap: 12px; 
+            align-items: center;
+            width: 100%;
         }
         .search-bar-box {
-            width: 100%; position: relative; flex: 1;
+            position: relative; 
+            flex: 1;
+            min-width: 240px;
         }
         .search-input {
-            width: 100%; padding: 12px 16px 12px 40px; border-radius: 25px;
-            border: 1px solid rgba(0,0,0,0.05); background-color: var(--bg-card);
-            font-size: 0.85rem; outline: none; color: var(--text-dark);
+            width: 100%; 
+            padding: 14px 16px 14px 44px; 
+            border-radius: 32px;
+            border: 1px solid rgba(0,0,0,0.05); 
+            background-color: var(--bg-card);
+            font-size: 0.92rem; 
+            outline: none; 
+            color: var(--text-dark);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-input:focus {
+            border-color: rgba(82, 130, 101, 0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
         .search-bar-box i {
-            position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
-            color: var(--text-muted); font-size: 0.9rem;
+            position: absolute; 
+            left: 18px; 
+            top: 50%; 
+            transform: translateY(-50%);
+            color: var(--text-muted); 
+            font-size: 1rem;
         }
         .date-filter-box {
-            position: relative; min-width: 132px;
+            position: relative; 
+            min-width: 160px;
         }
         .date-filter-box input {
-            width: 100%; padding: 12px 14px; border-radius: 25px;
-            border: 1px solid rgba(0,0,0,0.05); background-color: var(--bg-card);
-            font-size: 0.8rem; outline: none; color: var(--text-dark);
+            width: 100%; 
+            padding: 13px 18px; 
+            border-radius: 32px;
+            border: 1px solid rgba(0,0,0,0.05); 
+            background-color: var(--bg-card);
+            font-size: 0.9rem; 
+            outline: none; 
+            color: var(--text-dark);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
+        .date-filter-box input:focus {
+            border-color: rgba(82, 130, 101, 0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        /* --- CLEAR FILTER BUTTON STYLING --- */
+        .btn-clear-filters {
+            background-color: #eb5757;
+            color: #ffffff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 32px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: none; /* Dynamic control via JavaScript */
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2);
+            transition: all 0.2s ease;
+        }
+        .btn-clear-filters:hover {
+            background-color: #d84343;
+            transform: translateY(-1px);
+        }
+
         .search-highlight {
             background: rgba(74, 198, 143, 0.28);
             color: var(--brand-dark);
@@ -233,17 +197,19 @@
             font-weight: 700;
         }
 
+        /* --- FILTERS ENHANCEMENTS --- */
         .filter-chips-scrollrow {
-            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+            display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;
             scrollbar-width: none; -webkit-overflow-scrolling: touch;
         }
         .filter-chips-scrollrow::-webkit-scrollbar { display: none; }
         
         .chip-filter-btn {
             background-color: var(--bg-card); border: 1px solid var(--border-light);
-            padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 500;
+            padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
             color: var(--text-muted); cursor: pointer; white-space: nowrap;
             display: inline-flex; align-items: center; gap: 6px;
+            transition: all 0.2s ease;
         }
         .chip-filter-btn.active-chip {
             background-color: #1a4d32; color: #ffffff; border-color: #1a4d32;
@@ -255,23 +221,77 @@
         .report-row-node {
             background-color: var(--bg-card); padding: 14px 16px; border-radius: 12px;
             border: 1px solid var(--border-light); display: flex; justify-content: space-between;
-            align-items: center; cursor: pointer; transition: transform 0.2s;
+            align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .report-row-node:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
         .report-row-node:active { transform: scale(0.99); }
         
         .report-main-meta h4 { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
         .report-main-meta p { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
 
+        /* --- EMPTY STATE (COPIED STYLE FROM IMAGE_7D2CDA.PNG) --- */
+        .premium-empty-state-card {
+            background-color: var(--bg-card);
+            border-radius: 24px;
+            padding: 60px 24px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            grid-column: 1 / -1;
+        }
+        .empty-state-icon-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background-color: #eef5f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .empty-state-icon-circle i {
+            font-size: 1.75rem;
+            color: var(--primary-green);
+        }
+        .premium-empty-state-card h3 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+            margin-bottom: 12px;
+        }
+        .premium-empty-state-card p {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            max-width: 440px;
+            line-height: 1.6;
+        }
+
         /* --- PAGINATION SYSTEM DECK --- */
         .pagination-container {
-            display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 8px;
+            display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;
+            width: 100%;
         }
         .page-btn {
-            min-width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-light);
-            background-color: var(--bg-card); color: var(--text-dark); font-size: 0.8rem;
+            min-width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-light);
+            background-color: var(--bg-card); color: var(--text-dark); font-size: 0.85rem;
             font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .page-btn:hover:not(:disabled) {
+            background-color: #eef5f2;
+            color: var(--brand-dark);
         }
         .page-btn.active-page { background-color: #1a4d32; color: #ffffff; border-color: #1a4d32; }
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
 
         /* --- GLOBAL BACKDROP MODAL WRAPPERS --- */
         .modal-screen-overlay {
@@ -330,26 +350,6 @@
         .btn-modal-action.secondary { background-color: transparent; border: 1px solid var(--brand-dark); color: var(--brand-dark); }
         .btn-modal-action.secondary:hover { background-color: #f8fafc; }
 
-        .btn-fup-trigger { flex: 1; padding: 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; }
-        .btn-fup-trigger.dark { background-color: var(--brand-dark); color: #ffffff; }
-        .btn-fup-trigger.dark:hover { background-color: #162f27; transform: translateY(-1px); }
-        .btn-fup-trigger.light { background-color: transparent; border: 1px solid rgba(0,0,0,0.1); color: var(--text-dark); }
-        .btn-fup-trigger.light:hover { background-color: #f8fafc; }
-
-        .page-btn:hover, .chip-filter-btn:hover { transform: translateY(-1px); }
-
-        /* --- HOOK UP INPUT DRAG ZONE FOR MODAL 2 --- */
-        .followup-upload-zone {
-            background-color: var(--bg-card); border: 2px dashed rgba(82, 130, 101, 0.2);
-            border-radius: 16px; padding: 24px 16px; text-align: center;
-            display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 14px;
-        }
-        .followup-upload-zone p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.3; }
-        .followup-btn-row { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
-        .btn-fup-trigger { flex: 1; padding: 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .btn-fup-trigger.dark { background-color: var(--brand-dark); color: #ffffff; }
-        .btn-fup-trigger.light { background-color: transparent; border: 1px solid rgba(0,0,0,0.1); color: var(--text-dark); }
-
         .fup-textarea { width: 100%; height: 90px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); background-color: #eef3f0; padding: 12px; font-size: 0.82rem; color: var(--text-dark); resize: none; outline: none; }
 
         /* --- INTEGRATED NOTIFICATION STYLING --- */
@@ -371,42 +371,152 @@
         .notif-filter { transition: all 0.2s ease; }
         .notif-filter.active { background: #164630 !important; color: #ffffff !important; border-color: #164630 !important; }
 
-        @media (min-width: 501px) { .desktop-restriction-overlay { display: flex; } .mobile-viewport-container { display: none; } }
-        @media (max-width: 500px) { .desktop-restriction-overlay { display: none; } .mobile-viewport-container { display: flex; } }
+        /* ==========================================================================
+           7. RESPONSIVE MEDIA QUERIES (DESKTOP ENHANCEMENTS & ALIGNMENT)
+           ========================================================================== */
+        @media (max-width: 500px) {
+            .main-content-layout { 
+                padding: 88px 16px 24px; 
+            }
+            .reports-feed-stack {
+                grid-template-columns: 1fr;
+            }
+            .date-filter-box {
+                flex: 1;
+                min-width: 100%;
+            }
+            .btn-clear-filters {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .main-content-layout {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 108px 32px 32px 32px; 
+                gap: 24px; 
+            }
+
+            .header-content-wrapper {
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .mobile-header {
+                height: 72px; 
+                padding: 0 32px;
+            }
+
+            .sidebar-wrapper {
+                top: 72px;
+            }
+
+            .section-title-wrap h1 { 
+                font-size: 1.95rem; 
+            }
+
+            .section-title-wrap p { 
+                font-size: 0.98rem; 
+                margin-top: 4px;
+            }
+
+            .search-input {
+                padding: 15px 18px 15px 48px;
+                font-size: 0.98rem;
+                border-radius: 32px;
+            }
+            .search-bar-box i {
+                left: 20px;
+                font-size: 1.1rem;
+            }
+            .date-filter-box {
+                min-width: 180px;
+            }
+            .date-filter-box input {
+                padding: 14px 22px;
+                font-size: 0.95rem;
+                border-radius: 32px;
+            }
+
+            .chip-filter-btn {
+                padding: 10px 20px;
+                font-size: 0.95rem;
+                border-radius: 24px;
+            }
+
+            .reports-feed-stack { 
+                display: grid;
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 20px; 
+            }
+
+            @media (min-width: 1400px) {
+                .reports-feed-stack { 
+                    grid-template-columns: repeat(3, 1fr); 
+                }
+            }
+
+            .report-row-node {
+                border-radius: 20px;
+                padding: 20px;
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            }
+
+            .report-row-node > div:last-child {
+                width: 100%;
+                justify-content: space-between;
+                border-top: 1px solid var(--border-light);
+                padding-top: 12px;
+            }
+
+            .report-main-meta h4 {
+                font-size: 1.15rem;
+            }
+
+            .modal-sheet-sliding-card {
+                max-width: 600px;
+                border-radius: 24px;
+                margin-bottom: auto;
+                margin-top: auto;
+                box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+                animation: fadeIn 0.3s ease;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .modal-screen-overlay {
+                align-items: center;
+            }
+        } 
     </style>
 </head>
 <body>
 
-      <div class="desktop-restriction-overlay">
-        <div class="desktop-card-prompt">
-            <div class="glow-effect"></div>
-            
-            <div class="icon-pulse-container">
-                <div class="ripple-ring ring-1"></div>
-                <div class="ripple-ring ring-2"></div>
-                <i class="fa-solid fa-mobile-screen-button"></i>
-            </div>
-            
-            <h2>Mobile Access Required</h2>
-            <p>The <strong>CocoScan Farmer Platform</strong> is purpose-built exclusively for mobile smartphone screens to facilitate field scan operations.</p>
-        </div>
-    </div>
-
     <div class="mobile-viewport-container">
         
         <header class="mobile-header">
-            <div class="logo-group">
-                <div class="logo-img-fallback">
-                    <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
+            <div class="header-content-wrapper">
+                <div class="logo-group">
+                    <div class="logo-img-fallback">
+                        <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
+                    </div>
+                    <div>
+                        <h2>CocoScan</h2>
+                        <p>Coconut Pest Detection</p>
+                    </div>
                 </div>
-                <div>
-                    <h2>CocoScan</h2>
-                    <p>Coconut Pest Detection</p>
-                </div>
+                <button class="hamburger-btn" onclick="toggleSidebarMenu()">
+                    <i class="fa-solid fa-bars" id="toggleIcon"></i>
+                </button>
             </div>
-            <button class="hamburger-btn" onclick="toggleSidebarMenu()">
-                <i class="fa-solid fa-bars" id="toggleIcon"></i>
-            </button>
         </header>
 
         <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
@@ -470,9 +580,13 @@
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <input type="text" id="report-search" class="search-input" placeholder="Search by pest name...">
                 </div>
-                    <div class="date-filter-box">
+                <div class="date-filter-box">
                     <input type="date" id="report-date-filter" aria-label="Filter by date">
                 </div>
+                <!-- Clear Filters Button Element -->
+                <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
+                    <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+                </button>
             </div>
 
             <div class="filter-chips-scrollrow">
@@ -488,6 +602,7 @@
         </main>
     </div>
 
+    <!-- Modals Layout Block -->
     <div class="modal-screen-overlay" id="summary-modal">
         <div class="modal-sheet-sliding-card">
             <div class="modal-header-inline">
@@ -579,9 +694,61 @@
         </div>
     </div>
 
-    <script id="reports-data" type="application/json">{{ reports_data|tojson|safe }}</script>
+    <!-- REPLACEME: Alisin ang buong script block na ito kapag isasalpak mo na ang iyong totoong Flask dynamic context rendering payload -->
+    <script id="reports-data" type="application/json">
+        [
+            {
+                "pest": "Coconut Scale Insect (Asipidotus destructor)",
+                "date": "2026-07-01",
+                "timestamp": "Jul 01, 2026 • 09:15 AM",
+                "status": "Recommendation Issued",
+                "confidence": "94.5%",
+                "damage": "High",
+                "notes": "Spreading heavily across the lower layer leaf structures of the sector 3 trees.",
+                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
+                "initial_recommendations": [
+                    "Isolate the sector framework perimeter.",
+                    "Prune completely dried up yellow leaf structures down safely."
+                ],
+                "expert_recommendations": [
+                    "Apply neat organic soap-oil water emulsion directly on leaf underscores.",
+                    "Schedule release of predatory coccinellid beetles next week cycle."
+                ]
+            },
+            {
+                "pest": "Rhinoceros Beetle (Oryctes rhinoceros)",
+                "date": "2026-06-28",
+                "timestamp": "Jun 28, 2026 • 04:30 PM",
+                "status": "Under Review",
+                "confidence": "88.2%",
+                "damage": "Moderate",
+                "notes": "V-shaped holes cut into fronds noticed near the central spear leaf area.",
+                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
+                "initial_recommendations": [
+                    "Extract beetles manually from entry boring tunnels using wire iron hooks."
+                ]
+            },
+            {
+                "pest": "Coconut Scale Insect (Asipidotus destructor)",
+                "date": "2026-06-25",
+                "timestamp": "Jun 25, 2026 • 11:20 AM",
+                "status": "Recommendation Issued",
+                "confidence": "91.0%",
+                "damage": "Moderate",
+                "notes": "Light yellow spotting discovered on newly matured leaflets.",
+                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
+                "initial_recommendations": [
+                    "Check nearby intercrop lines for alternative pest breeding grounds."
+                ],
+                "expert_recommendations": [
+                    "Perform overhead high-pressure water spraying checks to dislodge colonies cleanly."
+                ]
+            }
+        ]
+    </script>
+
     <script>
-        // Production State Containers (Initialized from the Flask-rendered report payload)
+        // Production State Containers
         let reports = [];
         try {
             reports = JSON.parse(document.getElementById("reports-data")?.textContent || "[]");
@@ -590,26 +757,22 @@
         }
         let notifications = [];
 
-        // Global Active Control Flags Variables
         let activeSearchQuery = "";
         let activeStatusFilter = "all";
         let activeDateFilter = "";
         let currentPage = 1;
-        const recordsPerPage = 5;
+        const recordsPerPage = 6; 
         let selectedReportRecord = null;
 
         document.addEventListener("DOMContentLoaded", () => {
-        const rawName = "{{ user_name }}".trim();
-        const fullUserName = rawName || "Farmer";
-        document.getElementById("sidebar-user-display").textContent = fullUserName;
+            const rawName = "{{ user_name }}".trim();
+            const fullUserName = rawName || "Farmer";
+            document.getElementById("sidebar-user-display").textContent = fullUserName;
 
-        // Register Input & Header Trigger Click Listeners
-        initNotificationsSystem();
-        initSearchAndFilters();
-        
-        // Execute view render evaluation pipelines
-        renderReportsGrid();
-    });
+            initNotificationsSystem();
+            initSearchAndFilters();
+            renderReportsGrid();
+        });
 
         /* ================== NOTIFICATION OVERLAY ENGINE ================== */
         function initNotificationsSystem() {
@@ -696,12 +859,14 @@
             searchInput.addEventListener("input", (e) => {
                 activeSearchQuery = e.target.value.toLowerCase().trim();
                 currentPage = 1; 
+                evaluateClearFilterButtonState();
                 renderReportsGrid();
             });
 
             dateInput.addEventListener("change", (e) => {
                 activeDateFilter = e.target.value;
                 currentPage = 1;
+                evaluateClearFilterButtonState();
                 renderReportsGrid();
             });
 
@@ -711,9 +876,38 @@
                     e.target.classList.add("active-chip");
                     activeStatusFilter = e.target.getAttribute("data-status");
                     currentPage = 1;
+                    evaluateClearFilterButtonState();
                     renderReportsGrid();
                 });
             });
+        }
+
+        /* Pag-evaluate kung dapat bang itago o ipakita ang Clear Filters button */
+        function evaluateClearFilterButtonState() {
+            const clearBtn = document.getElementById("clear-filters-btn");
+            if (activeSearchQuery !== "" || activeDateFilter !== "" || activeStatusFilter !== "all") {
+                clearBtn.style.display = "inline-flex";
+            } else {
+                clearBtn.style.display = "none";
+            }
+        }
+
+        /* Pag-reset ng lahat ng filter values pabalik sa default state */
+        function clearAllActiveFilters() {
+            document.getElementById("report-search").value = "";
+            document.getElementById("report-date-filter").value = "";
+            
+            document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
+            const allChip = document.querySelector('.chip-filter-btn[data-status="all"]');
+            if (allChip) allChip.classList.add("active-chip");
+
+            activeSearchQuery = "";
+            activeDateFilter = "";
+            activeStatusFilter = "all";
+            currentPage = 1;
+
+            evaluateClearFilterButtonState();
+            renderReportsGrid();
         }
 
         function escapeHtml(text) {
@@ -739,10 +933,8 @@
             const countLabel = document.getElementById("chip-count-label");
             container.innerHTML = "";
 
-            // Update baseline full total tracker chip counter text label tracking
             countLabel.textContent = `All (${reports.length})`;
 
-            // Apply search, date, and status filtering rules sequentially
             let processedRecords = reports.filter(item => {
                 const matchesSearch = !activeSearchQuery || item.pest.toLowerCase().includes(activeSearchQuery);
                 const matchesDate = !activeDateFilter || item.date === activeDateFilter;
@@ -752,22 +944,22 @@
 
             if (processedRecords.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align: center; padding: 40px 20px; background: #fff; border-radius: 16px; border: 1px solid var(--border-light);">
-                        <i class="fa-solid fa-folder-open" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 10px;"></i>
-                        <h3 style="font-size: 1rem; color: var(--brand-dark); margin-bottom: 4px;">No Reports Found</h3>
-                        <p style="font-size: 0.8rem; color: var(--text-muted);">We couldn't find any records matching your criteria.</p>
+                    <div class="premium-empty-state-card">
+                        <div class="empty-state-icon-circle">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </div>
+                        <h3>No Reports Found</h3>
+                        <p>We couldn't find any records matching your criteria. Try adjustments to your text search queries or structural filters.</p>
                     </div>`;
                 updatePaginationController(0);
                 return;
             }
 
-            // Client-Side Pagination calculations
             const totalMatches = processedRecords.length;
             const startIndex = (currentPage - 1) * recordsPerPage;
             const endIndex = startIndex + recordsPerPage;
             const paginatedRecords = processedRecords.slice(startIndex, endIndex);
 
-            // Append compiled records row loop nodes
             paginatedRecords.forEach(item => {
                 const row = document.createElement("div");
                 row.className = "report-row-node";
@@ -788,14 +980,13 @@
             updatePaginationController(totalMatches);
         }
 
-        /* ================== RE-EVALUATED CONDITIONAL PAGINATION ================== */
+        /* ================== CONDITIONAL PAGINATION ================== */
         function updatePaginationController(totalMatchedCount) {
             const paginationBlock = document.getElementById("pagination-wrapper");
             paginationBlock.innerHTML = "";
 
             const totalPagesCalculated = Math.ceil(totalMatchedCount / recordsPerPage);
 
-            // Hides the pagination completely if all current records fit cleanly on a single page
             if (totalPagesCalculated <= 1) {
                 paginationBlock.style.display = "none";
                 return;
@@ -803,7 +994,6 @@
 
             paginationBlock.style.display = "flex";
 
-            // Left Arrow
             const leftBtn = document.createElement("button");
             leftBtn.className = "page-btn";
             leftBtn.innerHTML = `<i class="fa-solid fa-chevron-left"></i>`;
@@ -811,7 +1001,6 @@
             leftBtn.onclick = () => { if(currentPage > 1) { currentPage--; renderReportsGrid(); }};
             paginationBlock.appendChild(leftBtn);
 
-            // Sequential Iteration Pages Loop Indices
             for (let i = 1; i <= totalPagesCalculated; i++) {
                 const pageBtn = document.createElement("button");
                 pageBtn.className = `page-btn ${i === currentPage ? 'active-page' : ''}`;
@@ -820,7 +1009,6 @@
                 paginationBlock.appendChild(pageBtn);
             }
 
-            // Right Arrow
             const rightBtn = document.createElement("button");
             rightBtn.className = "page-btn";
             rightBtn.innerHTML = `<i class="fa-solid fa-chevron-right"></i>`;
@@ -842,7 +1030,6 @@
             const imgElement = document.getElementById('sum-media-img');
             imgElement.src = record.img || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
 
-            // Dynamic Contextual Threshold color styles text handler assignments
             const statusTarget = document.getElementById('sum-status-text');
             statusTarget.textContent = record.status;
             statusTarget.style.color = (record.status === "Recommendation Issued") ? "#059669" : "#d97706";
@@ -850,7 +1037,6 @@
             const severityBanner = document.getElementById("sum-severity-banner");
             severityBanner.style.backgroundColor = (record.damage === "High") ? "#b91c1c" : "#528265";
 
-            // Populate recommendations arrays loops structures dynamically
             const initialList = document.getElementById('sum-initial-list');
             initialList.innerHTML = "";
             if(record.initial_recommendations && record.initial_recommendations.length > 0) {

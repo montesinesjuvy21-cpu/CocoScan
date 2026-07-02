@@ -390,19 +390,6 @@
 
         .btn-action-trigger.camera { background-color: var(--brand-dark); color: #ffffff; }
         .btn-action-trigger.camera:hover { background-color: #1f382f; transform: translateY(-1px); }
-        .btn-action-trigger.file { background-color: transparent; border: 1px solid rgba(0,0,0,0.1); color: var(--text-dark); }
-        .btn-action-trigger.file:hover { background-color: #f3f4f6; }
-
-        .btn-control {
-            transition: all 0.2s ease;
-        }
-        .btn-control.submit:hover {
-            background-color: #2e5630;
-            transform: translateY(-1px);
-        }
-        .btn-control.cancel:hover {
-            background-color: #f3f4f6;
-        }
 
         .guidance-tips-card {
             background-color: #e8f0ec;
@@ -478,7 +465,40 @@
         .history-info-meta h5 { font-size: 0.85rem; font-weight: 600; color: var(--text-dark); }
         .history-info-meta p { font-size: 0.72rem; color: var(--text-muted); margin-top: 1px; }
 
-        /* --- REFACTORED WORKSPACE RESYNC: FIRST PHOTO PARITY --- */
+        /* --- EMPTY HISTORY STATE CONTAINER --- */
+        .history-empty-state-card {
+            text-align: center;
+            padding: 32px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+        }
+        .history-empty-icon-circle {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background-color: #f0f5f2;
+            color: var(--primary-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            font-size: 1.25rem;
+        }
+        .history-empty-state-card h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+            margin-bottom: 4px;
+        }
+        .history-empty-state-card p {
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+
+        /* --- DIAGNOSTIC PREVIEW ELEMENTS --- */
         .diagnostic-result-badge {
             background-color: var(--badge-green-bg);
             border-radius: 14px;
@@ -502,7 +522,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
-        /* Fixed aspect ratio and object-fit cropping matching standard devices */
         .preview-media-frame img {
             width: 100%;
             display: block;
@@ -520,107 +539,178 @@
             word-break: break-word;
         }
 
-        /* Clean, non-background plain item lists mimicking reference photo */
-        .recommendation-sheet {
-            background: transparent;
-            padding: 4px 0;
-            border: none;
+        /* --- PREMIUM SUGGESTIONS CONTAINER CARD --- */
+        .premium-reco-card {
+            background-color: var(--bg-card);
+            border-radius: 20px;
+            padding: 24px 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.015);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        .recommendation-sheet h4 { 
-            font-size: 0.92rem; 
+        .premium-reco-card h4 { 
+            font-size: 1.02rem; 
             font-weight: 700; 
             color: var(--brand-dark); 
-            margin-bottom: 10px; 
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        
-        .recommendation-sheet ul {
+
+        .premium-reco-card h4 i {
+            color: var(--primary-green);
+            font-size: 1.1rem;
+        }
+
+        /* --- BALANCED ITEM CLEAN LIST --- */
+        .premium-reco-card ul {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            padding-left: 4px;
+            gap: 12px; /* Mas maluwag na padding space para madaling basahin */
+            padding: 2px 0;
         }
 
-        .recommendation-sheet li {
-            font-size: 0.85rem;
+        .premium-reco-card li {
+            font-size: 0.9rem;
             color: #334155;
             display: flex;
             align-items: flex-start;
+            gap: 12px;
+            line-height: 1.5;
+        }
+
+        /* Soft, professional check icon indicator */
+        .premium-reco-card li i {
+            color: #2e7d32; /* Rich agricultural check green */
+            font-size: 0.95rem;
+            margin-top: 3px; /* Perpektong vertical alignment sa unang linya ng teksto */
+            flex-shrink: 0;
+        }
+
+        .premium-reco-card li span {
+            flex: 1;
+        }
+
+        /* --- MODERN DISCLAIMER CALLOUT BOX --- */
+        .modern-disclaimer-box {
+            background-color: #fef8f2; /* Soft alert sand/amber hue tint wash */
+            border: 1px solid #f973161c; /* Soft transparent warm border line */
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: flex-start;
             gap: 10px;
-            line-height: 1.45;
-        }
-
-        .recommendation-sheet li::before {
-            content: "•";
-            color: var(--brand-dark);
-            font-size: 1.1rem;
-            line-height: 1;
-            margin-top: -1px;
-        }
-
-        .disclaimer-text-note {
-            font-size: 0.72rem;
-            font-style: italic;
-            color: #64748b;
-            margin-top: 14px;
-            line-height: 1.4;
-        }
-
-        /* --- OBSERVATION INPUT FIELD --- */
-        .additional-notes-area {
             margin-top: 4px;
         }
 
-        .additional-notes-area h4 {
-            font-size: 0.92rem;
+        .modern-disclaimer-box i {
+            color: #d97706; /* Notice attention indicator warning color */
+            font-size: 0.95rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .disclaimer-text-note {
+            font-size: 0.78rem;
+            color: #b45309; /* Deep cohesive amber text line entry */
+            line-height: 1.45;
+            margin: 0;
+        }
+
+        .disclaimer-text-note strong {
+            font-weight: 700;
+        }
+
+        /* --- CLEAN AND ORGANIZED PREMIUM FORMS WRAPPERS (IMAGE_7E1159 FIXED) --- */
+        .premium-form-card {
+            background-color: var(--bg-card);
+            border-radius: 18px;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .premium-form-card h4 {
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--brand-dark);
-            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .premium-form-card h4 i {
+            color: var(--primary-green);
         }
 
         .notes-input-box {
             width: 100%;
-            height: 120px;
+            height: 110px;
             border-radius: 12px;
-            border: 1px solid rgba(0, 0, 0, 0.08);
-            background-color: #eef3f0;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            background-color: #f8faf9;
             padding: 14px;
-            font-size: 0.85rem;
+            font-size: 0.88rem;
             color: var(--text-dark);
             resize: none;
             outline: none;
-            transition: border-color 0.2s;
+            transition: all 0.2s ease;
         }
         
         .notes-input-box:focus {
+            border-color: rgba(82, 130, 101, 0.4);
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        /* Modernized Micro Upload Drag-Drop Box for Supporting Photos */
+        .modern-micro-upload-zone {
+            border: 2px dashed rgba(82, 130, 101, 0.2);
+            background-color: #f8faf9;
+            border-radius: 14px;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .modern-micro-upload-zone:hover {
+            background-color: #f1f6f3;
             border-color: var(--primary-green);
         }
 
-        .supporting-photos-area {
-            margin-top: 16px;
+        .modern-micro-upload-zone i {
+            font-size: 1.35rem;
+            color: var(--primary-green);
         }
 
-        .supporting-help-text {
-            font-size: 0.78rem;
-            color: #475569;
-            margin-top: 8px;
-            line-height: 1.4;
+        .modern-micro-upload-zone span {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--brand-dark);
         }
 
-        .supporting-photos-controls {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-top: 10px;
+        .modern-micro-upload-zone p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
         }
 
         .supporting-preview-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
             gap: 10px;
-            margin-top: 12px;
+            margin-top: 4px;
         }
 
         .supporting-preview-card {
@@ -629,77 +719,98 @@
             border-radius: 12px;
             overflow: hidden;
             position: relative;
+            aspect-ratio: 1 / 1;
         }
 
         .supporting-preview-card img {
             width: 100%;
-            height: 100px;
+            height: 100%;
             object-fit: cover;
             display: block;
         }
 
         .supporting-preview-card button {
             position: absolute;
-            top: 6px;
-            right: 6px;
+            top: 4px;
+            right: 4px;
             border: none;
-            background: rgba(0,0,0,0.55);
+            background: rgba(239, 68, 68, 0.85);
             color: #ffffff;
             border-radius: 50%;
-            width: 26px;
-            height: 26px;
+            width: 22px;
+            height: 22px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            font-size: 0.75rem;
         }
 
         #supporting-photos-input { display: none; }
 
-        /* --- NOTIFICATION PLATFORM STYLES --- */
-        .bell-notice-wrapper {
-            position: relative; width: 38px; height: 38px; background: #ffffff;
-            border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; color: #0b251a;
-            font-size: 1.1rem; cursor: pointer; display: flex; align-items: center;
-            justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-        .notif-item {
-            display: flex; gap: 10px; padding: 10px; border-radius: 8px;
-            background: #f8fafc; border: 1px solid rgba(0,0,0,0.02); transition: background 0.15s ease; cursor: pointer;
-        }
-        .notif-item.is-unread {
-            background: rgba(22, 70, 48, 0.04); border-left: 3px solid #164630;
-        }
-        .notif-item p { margin: 0; font-size: 0.78rem; line-height: 1.3; color: #334155; }
-        .notif-item span.time { font-size: 0.65rem; color: #94a3b8; display: block; margin-top: 4px; }
-        .notif-filter { transition: all 0.2s ease; }
-        .notif-filter.active { background: #164630 !important; color: #ffffff !important; border-color: #164630 !important; }
-
-        /* --- CONTROL FOOTER BUTTON CONSOLE --- */
+        /* --- PRECISE HIERARCHY BUTTON CONSOLE PANEL --- */
         .control-action-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            margin-top: 16px; /* Dinagdagan natin ng kaunting breathing room mula sa card sa itaas */
+        }
+
+        .secondary-actions-row {
             display: flex;
             gap: 12px;
             width: 100%;
-            margin-top: 8px;
         }
 
         .btn-control {
-            flex: 1;
             padding: 14px;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            font-weight: 600;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 700;
             cursor: pointer;
             border: none;
-            text-align: center;
-            transition: opacity 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px; /* Tamang spacing para sa icon ng Submit Report */
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
         }
-        
-        .btn-control:active { opacity: 0.85; }
 
-        .btn-control.submit { background-color: #386136; color: #ffffff; }
-        .btn-control.cancel { background-color: #ffffff; border: 1px solid #c3cbd6; color: #334155; }
+        /* Primary Action: Full Highlight Solid Layout Button */
+        .btn-control.submit-primary { 
+            background-color: #164630; 
+            color: #ffffff; 
+            box-shadow: 0 4px 12px rgba(22, 70, 48, 0.18);
+        }
+        .btn-control.submit-primary:hover { 
+            background-color: #1e5c3f; 
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(30, 92, 63, 0.25);
+        }
 
+        /* Secondary Actions: Sophisticated Ghost Borders Outlines Buttons */
+        .btn-control.draft-secondary { 
+            background-color: #ffffff; 
+            border: 1px solid rgba(82, 130, 101, 0.25); 
+            color: var(--brand-dark); 
+        }
+        .btn-control.draft-secondary:hover { 
+            background-color: #e8f2f0; 
+            border-color: var(--primary-green);
+        }
+
+        .btn-control.cancel-secondary { 
+            background-color: #fff5f5; 
+            border: 1px solid rgba(239, 68, 68, 0.15); 
+            color: #e53e3e; 
+        }
+        .btn-control.cancel-secondary:hover { 
+            background-color: #fee2e2; 
+            color: #9b1c1c; 
+            border-color: rgba(239, 68, 68, 0.35);
+        }
         #hidden-camera-input { display: none; }
 
         /* --- RESPONSIVE WORKSPACE MEDIA TETHER --- */
@@ -819,15 +930,7 @@
 
                 <div class="recent-scans-panel">
                     <div class="panel-header-inline"><i class="fa-solid fa-clock-rotate-left"></i> Recent History Logs</div>
-                    <div class="scans-history-list" id="historical-log-target">
-                        <div class="history-item-node" onclick="viewHistoricalReport('Rhinoceros Beetle', '87%', 'Moderate', '2026-05-02 02:30:06')">
-                            <div class="history-info-meta">
-                                <h5>Rhinoceros Beetle</h5>
-                                <p>May 02, 2:30 AM | Damage: Moderate</p>
-                            </div>
-                            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.8rem;"></i>
-                        </div>
-                    </div>
+                    <div class="scans-history-list" id="historical-log-target"></div>
                 </div>
             </div>
 
@@ -861,40 +964,82 @@
                 </div>
                 
                 <div class="image-timestamp-footer">
-                    Farmer: <span style="font-weight: 600;">{{ user_name }}</span> &nbsp;|&nbsp; Brgy. San Ignacio, San Pablo City, Laguna &nbsp;|&nbsp; <span id="res-timestamp">2026-05-02 02:30:06</span>
+                    Farmer: <span style="font-weight: 600;">{{ user_name }}</span> 
+                    <br> Brgy. San Ignacio, San Pablo City, Laguna <br>
+                    <span id="res-timestamp">2026-05-02 02:30:06</span>
                 </div>
 
-                <div class="recommendation-sheet">
-                    <h4>Initial Recommendation</h4>
-                    <ul id="res-recommendations-list"></ul>
-                    <p class="disclaimer-text-note">This is an initial system suggestion only.<br>An agricultural expert will review and confirm the final recommendation.</p>
+        
+                <div class="premium-reco-card">
+                <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Initial Recommendation</h4>
+                <ul id="res-recommendations-list">
+                    <!-- Ang mga LI ay dadaan sa JavaScript na may kasamang icon wrapper -->
+                </ul>
+                
+                <!-- Modern Callout Notice Box Design -->
+                <div class="modern-disclaimer-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <p class="disclaimer-text-note">
+                        <strong>Initial Suggestion Only:</strong> An agricultural expert will thoroughly review and confirm the final treatment metrics.
+                    </p>
                 </div>
+            </div>
 
-                <div class="additional-notes-area">
-                    <h4>Additional Notes</h4>
+                <!-- Card Structured Form Field (Additional Notes) -->
+                <div class="premium-form-card">
+                    <h4><i class="fa-solid fa-pen-to-square"></i> Additional Notes</h4>
                     <textarea class="notes-input-box" id="field-notes-capture" placeholder="Write your additional notes here..."></textarea>
                 </div>
 
-                <div class="supporting-photos-area">
-                    <h4>Supporting Photos (optional)</h4>
-                    <p class="supporting-help-text">Add extra images to help experts review your report faster.</p>
-                    <div class="supporting-photos-controls">
-                        <button class="btn-control file" onclick="triggerSupportingPhotoUpload()">
-                            <i class="fa-solid fa-camera-retro"></i> Add Supporting Images
-                        </button>
-                        <input type="file" id="supporting-photos-input" accept="image/*" multiple onchange="handleSupportingImages(event)">
+                <!-- Card Structured Form Field (Supporting Photos Drag/Upload Zone) -->
+                <div class="premium-form-card">
+                    <h4><i class="fa-solid fa-images"></i> Supporting Photos (optional)</h4>
+                    <div class="modern-micro-upload-zone" onclick="triggerSupportingPhotoUpload()">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Add Extra Field Images</span>
+                        <p>Tap to open your phone gallery directory</p>
                     </div>
+                    <input type="file" id="supporting-photos-input" accept="image/*" multiple onchange="handleSupportingImages(event)">
                     <div class="supporting-preview-grid" id="supporting-preview-grid"></div>
                 </div>
 
+                <!-- Balanced Control Setup Box Consoles -->
                 <div class="control-action-bar">
-                    <button class="btn-control submit" onclick="saveDraftToIndexedDB()">Save Draft</button>
-                    <button class="btn-control submit" onclick="submitReportPayload()">Submit Report</button>
-                    <button class="btn-control cancel" onclick="abortReportWorkflow()">Cancel</button>
+                    <button class="btn-control submit-primary" onclick="submitReportPayload()">
+                        <i class="fa-solid fa-paper-plane"></i> Submit Report
+                    </button>
+                    <div class="secondary-actions-row">
+                        <button class="btn-control draft-secondary" onclick="saveDraftToIndexedDB()">
+                            Save Draft
+                        </button>
+                        <button class="btn-control cancel-secondary" onclick="abortReportWorkflow()">
+                            Cancel
+                        </button>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
+
+    <!-- REPLACEME: Mock Dataset Configuration -->
+    <script id="recent-history-mock-data" type="application/json">
+        [
+            {
+                "pest": "Rhinoceros Beetle",
+                "confidence": "87%",
+                "damage": "Moderate",
+                "time_string": "May 02, 2:30 AM",
+                "raw_timestamp": "2026-05-02 02:30:06"
+            },
+            {
+                "pest": "Brontispa",
+                "confidence": "92%",
+                "damage": "High",
+                "time_string": "Apr 28, 11:15 AM",
+                "raw_timestamp": "2026-04-28 11:15:22"
+            }
+        ]
+    </script>
 
     <script>
         let globalActiveImagePayload = "";
@@ -917,6 +1062,45 @@
             sidebar.classList.toggle('show-mobile');
             backdrop.classList.toggle('active');
             icon.className = sidebar.classList.contains('show-mobile') ? "fa-solid fa-xmark" : "fa-solid fa-bars";
+        }
+
+        /* ================== DYNAMIC HISTORICAL HISTORY RENDERING ENGINE ================== */
+        function loadAndRenderRecentHistoryLogs() {
+            const logTargetContainer = document.getElementById('historical-log-target');
+            logTargetContainer.innerHTML = '';
+
+            let historyDataset = [];
+            try {
+                const rawMockJson = document.getElementById('recent-history-mock-data')?.textContent;
+                historyDataset = JSON.parse(rawMockJson || "[]");
+            } catch(e) {
+                historyDataset = [];
+            }
+
+            if (!historyDataset || historyDataset.length === 0) {
+                logTargetContainer.innerHTML = `
+                    <div class="history-empty-state-card">
+                        <div class="history-empty-icon-circle">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                        <h4>No recent scan history</h4>
+                        <p>Your recent insect diagnostics will be tracked here once you execute a localized leaf scan operation.</p>
+                    </div>`;
+                return;
+            }
+
+            historyDataset.forEach(log => {
+                const nodeRow = document.createElement('div');
+                nodeRow.className = "history-item-node";
+                nodeRow.setAttribute('onclick', `viewHistoricalReport('${log.pest}', '${log.confidence}', '${log.damage}', '${log.raw_timestamp}')`);
+                nodeRow.innerHTML = `
+                    <div class="history-info-meta">
+                        <h5>${log.pest}</h5>
+                        <p>${log.time_string} | Damage: ${log.damage}</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.8rem;"></i>`;
+                logTargetContainer.appendChild(nodeRow);
+            });
         }
 
         function triggerNativeCamera() { document.getElementById('hidden-camera-input').click(); }
@@ -1008,10 +1192,6 @@
             const formData = new FormData();
             formData.append('image_file', globalActiveImageFile);
 
-            for (const pair of formData.entries()) {
-                console.log('formData entry:', pair[0], pair[1]);
-            }
-            
             fetch('/farmer/predict', {
                 method: 'POST',
                 body: formData
@@ -1025,7 +1205,6 @@
                     return;
                 }
                 
-                // Display results
                 const activeDate = new Date();
                 const formattedTimestamp = activeDate.toISOString().replace('T', ' ').substring(0, 19);
                 
@@ -1045,20 +1224,18 @@
                 
                 document.getElementById('res-img-placeholder').src = globalActiveImagePayload || defaultImages[data.pest];
                 
-                // Display recommendations
                 const listNode = document.getElementById('res-recommendations-list');
                 listNode.innerHTML = '';
                 if (data.recommendations && data.recommendations.length > 0) {
                     data.recommendations.forEach(rec => {
                         const li = document.createElement('li');
-                        li.textContent = rec;
+                        li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${rec}</span>`;
                         listNode.appendChild(li);
                     });
                 } else {
                     listNode.innerHTML = '<li>No specific recommendations at this time.</li>';
                 }
                 
-                // Store prediction data for report submission
                 window.currentPrediction = data;
                 
                 document.getElementById('step-loading-view').classList.remove('active-view');
@@ -1089,19 +1266,6 @@
             const compiledDamage = document.getElementById('res-damage').textContent;
             const additionalNotes = document.getElementById('field-notes-capture').value.trim();
             const predictionData = window.currentPrediction || {};
-
-            const targetLogList = document.getElementById('historical-log-target');
-            const newHistoryItem = document.createElement('div');
-            newHistoryItem.className = "history-item-node";
-            newHistoryItem.setAttribute('onclick', `viewHistoricalReport('${compiledPest}', '${compiledConfidence}', '${compiledDamage}', '${document.getElementById('res-timestamp').textContent}')`);
-            newHistoryItem.innerHTML = `
-                <div class="history-info-meta">
-                    <h5>${compiledPest}</h5>
-                    <p>Just now | Damage: ${compiledDamage}</p>
-                </div>
-                <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.8rem;"></i>
-            `;
-            targetLogList.insertBefore(newHistoryItem, targetLogList.firstChild);
 
             const formData = new FormData();
             formData.append('pest_type', compiledPest);
@@ -1156,7 +1320,6 @@
             const compiledConfidence = document.getElementById('res-confidence').textContent;
             const compiledDamage = document.getElementById('res-damage').textContent;
             const additionalNotes = document.getElementById('field-notes-capture').value.trim();
-            const predictionData = window.currentPrediction || {};
 
             if (!globalActiveImagePayload || !globalPrimaryGPS || !compiledPest) {
                 alert('Please perform a scan first before saving a draft.');
@@ -1207,12 +1370,6 @@
                         alert('Draft saved locally. You can resume it later when online.');
                         if (isOfflineSubmit) resetWorkflowStateToHome();
                     };
-                    transaction.onerror = () => {
-                        alert('Unable to save draft locally. Please try again.');
-                    };
-                };
-                request.onerror = () => {
-                    alert('Unable to access local draft storage.');
                 };
             });
         }
@@ -1307,6 +1464,7 @@
             globalActiveImageFile = null;
             globalPrimaryGPS = null;
             supportingImages = [];
+            loadAndRenderRecentHistoryLogs();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -1383,6 +1541,8 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             loadDraftFromSession();
+            loadAndRenderRecentHistoryLogs();
+            
             const trigger = document.getElementById("bell-trigger");
             const dropdown = document.getElementById("notif-dropdown");
             if(trigger && dropdown) {

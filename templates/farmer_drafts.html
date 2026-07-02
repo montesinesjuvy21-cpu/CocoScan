@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* ==========================================================================
+           1. VARIABLES & BASE STYLES
+           ========================================================================== */
         :root {
             --bg-base: #f4f7f5;
             --bg-card: #ffffff;
@@ -24,110 +27,15 @@
             font-family: 'Inter', sans-serif;
         }
         body {
-            background-color: var(--bg-base);
+            background-color: var(--brand-dark); /* Prevents white flashes on load */
             color: var(--text-dark);
             min-height: 100vh;
             overflow-x: hidden;
         }
-             /* --- DESKTOP RESTRICTION STYLING --- */
-        .desktop-restriction-overlay {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(circle at center, #0e3021 0%, #04120c 100%);
-            color: #ffffff;
-            z-index: 10000;
-            padding: 24px;
-            text-align: center;
-            overflow: hidden;
-        }
 
-        .desktop-card-prompt {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            padding: 50px 35px;
-            border-radius: 28px;
-            max-width: 420px;
-            width: 100%;
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            position: relative;
-        }
-
-        .glow-effect {
-            position: absolute;
-            top: -20%; left: -20%; right: -20%; bottom: -20%;
-            background: radial-gradient(circle at center, rgba(74, 198, 143, 0.08) 0%, transparent 60%);
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        .desktop-card-prompt .icon-pulse-container {
-            width: 84px;
-            height: 84px;
-            background: linear-gradient(135deg, rgba(74, 198, 143, 0.2) 0%, rgba(82, 130, 101, 0.2) 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 28px auto;
-            border: 1px solid rgba(74, 198, 143, 0.3);
-            position: relative;
-        }
-
-        .desktop-card-prompt i {
-            font-size: 2.4rem;
-            color: #4ac68f;
-            text-shadow: 0 0 15px rgba(74, 198, 143, 0.4);
-            z-index: 2;
-        }
-
-        .ripple-ring {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: 50%;
-            border: 1px solid rgba(74, 198, 143, 0.4);
-            animation: rippleEffect 2.5s infinite cubic-bezier(0.25, 0, 0, 1);
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .ring-2 { animation-delay: 0.8s; }
-
-        @keyframes rippleEffect {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.4); opacity: 0; }
-        }
-
-        .desktop-card-prompt h2 {
-            font-size: 1.6rem;
-            font-weight: 800;
-            margin-bottom: 14px;
-            letter-spacing: -0.5px;
-            background: linear-gradient(120deg, #ffffff 40%, #c3eede 100%);
-            -webkit-background-clip: text;
-            background-clip: text; 
-            -webkit-text-fill-color: transparent;
-        }
-
-        .desktop-card-prompt p {
-            font-size: 0.95rem;
-            color: #a4c2b3;
-            line-height: 1.6;
-        }
-        .mobile-viewport-container {
-            width: 100%;
-            min-height: 100vh;
-            background-color: var(--bg-base);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
+        /* ==========================================================================
+           2. FIXED HEADER & NAVIGATION
+           ========================================================================== */
         .mobile-header {
             width: 100%;
             height: 64px;
@@ -136,16 +44,47 @@
             position: fixed;
             top: 0; left: 0;
             z-index: 1000;
-            padding: 0 16px;
+            padding: 0 max(16px, calc((100% - 1400px) / 2 + 24px)); 
             display: flex;
             align-items: center;
             justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
-        .logo-group { display: flex; align-items: center; gap: 10px; }
-        .logo-img-fallback { width: 32px; height: 32px; background: var(--bg-card); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .mobile-header h2 { font-size: 1.15rem; margin-bottom: 0; }
-        .mobile-header p { font-size: 0.7rem; color: rgba(255,255,255,0.7); margin: 0; }
-        .hamburger-btn { background: none; border: none; color: #ffffff; font-size: 1.35rem; cursor: pointer; }
+        .logo-group { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        .logo-img-fallback { 
+            width: 32px; 
+            height: 32px; 
+            background: var(--bg-card); 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .mobile-header h2 { 
+            font-size: 1.15rem; 
+            margin-bottom: 0; 
+            font-weight: 800;
+        }
+        .mobile-header p { 
+            font-size: 0.7rem; 
+            color: rgba(255,255,255,0.7); 
+            margin: 0; 
+        }
+        .hamburger-btn { 
+            background: none; 
+            border: none; 
+            color: #ffffff; 
+            font-size: 1.35rem; 
+            cursor: pointer; 
+        }
+
+        /* ==========================================================================
+           3. SIDEBAR DRAWER MENU
+           ========================================================================== */
         .sidebar-wrapper {
             width: 290px;
             background-color: var(--brand-dark);
@@ -157,70 +96,370 @@
             top: 64px; bottom: 0; right: 0;
             z-index: 999;
             transform: translateX(100%);
-            transition: transform 0.3s ease;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: -5px 0 25px rgba(0,0,0,0.25);
         }
-        .sidebar-wrapper.show-mobile { transform: translateX(0); }
-        .menu-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); padding: 24px 20px 12px; font-weight: 700; }
-        .sidebar-menu-list { list-style: none; padding: 0 10px; }
-        .menu-item-link { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: rgba(255,255,255,0.75); text-decoration: none; border-radius: 10px; margin-bottom: 6px; font-size: 0.95rem; font-weight: 500; }
-        .menu-item-link:hover, .menu-item-link.active { background: rgba(255,255,255,0.08); color: #ffffff; }
-        .sidebar-user-footer { padding: 20px; background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.08); }
-        .user-meta-box { display: flex; align-items: center; gap: 12px; }
-        .user-avatar-circle { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; }
-        .user-identity-text h4 { font-size: 0.9rem; margin: 0; }
-        .user-identity-text p { font-size: 0.75rem; color: rgba(255,255,255,0.6); margin: 0; }
-        .btn-logout-trigger { color: rgba(255,255,255,0.6); font-size: 1.2rem; }
-        .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(11,37,26,0.4); z-index: 950; }
-        .sidebar-backdrop.active { display: block; }
-        .main-content-layout { flex: 1; width: 100%; padding: 88px 16px 24px; display: flex; flex-direction: column; gap: 16px; }
-        .section-title-wrap { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-        .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
-        .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
-        .drafts-board { display: grid; grid-template-columns: 1fr; gap: 14px; }
-        .draft-card { background: var(--bg-card); border-radius: 18px; border: 1px solid var(--border-light); overflow: hidden; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
-        .draft-card-header { display: grid; grid-template-columns: 96px 1fr; gap: 14px; padding: 16px; align-items: center; }
-        .draft-thumb { width: 96px; height: 96px; border-radius: 16px; background: #f8fafb; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        .draft-thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .draft-meta { display: flex; flex-direction: column; gap: 4px; }
-        .draft-meta h3 { font-size: 1rem; margin: 0; color: var(--brand-dark); }
-        .draft-meta p { margin: 0; color: var(--text-muted); font-size: 0.82rem; line-height: 1.4; }
-        .draft-card-body { padding: 0 16px 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-        .draft-stat { background: #f6fbf8; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
-        .draft-stat strong { font-size: 0.95rem; color: var(--brand-dark); }
-        .draft-stat span { font-size: 0.78rem; color: var(--text-muted); }
-        .draft-actions { padding: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
-        .btn-ghost, .btn-solid { flex: 1; min-width: 120px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; padding: 12px 14px; cursor: pointer; border: none; }
-        .btn-ghost { background: #ffffff; color: var(--brand-dark); border: 1px solid rgba(82,130,101,0.18); }
-        .btn-solid { background: var(--primary-green); color: #ffffff; }
-        .status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px; background: #eef7f0; color: #24522f; font-size: 0.8rem; font-weight: 700; }
-        .empty-state { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 18px; padding: 28px 20px; text-align: center; color: var(--text-muted); }
-        .empty-state h2 { font-size: 1.25rem; margin-bottom: 12px; color: var(--brand-dark); }
-        .empty-state p { font-size: 0.92rem; line-height: 1.6; }
-        @media (min-width: 501px) {
-            .desktop-restriction-overlay { display: flex; }
-            .mobile-viewport-container { display: none; }
+        .sidebar-wrapper.show-mobile { 
+            transform: translateX(0); 
         }
+        .menu-label { 
+            font-size: 0.7rem; 
+            text-transform: uppercase; 
+            letter-spacing: 0.1em; 
+            color: rgba(255,255,255,0.5); 
+            padding: 24px 20px 12px; 
+            font-weight: 700; 
+        }
+        .sidebar-menu-list { 
+            list-style: none; 
+            padding: 0 10px; 
+        }
+        .menu-item-link { 
+            display: flex; 
+            align-items: center; 
+            gap: 14px; 
+            padding: 14px 16px; 
+            color: rgba(255,255,255,0.75); 
+            text-decoration: none; 
+            border-radius: 10px; 
+            margin-bottom: 6px; 
+            font-size: 0.95rem; 
+            font-weight: 500; 
+        }
+        .menu-item-link:hover, 
+        .menu-item-link.active { 
+            background: rgba(255,255,255,0.08); 
+            color: #ffffff; 
+        }
+        .sidebar-user-footer { 
+            padding: 20px; 
+            background: rgba(0,0,0,0.2); 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            border-top: 1px solid rgba(255,255,255,0.08); 
+        }
+        .user-meta-box { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+        }
+        .user-avatar-circle { 
+            width: 42px; 
+            height: 42px; 
+            border-radius: 50%; 
+            background: rgba(255,255,255,0.12); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .user-identity-text h4 { 
+            font-size: 0.9rem; 
+            margin: 0; 
+        }
+        .user-identity-text p { 
+            font-size: 0.75rem; 
+            color: rgba(255,255,255,0.6); 
+            margin: 0; 
+        }
+        .btn-logout-trigger { 
+            color: rgba(255,255,255,0.6); 
+            font-size: 1.2rem; 
+        }
+        .sidebar-backdrop { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(11,37,26,0.4); 
+            z-index: 950; 
+        }
+        .sidebar-backdrop.active { 
+            display: block; 
+        }
+
+        /* ==========================================================================
+           4. CORE MAIN LAYOUT & TITLES
+           ========================================================================== */
+        .mobile-viewport-container {
+            width: 100%;
+            min-height: 100vh;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .main-content-layout { 
+            flex: 1; 
+            width: 100%; 
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 88px 24px 24px 24px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 24px; 
+        }
+        .section-title-wrap { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            gap: 16px; 
+        }
+        .section-title-wrap h1 { 
+            font-size: 1.45rem; 
+            font-weight: 800; 
+            color: var(--brand-dark); 
+        }
+        .section-title-wrap p { 
+            font-size: 0.85rem; 
+            color: var(--text-muted); 
+            margin-top: 4px; 
+        }
+
+        .btn-icon-refresh {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: #ffffff;
+            border: 1px solid var(--border-light);
+            color: var(--primary-green);
+            font-size: 1.05rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-icon-refresh:hover {
+            background-color: var(--primary-green);
+            color: #ffffff;
+            transform: rotate(45deg);
+            box-shadow: 0 6px 14px rgba(82, 130, 101, 0.15);
+        }
+        .btn-icon-refresh:active {
+            transform: rotate(90deg) scale(0.95);
+        }
+
+        /* ==========================================================================
+           5. DRAFTS GRID & CARDS
+           ========================================================================== */
+        .drafts-board { 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 14px; 
+        }
+        .draft-card { 
+            background: var(--bg-card); 
+            border-radius: 18px; 
+            border: 1px solid var(--border-light); 
+            overflow: hidden; 
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); 
+            display: flex;
+            flex-direction: column;
+        }
+        .draft-card-header { 
+            display: grid; 
+            grid-template-columns: 96px 1fr; 
+            gap: 14px; 
+            padding: 16px; 
+            align-items: center; 
+        }
+        .draft-thumb { 
+            width: 96px; 
+            height: 96px; 
+            border-radius: 16px; 
+            background: #f8fafb; 
+            overflow: hidden; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .draft-thumb img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+        }
+        .draft-meta { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+        }
+        .draft-meta h3 { 
+            font-size: 1rem; 
+            margin: 0; 
+            color: var(--brand-dark); 
+        }
+        .draft-meta p { 
+            margin: 0; 
+            color: var(--text-muted); 
+            font-size: 0.82rem; 
+            line-height: 1.4; 
+        }
+        .draft-card-body { 
+            padding: 0 16px 16px; 
+            display: grid; 
+            grid-template-columns: repeat(2, minmax(0, 1fr)); 
+            gap: 12px; 
+        }
+        .draft-stat { 
+            background: #f6fbf8; 
+            border-radius: 14px; 
+            padding: 12px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+        }
+        .draft-stat strong { 
+            font-size: 0.95rem; 
+            color: var(--brand-dark); 
+        }
+        .draft-stat span { 
+            font-size: 0.78rem; 
+            color: var(--text-muted); 
+        }
+        .draft-actions { 
+            padding: 16px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 10px; 
+            margin-top: auto;
+        }
+        .btn-ghost, .btn-solid { 
+            flex: 1; 
+            min-width: 120px; 
+            border-radius: 12px; 
+            font-size: 0.85rem; 
+            font-weight: 700; 
+            padding: 12px 14px; 
+            cursor: pointer; 
+            border: none; 
+            transition: all 0.2s ease;
+        }
+        .btn-ghost { 
+            background: #ffffff; 
+            color: var(--brand-dark); 
+            border: 1px solid rgba(82,130,101,0.18); 
+        }
+        .btn-solid { 
+            background: var(--primary-green); 
+            color: #ffffff; 
+        }
+
+        /* ==========================================================================
+           6. ENHANCED PROPORTIONAL EMPTY STATE VIEW (MATCHES REPORTS CARD SIZE)
+           ========================================================================== */
+        .empty-state { 
+            background: var(--bg-card); 
+            border: 1px solid var(--border-light); 
+            border-radius: 24px; 
+            padding: 60px 32px; 
+            text-align: center; 
+            color: var(--text-muted);
+            width: 100%; /* Binago para sumakop sa buong track gaya ng premium report container */
+            margin: 0 auto; 
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.03);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            grid-column: 1 / -1; /* Sasakupin ang buong space kahit naka-grid bundle sa desktop */
+        }
+
+        .empty-state-icon-box {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #f0f7f3;
+            color: var(--primary-green);
+            font-size: 2.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .empty-state h2 { 
+            font-size: 1.35rem; 
+            font-weight: 800;
+            margin-bottom: 10px; 
+            color: var(--brand-dark); 
+            letter-spacing: -0.3px;
+        }
+        .empty-state p { 
+            font-size: 0.92rem; 
+            line-height: 1.6; 
+            color: var(--text-muted);
+            max-width: 440px;
+        }
+
+        /* ==========================================================================
+           7. RESPONSIVE MEDIA QUERIES (DESKTOP ENHANCEMENTS)
+           ========================================================================== */
         @media (max-width: 500px) {
-            .desktop-restriction-overlay { display: none; }
-            .mobile-viewport-container { display: flex; }
-            .draft-card-body { grid-template-columns: 1fr; }
-            .draft-actions { flex-direction: column; }
+            .main-content-layout { 
+                padding: 88px 16px 24px; 
+            }
+            .draft-card-body { 
+                grid-template-columns: 1fr; 
+            }
+            .draft-actions { 
+                flex-direction: column; 
+            }
+            .empty-state {
+                padding: 44px 20px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .main-content-layout {
+                padding: 108px 32px 32px 32px; 
+                gap: 24px; 
+            }
+            .mobile-header {
+                height: 72px; 
+                padding: 0 max(32px, calc((100% - 1400px) / 2 + 32px));
+            }
+            .sidebar-wrapper {
+                top: 72px;
+            }
+            .section-title-wrap h1 { 
+                font-size: 1.95rem; 
+            }
+            .section-title-wrap p { 
+                font-size: 0.98rem; 
+                margin-top: 4px;
+            }
+            .drafts-board { 
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 20px; 
+            }
+            @media (min-width: 1400px) {
+                .drafts-board { 
+                    grid-template-columns: repeat(3, 1fr); 
+                }
+            }
+            .draft-card {
+                border-radius: 20px;
+            }
+            .draft-card-header {
+                padding: 20px;
+                gap: 16px;
+            }
+            .draft-meta h3 {
+                font-size: 1.15rem;
+            }
+            .draft-card-body {
+                padding: 0 20px 20px;
+                gap: 14px;
+            }
+            .draft-actions {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
-     <div class="desktop-restriction-overlay">
-        <div class="desktop-card-prompt">
-            <div class="glow-effect"></div>
-            <div class="icon-pulse-container">
-                <div class="ripple-ring ring-1"></div>
-                <div class="ripple-ring ring-2"></div>
-                <i class="fa-solid fa-mobile-screen-button"></i>
-            </div>
-            <h2>Mobile Access Required</h2>
-            <p>The <strong>CocoScan Farmer Platform</strong> is purpose-built exclusively for mobile smartphone screens to facilitate field scan operations.</p>
-        </div>
-    </div>
 
     <div class="mobile-viewport-container">
         <header class="mobile-header">
@@ -264,14 +503,19 @@
                     <p>Resume, submit, or remove your saved field scan reports.</p>
                 </div>
                 <div>
-                    <button class="btn-solid" onclick="loadDrafts()">Refresh</button>
+                    <button class="btn-icon-refresh" onclick="loadDrafts()" title="Refresh Layout"><i class="fa-solid fa-arrows-rotate"></i></button>
                 </div>
             </header>
 
+            <!-- Dito ipapasok ang grid at empty view module layouts -->
             <div id="drafts-list" class="drafts-board"></div>
+            
             <div id="empty-state" class="empty-state" style="display:none;">
-                <h2>No saved drafts</h2>
-                <p>You don’t have any draft scans saved yet. Capture a leaf image using Scan Pest to begin your first report.</p>
+                <div class="empty-state-icon-box">
+                    <i class="fa-solid fa-file-signature"></i>
+                </div>
+                <h2>No Saved Drafts</h2>
+                <p>You don’t have any draft scans saved yet. Go to Scan Pest page to begin your first report.</p>
             </div>
         </main>
     </div>
@@ -325,7 +569,7 @@
             const list = document.getElementById('drafts-list');
             if (show) {
                 list.innerHTML = '';
-                empty.style.display = 'block';
+                empty.style.display = 'flex'; 
                 if (message) empty.querySelector('p').textContent = message;
             } else {
                 empty.style.display = 'none';
@@ -454,6 +698,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // HARDCODED MOCK DATA: Isesend nito ang empty container view kung walang laman ang database track.
             loadDrafts();
         });
     </script>
