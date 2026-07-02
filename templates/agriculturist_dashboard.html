@@ -82,34 +82,11 @@
         .metric-icon-box { width:46px; height:46px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.15rem; }
 
         .weather-analytics-card { background: linear-gradient(135deg, #528265 0%, #3b604a 100%); border-radius:14px; padding:18px; color:#fff; margin-top:10px; }
-        .weather-card-header h4 { font-size: 0.75rem; text-transform: uppercase; opacity: 0.75; font-weight: 600; letter-spacing: 0.5px; }
-        .weather-card-header h3 { font-size: 1.2rem; font-weight: 700; margin-top: 1px; }
-        .weather-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 16px 0; }
-        .weather-stat-node { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; }
-        .weather-stat-node h6 { font-size: 0.75rem; opacity: 0.7; font-weight: 400; }
-        .weather-stat-node p { font-size: 1.45rem; font-weight: 800; margin-top: 2px; }
-        .weather-stat-node p span { font-size: 0.85rem; font-weight: 500; margin-left: 1px; }
-        .weather-alert-banner { background-color: rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 12px; font-size: 0.75rem; line-height: 1.4; display: flex; align-items: flex-start; gap: 8px; }
-        .dynamic-risk-card { background-color: var(--risk-bg, #ffffff) !important; border: 1px solid var(--risk-border, rgba(0,0,0,0.08)) !important; color: var(--risk-color, #0b251a) !important; display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px; margin-top: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .dynamic-risk-card .risk-icon { margin-top: 2px; flex-shrink: 0; font-size: 1.1rem; color: var(--risk-color) !important; }
-        .dynamic-risk-card .risk-text { font-size: 0.82rem; line-height: 1.4; color: #1e293b; }
-        .dynamic-risk-card .risk-text strong { color: var(--risk-color) !important; font-weight: 700; }
         .chart-visual-card { background:var(--bg-card); border-radius:12px; padding:14px; border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(16,24,24,0.03); }
         .chart-box-render-frame { width:100%; height:240px; }
-        .chart-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted); gap:8px; text-align:center; font-size:0.85rem; }
-        .chart-empty-state i { font-size:1.1rem; color:var(--primary-green); }
-        .notif-item { display:flex; gap:10px; padding:10px; border-radius:8px; background:#f8fafc; border:1px solid rgba(0,0,0,0.02); transition:background 0.15s ease; }
-        .notif-item.is-unread { background: rgba(22,70,48,0.04); border-left: 3px solid #164630; }
-        .notif-item p { margin:0; font-size:0.78rem; line-height:1.3; color:#334155; }
-        .notif-item span.time { font-size:0.65rem; color:#94a3b8; display:block; margin-top:4px; }
-        .notif-filter { transition: all 0.2s ease; }
-        .notif-filter.active { background:#164630 !important; color:#ffffff !important; border-color:#164630 !important; }
-        .btn-logout-trigger { color: rgba(255,255,255,0.4); font-size:1.2rem; transition: color 0.2s ease; padding:4px; }
-        .btn-logout-trigger:hover { color:#ef4444 !important; }
 
         /* Quick action card (scan) */
         .quick-action-card { background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border-light); text-align:center; }
-        .responsive-dashboard-shell { width:100%; min-height:100vh; display:flex; flex-direction:column; }
 
         /* Responsive behavior */
         @media (min-width: 900px) {
@@ -130,20 +107,33 @@
             .chart-box-render-frame { height: 180px; }
         }
 
-        @media (max-width: 600px) {
-            .main-content-layout { padding: 88px 12px 20px 12px; }
-            .dashboard-header-container { flex-direction: column; align-items: flex-start; gap: 10px; }
-            .weather-stats-grid { grid-template-columns: 1fr; }
-            #notif-dropdown { width: min(320px, calc(100vw - 24px)); right: -8px; }
-        }
-
     </style>
 </head>
 <body>
-    {% from "components/dashboard_components.html" import sidebar, notification_panel, weather_card, chart_card, responsive_page_shell %}
 
     <!-- Sidebar (permanent on desktop, slide-over on mobile) -->
-    {{ sidebar('/agriculturist/dashboard', user_name, 'Agriculturist', sidebar_items) }}
+    <aside class="sidebar-wrapper" id="sidebar">
+        <div>
+            <div class="menu-label">MAIN MENU</div>
+            <ul class="sidebar-menu-list">
+                <li><a href="/agriculturist/dashboard" class="menu-item-link active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-check"></i> Pending Reports</a></li>
+                <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Reviewed</a></li>
+                <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-user-footer">
+            <div class="user-meta-box">
+                <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size:0.95rem;"></i></div>
+                <div class="user-identity-text">
+                    <h4>{{ user_name }}</h4>
+                    <p>Agriculturist</p>
+                </div>
+            </div>
+            <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
+        </div>
+    </aside>
 
     <!-- Topbar for mobile -->
     <div class="topbar">
@@ -159,14 +149,19 @@
 
     <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index: 900;"></div>
 
-    {% call responsive_page_shell() %}
     <main class="main-content-layout">
         <header class="dashboard-header-container">
             <div>
                 <h1>Dashboard</h1>
                 <p>Overview of reported and detected pests</p>
             </div>
-            {{ notification_panel() }}
+            <div id="notification-container" style="position:relative;">
+                <div id="bell-trigger" class="bell-notice-wrapper" style="position:relative; width:38px; height:38px; background:#ffffff; border:1px solid rgba(0,0,0,0.06); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-regular fa-bell"></i>
+                    <span id="bell-badge" style="display:none; position:absolute; top:8px; right:9px; width:6px; height:6px; background-color:#e63946; border-radius:50%; border:1.5px solid #fff;"></span>
+                </div>
+                <div id="notif-dropdown" style="display:none; position:absolute; top:46px; right:0; width:320px; background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:12px; padding:12px; box-shadow:0 8px 28px rgba(0,0,0,0.08); z-index:1000;"></div>
+            </div>
         </header>
 
         <div id="greeting-banner" style="font-weight:700; color:#164630; margin-bottom:8px;"></div>
@@ -211,13 +206,52 @@
 
         <div style="display:grid; grid-template-columns: 1fr 380px; gap: 16px; align-items:start; margin-bottom:16px;">
             <div>
-                {{ weather_card(weather, risk) }}
+                <div class="weather-analytics-card">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <h4 style="margin:0; font-size:0.75rem; text-transform:uppercase; opacity:0.85;">Current Weather</h4>
+                            <h3 style="margin:6px 0 0 0;">{{ weather.location }}</h3>
+                        </div>
+                        {% if weather.is_down %}
+                        <span style="font-size:0.7rem; background-color: rgba(239,68,68,0.12); color:#ef4444; padding:6px 10px; border-radius:10px; font-weight:700;">Offline</span>
+                        {% endif %}
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-top:14px;">
+                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
+                            <div style="font-size:0.75rem; opacity:0.8;">Temperature</div>
+                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.temp }}<span style="font-size:0.85rem; font-weight:600;">°C</span></div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
+                            <div style="font-size:0.75rem; opacity:0.8;">Humidity</div>
+                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.humidity }}<span style="font-size:0.85rem; font-weight:600;">%</span></div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
+                            <div style="font-size:0.75rem; opacity:0.8;">Rainfall</div>
+                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.rainfall }}<span style="font-size:0.85rem; font-weight:600;">mm</span></div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
+                            <div style="font-size:0.75rem; opacity:0.8;">Wind</div>
+                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.wind }}<span style="font-size:0.85rem; font-weight:600;">km/h</span></div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:12px; background: rgba(255,255,255,0.06); padding:10px; border-radius:8px; font-size:0.85rem;">
+                        <strong>Environmental Risk:</strong> <span>{{ risk.level }}</span> — {{ risk.text }}
+                    </div>
+                </div>
 
                 <div style="height:16px;"></div>
 
-                {{ chart_card('trendChart', 'Pest Trend Analytics', 'fa-chart-line', trend_chart_data) }}
+                <div class="chart-visual-card" style="margin-bottom:12px;">
+                    <div style="font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-chart-line" style="margin-right:8px; color:var(--primary-green);"></i> Pest Trends</div>
+                    <div class="chart-box-render-frame"><canvas id="trendChart"></canvas></div>
+                </div>
 
-                {{ chart_card('distributionChart', 'System Scope Distribution', 'fa-chart-pie', distribution_chart_data) }}
+                <div class="chart-visual-card">
+                    <div style="font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-chart-pie" style="margin-right:8px; color:var(--primary-green);"></i> Pest Distribution</div>
+                    <div class="chart-box-render-frame"><canvas id="distributionChart"></canvas></div>
+                </div>
             </div>
 
             <div>
@@ -240,14 +274,152 @@
         </div>
 
     </main>
-    {% endcall %}
 
-<div id="dashboard-config"
-     data-user-name="{{ user_name }}"
-     data-notifications='{{ notifications | tojson if notifications is defined else '[]' }}'
-     data-trend='{{ trend_chart_data | tojson if trend_chart_data is not none else 'null' }}'
-     data-distribution='{{ distribution_chart_data | tojson if distribution_chart_data is not none else 'null' }}'></div>
+<script>
+    // Reuse much of the farmer dashboard JS (greetings, notifications, charts)
+    document.addEventListener('DOMContentLoaded', () => {
+        setupMenuToggle();
+        setupGreeting();
+        initNotificationUiEngine();
+        initCharts();
+    });
 
-<script src="{{ url_for('static', filename='js/dashboard_shared.js') }}"></script>
+    function setupMenuToggle() {
+        const toggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('backdrop');
+        if (!toggle) return;
+        toggle.addEventListener('click', () => {
+            if (sidebar.classList.contains('show-mobile')) {
+                sidebar.classList.remove('show-mobile');
+                backdrop.style.display = 'none';
+            } else {
+                sidebar.classList.add('show-mobile');
+                backdrop.style.display = 'block';
+            }
+        });
+    }
+
+    function toggleSidebarMenu() { // called by backdrop
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('backdrop');
+        sidebar.classList.remove('show-mobile');
+        backdrop.style.display = 'none';
+    }
+
+    function setupGreeting() {
+        const banner = document.getElementById('greeting-banner');
+        const fullName = "{{ user_name }}".trim();
+        const firstName = fullName.split(' ')[0] || 'Agriculturist';
+        const hour = new Date().getHours();
+        let welcome = 'Dashboard';
+        if (hour < 12) welcome = `Good Morning, ${firstName}!`;
+        else if (hour < 18) welcome = `Good Afternoon, ${firstName}!`;
+        else welcome = `Good Evening, ${firstName}!`;
+        if (banner) banner.textContent = welcome;
+    }
+
+    let notifications = [{ text: 'High vector populations identified near Brgy. San Ignacio.', time: '10 mins ago', type: 'unread', tag: 'alert' }];
+
+    function initNotificationUiEngine() {
+        const bellTrigger = document.getElementById('bell-trigger');
+        const dropdown = document.getElementById('notif-dropdown');
+        const badge = document.getElementById('bell-badge');
+        const listWrapper = document.getElementById('notif-list-wrapper');
+
+        if (!bellTrigger) return;
+        bellTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+        document.addEventListener('click', (e) => {
+            if (dropdown && !dropdown.contains(e.target) && e.target !== bellTrigger) dropdown.style.display = 'none';
+        });
+
+        function renderNotifications() {
+            if (!listWrapper) return;
+            listWrapper.innerHTML = '';
+            notifications.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'notif-item ' + (item.type === 'unread' ? 'is-unread' : '');
+                div.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b; margin-top:4px;"></i><div><p style="margin:0;">${item.text}</p><span style="font-size:0.72rem;color:var(--text-muted);">${item.time}</span></div>`;
+                listWrapper.appendChild(div);
+            });
+            if (badge) badge.style.display = notifications.filter(n => n.type === 'unread').length > 0 ? 'block' : 'none';
+        }
+
+        renderNotifications();
+    }
+
+     function initCharts() {
+        const trendEl = document.getElementById('trendChart');
+        if (trendEl) {
+            const ctxTrend = trendEl.getContext('2d');
+            new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [
+                        {
+                            label: 'Rhinoceros Beetle',
+                            data: [8, 12, 11, 18, 14, 22],
+                            borderColor: '#0b251a',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.2,
+                            pointRadius: 3
+                        },
+                        {
+                            label: 'Brontispa',
+                            data: [4, 7, 4, 7, 8, 8],
+                            borderColor: '#4ac68f',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.2,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10, weight: '600' } } } 
+                    },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        const distEl = document.getElementById('distributionChart');
+        if (distEl) {
+            const ctxDist = distEl.getContext('2d');
+            new Chart(ctxDist, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Rhinoceros Beetle', 'Brontispa'],
+                    datasets: [{
+                        data: [65, 35],
+                        backgroundColor: ['#0b251a', '#528265'],
+                        borderWidth: 3,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11, weight: '500' } } }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+    }
+
+</script>
 </body>
 </html>

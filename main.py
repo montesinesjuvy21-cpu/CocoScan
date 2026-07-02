@@ -70,65 +70,6 @@ def normalize_role(value) -> str:
     return str(value or "").strip().lower()
 
 
-def build_dashboard_chart_payload(reports):
-    if not reports:
-        return None, None
-
-    month_counts = {}
-    pest_counts = {}
-    month_order = {
-        "Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5,
-        "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9, "Nov": 10, "Dec": 11,
-    }
-
-    for item in reports:
-        pest_type = (item.get("pest_type") or "Unknown Pest").strip() or "Unknown Pest"
-        pest_counts[pest_type] = pest_counts.get(pest_type, 0) + 1
-
-        created_at = item.get("created_at")
-        if not created_at:
-            continue
-
-        try:
-            created_dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-        except Exception:
-            continue
-
-        month_key = created_dt.strftime("%b")
-        month_counts[month_key] = month_counts.get(month_key, 0) + 1
-
-    trend_chart_data = None
-    if month_counts:
-        ordered_months = sorted(month_counts.items(), key=lambda item: month_order.get(item[0], 99))
-        trend_chart_data = {
-            "labels": [month for month, _ in ordered_months],
-            "datasets": [{
-                "label": "Reports",
-                "data": [count for _, count in ordered_months],
-                "borderColor": "#0b251a",
-                "backgroundColor": "transparent",
-                "borderWidth": 2,
-                "tension": 0.2,
-                "pointRadius": 3,
-            }],
-        }
-
-    distribution_chart_data = None
-    if pest_counts:
-        sorted_pests = sorted(pest_counts.items(), key=lambda item: item[1], reverse=True)
-        distribution_chart_data = {
-            "labels": [label for label, _ in sorted_pests],
-            "datasets": [{
-                "data": [count for _, count in sorted_pests],
-                "backgroundColor": ["#0b251a", "#528265", "#4ac68f", "#94a3b8"],
-                "borderWidth": 3,
-                "borderColor": "#ffffff",
-            }],
-        }
-
-    return trend_chart_data, distribution_chart_data
-
-
 def reverse_geocode_latlng(latitude, longitude):
     try:
         response = requests.get(
@@ -588,34 +529,7 @@ def farmer_dashboard():
 
         risk = calculate_environmental_risk(weather["temp"], weather["humidity"], weather["rainfall"])
 
-        sidebar_items = [
-            {"href": "/farmer/dashboard", "icon": "fa-solid fa-chart-pie", "label": "Dashboard"},
-            {"href": "/farmer/scan", "icon": "fa-solid fa-camera", "label": "Scan Pest"},
-            {"href": "/farmer/drafts", "icon": "fa-solid fa-file-pen", "label": "Drafts"},
-            {"href": "/farmer/reports", "icon": "fa-solid fa-folder-open", "label": "My Reports"},
-        ]
-        notifications = [{
-            "text": "Dashboard metrics are currently synced from your latest report snapshot.",
-            "time": "Now",
-            "type": "unread",
-            "tag": "info",
-        }]
-
-        reports_response = supabase.table("reports").select("created_at,pest_type").execute()
-        reports_data = getattr(reports_response, "data", []) or []
-        trend_chart_data, distribution_chart_data = build_dashboard_chart_payload(reports_data)
-
-        return render_template(
-            'farmer_dashboard.html',
-            user_name=user_name,
-            metrics=metrics,
-            weather=weather,
-            risk=risk,
-            sidebar_items=sidebar_items,
-            notifications=notifications,
-            trend_chart_data=trend_chart_data,
-            distribution_chart_data=distribution_chart_data,
-        )
+        return render_template('farmer_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk)
         
     except Exception as e:
         logger.error(f"Dashboard routing exception: {str(e)}")
@@ -869,34 +783,7 @@ def agriculturist_dashboard():
 
         risk = calculate_environmental_risk(weather["temp"], weather["humidity"], weather["rainfall"])
 
-        sidebar_items = [
-            {"href": "/agriculturist/dashboard", "icon": "fa-solid fa-chart-pie", "label": "Dashboard"},
-            {"href": "/agriculturist/pending", "icon": "fa-solid fa-list-check", "label": "Pending Reports"},
-            {"href": "/agriculturist/reviewed", "icon": "fa-solid fa-check-double", "label": "Reviewed"},
-            {"href": "/agriculturist/map", "icon": "fa-solid fa-map-location-dot", "label": "Map View"},
-        ]
-        notifications = [{
-            "text": "Recent reports are ready for review in the latest dashboard snapshot.",
-            "time": "Now",
-            "type": "unread",
-            "tag": "alert",
-        }]
-
-        reports_response = supabase.table("reports").select("created_at,pest_type").execute()
-        reports_data = getattr(reports_response, "data", []) or []
-        trend_chart_data, distribution_chart_data = build_dashboard_chart_payload(reports_data)
-
-        return render_template(
-            'agriculturist_dashboard.html',
-            user_name=user_name,
-            metrics=metrics,
-            weather=weather,
-            risk=risk,
-            sidebar_items=sidebar_items,
-            notifications=notifications,
-            trend_chart_data=trend_chart_data,
-            distribution_chart_data=distribution_chart_data,
-        )
+        return render_template('agriculturist_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk)
         
     except Exception as e:
         logger.error(f"Agriculturist dashboard routing exception: {str(e)}")
@@ -1055,6 +942,7 @@ def farmer_submit_report():
         logger.error(f"Cloud instance synchronization failed: {str(e)}")
         return jsonify({'success': False, 'message': f"Cloud instance synchronization failed: {str(e)}"}), 500
 
+# Admin
 @app.route('/admin/user-management')
 def admin_user_management():
     current_role = str(session.get('user_role', '')).strip().lower()
