@@ -748,16 +748,16 @@
 
         #supporting-photos-input { display: none; }
 
-        /* --- PRECISE HIERARCHY BUTTON CONSOLE PANEL --- */
+       /* --- PRECISE HIERARCHY BUTTON CONSOLE PANEL --- */
         .control-action-bar {
             display: flex;
             flex-direction: column;
             gap: 12px;
             width: 100%;
-            margin-top: 16px; /* Dinagdagan natin ng kaunting breathing room mula sa card sa itaas */
+            margin-top: 16px; 
         }
 
-        .secondary-actions-row {
+        .main-actions-row {
             display: flex;
             gap: 12px;
             width: 100%;
@@ -773,12 +773,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px; /* Tamang spacing para sa icon ng Submit Report */
+            gap: 8px; 
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             width: 100%;
         }
 
-        /* Primary Action: Full Highlight Solid Layout Button */
         .btn-control.submit-primary { 
             background-color: #164630; 
             color: #ffffff; 
@@ -794,13 +793,14 @@
         .btn-control.draft-secondary { 
             background-color: #ffffff; 
             border: 1px solid rgba(82, 130, 101, 0.25); 
-            color: var(--brand-dark); 
+            color: #0b251a; 
         }
         .btn-control.draft-secondary:hover { 
             background-color: #e8f2f0; 
-            border-color: var(--primary-green);
+            border-color: #528265;
         }
 
+       
         .btn-control.cancel-secondary { 
             background-color: #fff5f5; 
             border: 1px solid rgba(239, 68, 68, 0.15); 
@@ -1004,14 +1004,16 @@
                 </div>
 
                 <!-- Balanced Control Setup Box Consoles -->
-                <div class="control-action-bar">
-                    <button class="btn-control submit-primary" onclick="submitReportPayload()">
-                        <i class="fa-solid fa-paper-plane"></i> Submit Report
-                    </button>
-                    <div class="secondary-actions-row">
-                        <button class="btn-control draft-secondary" onclick="saveDraftToIndexedDB()">
-                            Save Draft
-                        </button>
+                <!-- Balanced Control Setup Box Consoles -->
+                    <div class="control-action-bar">
+                        <div class="main-actions-row">
+                            <button class="btn-control draft-secondary" onclick="saveDraftToIndexedDB()">
+                                <i class="fa-solid fa-bookmark"></i> Save Draft
+                            </button>
+                            <button class="btn-control submit-primary" onclick="submitReportPayload()">
+                                <i class="fa-solid fa-paper-plane"></i> Submit Report
+                            </button>
+                        </div>
                         <button class="btn-control cancel-secondary" onclick="abortReportWorkflow()">
                             Cancel
                         </button>
