@@ -2,6 +2,21 @@
 
 {% block head %}
 <style>
+    /* Mobile-first and Responsive Layout Adjustments */
+    .form-grid-row {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 1.35rem;
+    }
+    
+    .grid-2-col {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .grid-3-col {
+        grid-template-columns: 2fr 1fr 1fr;
+    }
+
     .dynamic-section {
         display: none; 
         background-color: rgba(42, 123, 76, 0.06); 
@@ -21,61 +36,92 @@
         letter-spacing: 0.5px;
     }
     
-    /* Elegant Multi-Column Layouts for Name Breakdown */
-    .name-grid-top {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-        margin-bottom: 1.35rem;
-    }
-
-    .name-grid-bottom {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 14px;
-        margin-bottom: 1.35rem;
-    }
-    
     @keyframes slideInDown {
         from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Password strength meter styling */
+    /* Modern Password Strength & Requirements UI */
+    .strength-bar-container {
+        display: flex; 
+        gap: 6px; 
+        margin-bottom: 0.65rem;
+    }
+
     .strength-bar {
         flex: 1;
-        height: 6px;
-        background-color: #e0e0e0;
-        border-radius: 3px;
-        transition: background-color 0.3s ease;
+        height: 5px;
+        background-color: #e5e7eb;
+        border-radius: 10px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .strength-bar.weak {
-        background-color: #d32f2f;
+    .strength-bar.weak { background-color: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.2); }
+    .strength-bar.fair { background-color: #f97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.2); }
+    .strength-bar.good { background-color: #eab308; box-shadow: 0 0 8px rgba(234, 179, 8, 0.2); }
+    .strength-bar.strong { background-color: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.2); }
+
+    .req-heading {
+        font-weight: 600; 
+        color: #374151; 
+        margin-bottom: 0.75rem;
+        font-size: 0.8rem;
     }
 
-    .strength-bar.fair {
-        background-color: #f57c00;
+    .requirements-box {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 0.75rem;
     }
 
-    .strength-bar.good {
-        background-color: #fbc02d;
+    .req-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background-color: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 20px;
+        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
     }
 
-    .strength-bar.strong {
-        background-color: #388e3c;
+    .req-badge i {
+        font-size: 0.7rem;
+        transition: transform 0.3s ease;
     }
 
-    .requirement-unchecked {
-        display: inline-block;
-        width: 16px;
-        color: #ccc;
-        font-weight: bold;
-        margin-right: 0.5rem;
+    /* Active / Checked State */
+    .req-badge.requirement-checked {
+        background-color: #f0fdf4;
+        border-color: #bbf7d0;
+        color: #16a34a;
+    }
+    
+    .req-badge.requirement-checked i {
+        transform: scale(1.1);
     }
 
-    .requirement-checked {
-        color: var(--primary-green);
+    /* Mobile Responsiveness Rules overrides */
+    @media (max-width: 576px) {
+        .form-grid-row.grid-2-col,
+        .form-grid-row.grid-3-col {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .requirements-box {
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .req-badge {
+            width: 100%;
+            box-sizing: border-box;
+        }
     }
 </style>
 {% endblock %}
@@ -86,14 +132,14 @@
         <div class="logo-icon-wrap" style="position: relative; display: inline-block;">
             <i class="fa-solid fa-shield-halved"></i>
             <i class="fa-solid fa-seedling" style="position: absolute; bottom: 4px; right: -4px; font-size: 1.5rem; color: #40916c;"></i>
-</div>
+        </div>
         <div class="logo-title">CocoScan</div>
         <div class="logo-subtitle">Create Your Account</div>
     </div>
 
     <form action="{{ url_for('signup') }}" method="POST">
         
-        <div class="name-grid-top">
+        <div class="form-grid-row grid-2-col">
             <div>
                 <label for="first_name">First Name</label>
                 <input type="text" id="first_name" name="first_name" placeholder="Maria" required>
@@ -104,7 +150,7 @@
             </div>
         </div>
 
-        <div class="form-row form-group" style="grid-template-columns: 2fr 1fr 1fr; gap: 12px;">
+        <div class="form-grid-row grid-3-col">
             <div>
                 <label for="last_name">Last Name</label>
                 <input type="text" id="last_name" name="last_name" placeholder="Garcia" required>
@@ -157,7 +203,7 @@
                 <label class="req">Agency / Office</label>
                 <input type="text" id="lgu_agency" name="lgu_agency" placeholder="e.g., DA, Municipal Agriculture Office">
             </div>
-            <div class="form-row form-group" style="grid-template-columns: 1fr 1fr;">
+            <div class="form-grid-row grid-2-col">
                 <div>
                     <label class="req">Position</label>
                     <input type="text" id="lgu_position" name="lgu_position" placeholder="Officer I">
@@ -183,7 +229,7 @@
                 <label class="req">LGU Office Name</label>
                 <input type="text" id="agri_office_name" name="agri_office_name" placeholder="Department/Office Assignment">
             </div>
-            <div class="form-row form-group" style="grid-template-columns: 1fr 1fr;">
+            <div class="form-grid-row grid-2-col">
                 <div>
                     <label class="req">Position / Title</label>
                     <input type="text" id="agri_position" name="agri_position" placeholder="Agronomist / Specialist">
@@ -199,7 +245,7 @@
             </div>
             <div class="form-group">
                 <label class="req">Assigned Municipality/Province</label>
-                <input type="text" id="agri_jurisdiction" name="agri_jurisdiction" placeholder="Assigned Territory">
+                <input type="text" id="agri_jurisdiction" name="agri_jurisdiction" placeholder="Assigned Area">
             </div>
         </div>
 
@@ -209,23 +255,25 @@
                 <input type="password" id="sign_password" name="password" placeholder="••••••••" required oninput="validatePasswordStrength()">
                 <i class="fa-regular fa-eye toggle-password" onclick="togglePasswordVisibility('sign_password', this)"></i>
             </div>
-            <div id="password-strength-meter" style="margin-top: 0.5rem;">
-                <div style="display: flex; gap: 4px; margin-bottom: 0.5rem;">
+            
+            <div id="password-strength-meter" style="margin-top: 0.65rem;">
+                <div class="strength-bar-container">
                     <div class="strength-bar" id="strength-1"></div>
                     <div class="strength-bar" id="strength-2"></div>
                     <div class="strength-bar" id="strength-3"></div>
                     <div class="strength-bar" id="strength-4"></div>
                 </div>
-                <p id="password-strength-text" style="font-size: 0.8rem; margin: 0.5rem 0; opacity: 0.8;"></p>
+                <p id="password-strength-text" style="font-size: 0.8rem; margin: 0.25rem 0; font-weight: 500; opacity: 0.8;"></p>
             </div>
-            <div id="password-requirements" style="font-size: 0.75rem; margin-top: 0.75rem; line-height: 1.6;">
-                <p style="font-weight: 600; color: var(--primary-green); margin-bottom: 0.5rem;">Password must contain:</p>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                    <div><span id="req-length" class="requirement-unchecked">✓</span> At least 8 characters</div>
-                    <div><span id="req-upper" class="requirement-unchecked">✓</span> Uppercase letter (A-Z)</div>
-                    <div><span id="req-lower" class="requirement-unchecked">✓</span> Lowercase letter (a-z)</div>
-                    <div><span id="req-digit" class="requirement-unchecked">✓</span> Number (0-9)</div>
-                    <div style="grid-column: 1 / -1;"><span id="req-special" class="requirement-unchecked">✓</span> Special character (!@#$%^&*)</div>
+
+            <div id="password-requirements" style="margin-top: 1rem;">
+                <p class="req-heading">Password Security Status</p>
+                <div class="requirements-box">
+                    <div id="req-length" class="req-badge"><i class="fa-solid fa-circle-dot"></i> 8+ Characters</div>
+                    <div id="req-upper" class="req-badge"><i class="fa-solid fa-circle-dot"></i> Uppercase (A-Z)</div>
+                    <div id="req-lower" class="req-badge"><i class="fa-solid fa-circle-dot"></i> Lowercase (a-z)</div>
+                    <div id="req-digit" class="req-badge"><i class="fa-solid fa-circle-dot"></i> Number (0-9)</div>
+                    <div id="req-special" class="req-badge"><i class="fa-solid fa-circle-dot"></i> Special (!@#$%^&*)</div>
                 </div>
             </div>
         </div>
@@ -236,7 +284,7 @@
                 <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" required oninput="validatePasswordMatch()">
                 <i class="fa-regular fa-eye toggle-password" onclick="togglePasswordVisibility('confirm_password', this)"></i>
             </div>
-            <p id="password-match-text" style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0;"></p>
+            <p id="password-match-text" style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0; font-weight: 500;"></p>
         </div>
 
         <button type="submit" class="btn-primary">Sign Up</button>
@@ -250,9 +298,6 @@
 
 {% block scripts %}
 <script>
-    /**
-     * Toggle password visibility
-     */
     function togglePasswordVisibility(inputId, icon) {
         const input = document.getElementById(inputId);
         if (input.type === 'password') {
@@ -264,13 +309,8 @@
         }
     }
 
-    /**
-     * Validate password strength in real-time
-     * Checks for: length, uppercase, lowercase, digit, special character
-     */
     function validatePasswordStrength() {
         const password = document.getElementById('sign_password').value;
-        let strength = 0;
         const requirements = {
             length: password.length >= 8,
             upper: /[A-Z]/.test(password),
@@ -279,76 +319,64 @@
             special: /[!@#$%^&*()_+\-=\[\]{};:\'",.<>?/\\|`~]/.test(password)
         };
 
-        // Update requirement checkmarks
         updateRequirement('req-length', requirements.length);
         updateRequirement('req-upper', requirements.upper);
         updateRequirement('req-lower', requirements.lower);
         updateRequirement('req-digit', requirements.digit);
         updateRequirement('req-special', requirements.special);
 
-        // Calculate strength
-        strength = Object.values(requirements).filter(Boolean).length;
-
-        // Update strength meter
+        const strength = Object.values(requirements).filter(Boolean).length;
         updateStrengthMeter(strength);
 
-        // Validate password match if confirm field has value
         if (document.getElementById('confirm_password').value) {
             validatePasswordMatch();
         }
     }
 
-    /**
-     * Update visual indicator for requirement
-     */
     function updateRequirement(elementId, isMet) {
         const element = document.getElementById(elementId);
+        const icon = element.querySelector('i');
         if (isMet) {
-            element.classList.remove('requirement-unchecked');
             element.classList.add('requirement-checked');
+            icon.className = 'fa-solid fa-circle-check';
         } else {
             element.classList.remove('requirement-checked');
-            element.classList.add('requirement-unchecked');
+            icon.className = 'fa-solid fa-circle-dot';
         }
     }
 
-    /**
-     * Update strength meter bars
-     */
     function updateStrengthMeter(strength) {
         const bars = document.querySelectorAll('.strength-bar');
         const strengthText = document.getElementById('password-strength-text');
         
-        // Reset all bars
         bars.forEach(bar => {
-            bar.classList.remove('weak', 'fair', 'good', 'strong');
+            bar.className = 'strength-bar';
         });
 
-        // Determine strength level
         let strengthLevel = '';
         let strengthColor = '';
         
         if (strength === 0) {
             strengthLevel = 'Enter a password';
-            strengthColor = '';
+            strengthColor = '#666';
         } else if (strength < 3) {
             strengthLevel = 'Weak password';
-            strengthColor = 'weak';
+            strengthColor = '#ef4444';
             bars[0].classList.add('weak');
         } else if (strength < 4) {
             strengthLevel = 'Fair password';
-            strengthColor = 'fair';
+            strengthColor = '#f97316';
             bars[0].classList.add('fair');
             bars[1].classList.add('fair');
         } else if (strength < 5) {
             strengthLevel = 'Good password';
-            strengthColor = 'good';
+            strengthColor = '#eab308';
             bars[0].classList.add('good');
             bars[1].classList.add('good');
             bars[2].classList.add('good');
         } else {
             strengthLevel = 'Strong password';
-            strengthColor = 'strong';
+            strengthColor = '#22c55e';
             bars[0].classList.add('strong');
             bars[1].classList.add('strong');
             bars[2].classList.add('strong');
@@ -356,15 +384,9 @@
         }
 
         strengthText.textContent = strengthLevel;
-        strengthText.style.color = strengthColor === 'weak' ? '#d32f2f' : 
-                                   strengthColor === 'fair' ? '#f57c00' : 
-                                   strengthColor === 'good' ? '#fbc02d' : 
-                                   strengthColor === 'strong' ? '#388e3c' : '#666';
+        strengthText.style.color = strengthColor;
     }
 
-    /**
-     * Validate that both passwords match
-     */
     function validatePasswordMatch() {
         const password = document.getElementById('sign_password').value;
         const confirmPassword = document.getElementById('confirm_password').value;
@@ -377,20 +399,17 @@
 
         if (password === confirmPassword) {
             matchText.textContent = '✓ Passwords match';
-            matchText.style.color = '#388e3c';
+            matchText.style.color = '#22c55e';
             matchText.style.opacity = '1';
             return true;
         } else {
             matchText.textContent = '✗ Passwords do not match';
-            matchText.style.color = '#d32f2f';
+            matchText.style.color = '#ef4444';
             matchText.style.opacity = '1';
             return false;
         }
     }
 
-    /**
-     * Handle role selection and show/hide role-specific fields
-     */
     function handleRoleChange(selectedRole) {
         document.querySelectorAll('.dynamic-section').forEach(element => {
             element.style.display = 'none';
@@ -421,9 +440,6 @@
         }
     }
 
-    /**
-     * Initialize password strength display on page load
-     */
     document.addEventListener('DOMContentLoaded', function() {
         validatePasswordStrength();
     });

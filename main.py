@@ -124,7 +124,6 @@ def upload_image_to_supabase(file_bytes, filename, content_type="application/oct
         logger.warning(f"Supabase Storage helper error: {str(upload_err)}")
     return ''
 
-
 def send_status_email(user_email, user_name, status):
     """Sends a transactional HTML notification email to the user via Gmail SMTP"""
     smtp_server = os.getenv("MAIL_SERVER", "smtp.gmail.com")
@@ -132,16 +131,23 @@ def send_status_email(user_email, user_name, status):
     sender_email = os.getenv("MAIL_USERNAME")    
     sender_password = os.getenv("MAIL_PASSWORD")  
     
-    sender_name = "CocoScan Platform"
+    sender_name = "CocoScan Admin Team"
     subject = f"Account Update: Your CocoScan Application has been {status}"
     
     # Dynamic styling matching the context status
     theme_color = "#40916c" if status == "Approved" else "#e63946"
     
-    # EXACT FONT-AWESOME 'fa-tree-city' SVG VECTOR DATA PATH
-    tree_city_svg = """
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" width="44" height="44" style="fill: #ffffff; display: block;">
-        <path d="M0 480c0 17.7 14.3 32 32 32h384V336c0-13.3-10.7-24-24-24H248c-13.3 0-24 10.7-24 24v176H32c-17.7 0-32-14.3-32-32V254.4c0-11.8 4.9-23 13.5-31l112-104c12.5-11.6 32.5-11.6 45 0l40.1 37.2c-5.7 14-8.8 29.3-8.8 45.4c0 66.3 53.7 120 120 120c24.6 0 47.5-7.4 66.5-20.1L303.4 320H400c44.2 0 80 35.8 80 80v112h128c17.7 0 32-14.3 32-32V224c0-17.7-14.3-32-32-32H480V24c0-13.3-10.7-24-24-24H344c-13.3 0-24 10.7-24 24v123.4L230.2 61.3c-23.4-21.7-59.1-21.7-82.5 0L5.3 191.4C1.9 194.5 0 198.9 0 203.6V480zm352-278a40 40 0 1 1 80 0 40 40 0 1 1 -80 0zm40 134a40 40 0 1 1 0-80 40 40 0 1 1 0 80zM520 256a40 40 0 1 1 80 0 40 40 0 1 1 -80 0zm40 134a40 40 0 1 1 0-80 40 40 0 1 1 0 80z"/>
+    # EMAIL-SAFE UNIFIED LOGO SVG (Shield + Overlaid Seedling Sprout)
+    cocoscan_logo_svg = """
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="50" height="50" style="display: block; margin: 0 auto;">
+        <!-- Shield Left Side (Filled White) -->
+        <path fill="#ffffff" d="M256 0c-11.5 0-22.1 5.5-28.5 14.8C183.3 78.1 105.9 115.4 52 123.8c-12 1.9-20 12.3-20 24.5 0 185.3 125.7 319.4 207.7 359.8 10.1 5 22.4 5 32.5 0 20.3-10 54.3-30.8 89.2-61.9-10.7-18-17.4-38.6-17.4-60.7 0-61.1 46.1-111.4 106-118.6V148.3c0-12.2-8-22.6-20-24.5-53.9-8.4-131.3-45.7-175.5-109C278.1 5.5 267.5 0 256 0z"/>
+        <!-- Shield Right Side Inner Outlines for Halved Effect -->
+        <path fill="#162a2d" opacity="0.4" d="M256 44.2v396.4c55.3-31.9 133.8-124.9 142.4-245.5v-75C345 113 288.5 81 256 44.2z"/>
+        <!-- Overlaid Brand Seedling Sprout on Bottom Right -->
+        <g transform="translate(310, 310) scale(0.38)" fill="#40916c">
+            <path d="M96 96c0-53 43-96 96-96h16c17.7 0 32 14.3 32 32v16c0 53-43 96-96 96H128c-17.7 0-32-14.3-32-32V96zM0 224c0-53 43-96 96-96h16c17.7 0 32 14.3 32 32v16c0 53-43 96-96 96H32c-17.7 0-32-14.3-32-32v-16zm224-32c0-17.7 14.3-32 32-32s32 14.3 32 32v192c0 17.7-14.3 32-32 32s-32-14.3-32-32V192z"/>
+        </g>
     </svg>
     """
 
@@ -179,13 +185,9 @@ def send_status_email(user_email, user_name, status):
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 550px; background-color: #121f22; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
                         <tr>
                             <td align="center" style="position: relative; padding: 50px 20px; background: linear-gradient(135deg, #162a2d 0%, #0b1315 100%); border-bottom: 2px solid {theme_color};">
-                                <div style="position: relative; width: 100px; height: 100px; margin-bottom: 20px; text-align: center;">
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90px; height: 90px; background-color: {theme_color}; border-radius: 50%; opacity: 0.15; filter: blur(10px);"></div>
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; border: 2px solid {theme_color}; border-radius: 50%; opacity: 0.3;"></div>
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 55px; height: 55px; border: 1px dashed {theme_color}; border-radius: 50%; opacity: 0.5;"></div>
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); line-height: 1; z-index: 5;">
-                                        {tree_city_svg}
-                                    </div>
+                                <div style="width: 100px; height: 100px; margin-bottom: 10px; text-align: center;">
+                                    <!-- Embedded safe vector graphic -->
+                                    {cocoscan_logo_svg}
                                 </div>
                                 <div style="font-weight: 800; font-size: 32px; color: #ffffff; letter-spacing: 1px; margin-bottom: 4px;">CocoScan</div>
                                 <div style="font-size: 13px; color: #789c8a; letter-spacing: 2px; text-transform: uppercase; font-weight: 500;">{status_title}</div>
@@ -200,7 +202,7 @@ def send_status_email(user_email, user_name, status):
                                 <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.06); margin: 35px 0;">
                                 <p style="margin: 0; font-size: 14px; color: #64748b; line-height: 1.5;">
                                     Best regards,<br>
-                                    <span style="color: #ffffff; font-weight: 600;">The CocoScan Development Node</span>
+                                    <span style="color: #ffffff; font-weight: 600;">The CocoScan Development Team</span>
                                 </p>
                             </td>
                         </tr>
