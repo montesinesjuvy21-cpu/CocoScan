@@ -842,14 +842,14 @@
         </div>
 
             <div class="chart-visual-card">
-                <div class="chart-header-inline"><i class="fa-solid fa-chart-line"></i> Pest Trend Analytics</div>
+                <div class="chart-header-inline"><i class="fa-solid fa-chart-line"></i> Pest Trend </div>
                 <div class="chart-box-render-frame">
                     <canvas id="trendChart"></canvas>
                 </div>
             </div>
 
             <div class="chart-visual-card">
-                <div class="chart-header-inline"><i class="fa-solid fa-chart-pie"></i> System Scope Distribution</div>
+                <div class="chart-header-inline"><i class="fa-solid fa-chart-pie"></i> Pest Distribution</div>
                 <div class="chart-box-render-frame">
                     <canvas id="distributionChart"></canvas>
                 </div>
@@ -996,7 +996,7 @@
         }
     }
 
-    function initCharts() {
+     function initCharts() {
         const trendEl = document.getElementById('trendChart');
         if (trendEl) {
             const ctxTrend = trendEl.getContext('2d');
@@ -1008,34 +1008,71 @@
                         {
                             label: 'Rhinoceros Beetle',
                             data: [8, 12, 11, 18, 14, 22],
-                            borderColor: '#0b251a',
-                            backgroundColor: 'transparent',
+                            borderColor: '#164630',
+                            // Added 15% opacity semi-transparent fill color matching your system token
+                            backgroundColor: 'rgba(22, 70, 48, 0.15)', 
                             borderWidth: 2,
                             tension: 0.2,
-                            pointRadius: 3
+                            pointRadius: 3,
+                            fill: true // Enables the shaded area below the line
                         },
                         {
                             label: 'Brontispa',
                             data: [4, 7, 4, 7, 8, 8],
-                            borderColor: '#4ac68f',
-                            backgroundColor: 'transparent',
+                            borderColor: '#d97706',
+                            // Added 15% opacity semi-transparent fill color matching your system token
+                            backgroundColor: 'rgba(217, 119, 6, 0.15)', 
                             borderWidth: 2,
                             tension: 0.2,
-                            pointRadius: 3
+                            pointRadius: 3,
+                            fill: true // Enables the shaded area below the line
                         }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10, weight: '600' } } } 
-                    },
-                    scales: { 
-                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
-                        x: { grid: { display: false } }
-                    }
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { 
+                    legend: { 
+                        position: 'top', 
+                        onClick: function(e, legendItem, legend) {
+                            const index = legendItem.datasetIndex;
+                            const ci = legend.chart;
+                            if (ci.isDatasetVisible(index)) {
+                                ci.hide(index);
+                            } else {
+                                ci.show(index);
+                            }
+                        },
+                        labels: { 
+                            boxWidth: 10, 
+                            font: { size: 10, weight: '600' },
+                            // Intercept label mapping to substitute shading layout parameters for line-through strikes
+                            generateLabels: function(chart) {
+                                const datasets = chart.data.datasets;
+                                return datasets.map((dataset, i) => {
+                                    const isVisible = chart.isDatasetVisible(i);
+                                    return {
+                                        text: dataset.label,
+                                        datasetIndex: i,
+                                        // Dynamic color shading updates
+                                        fillStyle: isVisible ? dataset.borderColor : 'rgba(203, 213, 225, 0.4)',
+                                        strokeStyle: isVisible ? dataset.borderColor : 'rgba(203, 213, 225, 0.4)',
+                                        fontColor: isVisible ? '#64748b' : 'rgba(100, 116, 139, 0.4)', 
+                                        lineWidth: dataset.borderWidth,
+                                        // Tricking Chart.js to drop text decoration strikes while tracking actual visibility
+                                        hidden: false 
+                                    };
+                                });
+                            }
+                        } 
+                    } 
+                },
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false } }
                 }
+            }
             });
         }
 
@@ -1048,19 +1085,60 @@
                     labels: ['Rhinoceros Beetle', 'Brontispa'],
                     datasets: [{
                         data: [65, 35],
-                        backgroundColor: ['#0b251a', '#528265'],
+                        backgroundColor: ['#164630', '#d97706'],
                         borderWidth: 3,
                         borderColor: '#ffffff'
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11, weight: '500' } } }
-                    },
-                    cutout: '65%'
-                }
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'bottom', 
+                        onClick: function(e, legendItem, legend) {
+                            const index = legendItem.index;
+                            const ci = legend.chart;
+                            
+                            // Toggle doughnut segment visibility natively
+                            const alreadyHidden = ci.getDataVisibility(index) === false;
+                            if (alreadyHidden) {
+                                ci.toggleDataVisibility(index);
+                            } else {
+                                ci.toggleDataVisibility(index);
+                            }
+                            ci.update();
+                        },
+                        labels: { 
+                            boxWidth: 12, 
+                            font: { size: 11, weight: '500' },
+                            // Custom label mapping to bypass text strike decorations and apply shading instead
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    const dataset = data.datasets[0];
+                                    return data.labels.map((label, i) => {
+                                        const isVisible = chart.getDataVisibility(i);
+                                        return {
+                                            text: label,
+                                            index: i,
+                                            // Shading behavior applied dynamically to match active vs toggled status colors
+                                            fillStyle: isVisible ? dataset.backgroundColor[i] : 'rgba(203, 213, 225, 0.4)',
+                                            strokeStyle: isVisible ? dataset.backgroundColor[i] : 'rgba(203, 213, 225, 0.4)',
+                                            fontColor: isVisible ? '#64748b' : 'rgba(100, 116, 139, 0.4)',
+                                            lineWidth: dataset.borderWidth || 1,
+                                            // Suppresses the strike-through decoration line natively
+                                            hidden: false 
+                                        };
+                                    });
+                                }
+                                return [];
+                            }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
             });
         }
     }

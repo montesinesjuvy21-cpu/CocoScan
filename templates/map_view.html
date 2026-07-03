@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CocoScan - Map View</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet Map Engine Infrastructure -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        /* ==========================================================================
+           1. DESIGN TOKENS & BASE COHESION
+           ========================================================================== */
+        :root {
+            --bg-base: #f4f7f5;
+            --bg-card: #ffffff;
+            --brand-dark: #0b251a;
+            --brand-accent: #4ac68f;
+            --primary-green: #528265;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-light: rgba(0, 0, 0, 0.05);
+            
+            /* Pest Color-Mapping Configurations derived from user requirements */
+            --color-rhinoceros: #164630;
+            --color-brontispa: #d97706;
+            --color-unknown: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--brand-dark);
+            color: var(--text-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .mobile-viewport-container {
+            width: 100%;
+            min-height: 100vh;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* --- STICKY APP HEADER --- */
+        .mobile-header {
+            width: 100%;
+            height: 64px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 1000;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-content-wrapper {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-group { display: flex; align-items: center; gap: 10px; }
+        .logo-img-fallback {
+            width: 32px; height: 32px; background: var(--bg-card); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .mobile-header h2 { font-size: 1.15rem; font-weight: 800; }
+        .mobile-header p { font-size: 0.65rem; color: rgba(255, 255, 255, 0.5); }
+        .hamburger-btn { background: none; border: none; color: #ffffff; font-size: 1.35rem; cursor: pointer; }
+
+        /* --- SIDEBAR MENU SYSTEM --- */
+        .sidebar-wrapper {
+            width: 290px; background-color: var(--brand-dark); color: #ffffff;
+            display: flex; flex-direction: column; justify-content: space-between;
+            position: fixed; top: 64px; bottom: 0; right: 0; z-index: 999;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-wrapper.show-mobile { transform: translateX(0); }
+        .menu-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.4); padding: 24px 20px 12px 20px; font-weight: 700; }
+        .sidebar-menu-list { list-style: none; padding: 0 10px; }
+        .menu-item-link { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 0.95rem; font-weight: 500; border-radius: 10px; margin-bottom: 6px; }
+        .menu-item-link:hover, .menu-item-link.active { color: #ffffff; background-color: rgba(255, 255, 255, 0.06); }
+        .sidebar-user-footer { padding: 20px; background-color: rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .user-meta-box { display: flex; align-items: center; gap: 12px; }
+        .user-avatar-circle { width: 42px; height: 42px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; }
+        .user-identity-text h4 { font-size: 0.9rem; color: #ffffff; }
+        .user-identity-text p { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
+        .btn-logout-trigger { color: rgba(255, 255, 255, 0.4); font-size: 1.2rem; }
+        .sidebar-backdrop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 37, 26, 0.4); backdrop-filter: blur(4px); z-index: 950; }
+        .sidebar-backdrop.active { display: block; }
+
+        /* --- MAIN VIEWPORTS LAYOUT --- */
+        .main-content-layout {
+            flex: 1; 
+            width: 100%; 
+            padding: 88px 16px 24px 16px;
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px;
+        }
+
+        .section-title-wrap { display: flex; justify-content: space-between; align-items: flex-start; }
+        .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
+        .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); }
+
+        /* --- SEARCH AND CONTROLS --- */
+        .search-controls-row {
+            display: flex; 
+            flex-wrap: wrap;
+            gap: 12px; 
+            align-items: center;
+            width: 100%;
+        }
+        .search-bar-box {
+            position: relative; 
+            flex: 1;
+            min-width: 240px;
+        }
+        .search-input {
+            width: 100%; 
+            padding: 14px 16px 14px 44px; 
+            border-radius: 32px;
+            border: 1px solid rgba(0,0,0,0.05); 
+            background-color: var(--bg-card);
+            font-size: 0.92rem; 
+            outline: none; 
+            color: var(--text-dark);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+        }
+        .search-bar-box i {
+            position: absolute; 
+            left: 18px; 
+            top: 50%; 
+            transform: translateY(-50%);
+            color: var(--text-muted); 
+            font-size: 1rem;
+        }
+
+        /* --- CLEAR FILTER BUTTON STYLING --- */
+        .btn-clear-filters {
+            background-color: #eb5757;
+            color: #ffffff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 32px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: none; 
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2);
+            transition: all 0.2s ease;
+        }
+        .btn-clear-filters:hover {
+            background-color: #d84343;
+            transform: translateY(-1px);
+        }
+
+        /* --- FILTERS CHIPS ROW --- */
+        .filter-chips-scrollrow {
+            display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;
+            scrollbar-width: none; -webkit-overflow-scrolling: touch;
+        }
+        .filter-chips-scrollrow::-webkit-scrollbar { display: none; }
+        
+        .chip-filter-btn {
+            background-color: var(--bg-card); border: 1px solid var(--border-light);
+            padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
+            color: var(--text-muted); cursor: pointer; white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .chip-filter-btn.active-chip {
+            background-color: #1a4d32; color: #ffffff; border-color: #1a4d32;
+        }
+
+        /* ==========================================================================
+           2. INTERACTIVE GEOSPATIAL MAP CANVAS
+           ========================================================================== */
+        .map-card-container {
+            background-color: var(--bg-card);
+            border-radius: 20px;
+            padding: 16px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            position: relative;
+            width: 100%;
+        }
+
+        .map-viewport-frame {
+            width: 100%;
+            height: 340px;
+            border-radius: 14px;
+            overflow: hidden;
+            z-index: 1;
+            background-color: #e5e9e5;
+        }
+
+        /* Dynamic Map Custom Markers */
+        .custom-map-marker-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: -2px 2px 4px rgba(0,0,0,0.25);
+            border: 2px solid #ffffff;
+        }
+        .custom-map-marker-pin i {
+            transform: rotate(45deg);
+            color: #ffffff;
+            font-size: 1rem;
+        }
+
+        /* Pest Identification Color Key Deck layout mapping to image_e8e7f6.png style */
+        .map-legend-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 16px;
+            margin-top: 12px;
+            padding-right: 4px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* ==========================================================================
+           3. DUAL-COLUMN GRID SECTIONS (image_e8e7f6.png Match)
+           ========================================================================== */
+        .map-split-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .content-panel-card {
+            background-color: var(--bg-card);
+            border-radius: 18px;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height: 220px;
+        }
+
+        .panel-heading {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-heading i {
+            color: var(--primary-green);
+        }
+
+        /* Recent View List Stack Elements */
+        .location-feed-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .location-node-row {
+            background-color: #f8faf9;
+            border: 1px solid rgba(0,0,0,0.03);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .location-node-row:hover {
+            background-color: #edf2ef;
+        }
+        .location-node-info h4 {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        .location-node-info p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .pest-indicator-pill {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Details Dynamic Placeholder State */
+        .empty-details-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-muted);
+            gap: 10px;
+        }
+        .empty-details-view i {
+            font-size: 2rem;
+            color: #cbd5e1;
+        }
+        .empty-details-view p {
+            font-size: 0.88rem;
+        }
+
+        /* Active Detail Box Template layout matching lower portion of image_e8e7f6.png */
+        .detail-active-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            justify-content: space-between;
+            flex: 1;
+        }
+        .detail-meta-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .detail-meta-header h3 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--brand-dark);
+        }
+        .detail-meta-header p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .severity-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: capitalize;
+        }
+        .severity-badge.high { background-color: #fee2e2; color: #b91c1c; }
+        .severity-badge.moderate { background-color: #fef3c7; color: #d97706; }
+        .severity-badge.low { background-color: #eef5f2; color: #164630; }
+
+        .detail-data-table {
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .data-table-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed rgba(0,0,0,0.05);
+        }
+        .data-table-row span:first-child { color: var(--text-muted); }
+        .data-table-row span:last-child { font-weight: 600; color: var(--text-dark); }
+
+        .btn-view-action {
+            width: 100%;
+            background-color: #164630;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+            transition: background-color 0.2s;
+        }
+        .btn-view-action:hover {
+            background-color: #1e5c3f;
+        }
+
+        /* ==========================================================================
+           4. RESPONSIVE UP-SCALING (DESKTOP GRID PARITY)
+           ========================================================================== */
+        @media (max-width: 500px) {
+            .btn-clear-filters { width: 100%; justify-content: center; }
+        }
+
+        @media (min-width: 1024px) {
+            .main-content-layout {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 108px 32px 32px 32px; 
+                gap: 24px; 
+            }
+
+            .header-content-wrapper { max-width: 1400px; margin: 0 auto; }
+            .mobile-header { height: 72px; padding: 0 32px; }
+            .sidebar-wrapper { top: 72px; }
+
+            .section-title-wrap h1 { font-size: 1.95rem; }
+            .section-title-wrap p { font-size: 0.98rem; margin-top: 4px; }
+
+            .map-viewport-frame { height: 420px; }
+
+            /* Grid layout deployment pattern reflecting layout columns in image_e8e7f6.png */
+            .map-split-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-viewport-container">
+        
+        <!-- HEADER APPARATUS -->
+        <header class="mobile-header">
+            <div class="header-content-wrapper">
+                <div class="logo-group">
+                    <div class="logo-img-fallback">
+                        <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
+                    </div>
+                    <div>
+                        <h2>CocoScan</h2>
+                        <p>Coconut Pest Detection</p>
+                    </div>
+                </div>
+                <button class="hamburger-btn" onclick="toggleSidebarMenu()">
+                    <i class="fa-solid fa-bars" id="toggleIcon"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
+
+        <!-- NAVIGATION DRAWER MATRIX -->
+        <aside class="sidebar-wrapper" id="sidebar">
+            <div>
+                <div class="menu-label">Main Menu</div>
+                <ul class="sidebar-menu-list">
+                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                    <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-check"></i> Pending Reports</a></li>
+                    <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Reviewed</a></li>
+                    <li><a href="/agriculturist/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-user-footer">
+                <div class="user-meta-box">
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-identity-text">
+                        <h4>{{user_name}}</h4>
+                        <p>PCA Agriculturist</p>
+                    </div>
+                </div>
+                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+        </aside>
+
+        <!-- MAIN CANVAS WORKSPACE -->
+        <main class="main-content-layout">
+            
+            <header class="section-title-wrap">
+                <div>
+                    <h1>Map View</h1>
+                    <p>Interactive map showing affected locations with pest identification color coding</p>
+                </div>
+            </header>
+
+            <!-- CONTROLS CONTAINER -->
+            <div class="search-controls-row">
+                <div class="search-bar-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="map-search-input" class="search-input" placeholder="Search locations here...">
+                </div>
+                <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
+                    <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+                </button>
+            </div>
+
+            <div class="filter-chips-scrollrow">
+                <button class="chip-filter-btn active-chip" data-pest="all" id="chip-count-label">All (0)</button>
+                <button class="chip-filter-btn" data-pest="Rhinoceros Beetle">Rhinoceros Beetle</button>
+                <button class="chip-filter-btn" data-pest="Brontispa">Brontispa</button>
+            </div>
+
+            <!-- GEOSPATIAL MAP HOUSING -->
+            <section class="map-card-container">
+                <div id="map-canvas" class="map-viewport-frame"></div>
+                
+                <!-- Color-mapped Pest Identification Legend Elements replacing Severity colors -->
+                <div class="map-legend-row">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background-color: var(--color-rhinoceros);"></div>
+                        <span>Rhinoceros Beetle</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background-color: var(--color-brontispa);"></div>
+                        <span>Brontispa</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DETAIL SPLIT GRIDS -->
+            <div class="map-split-grid">
+                
+                <!-- LEFT COLUMN PANEL: RECENT VIEWS -->
+                <section class="content-panel-card">
+                    <div class="panel-heading">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Recent View</span>
+                    </div>
+                    <div class="location-feed-stack" id="location-list-container">
+                        <!-- Dynamic node instances injected here -->
+                    </div>
+                </section>
+
+                <!-- RIGHT COLUMN PANEL: DYNAMIC PIN METRICS -->
+                <section class="content-panel-card" id="details-panel-container">
+                    <div class="empty-details-view" id="details-empty-state">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <p>Click on a location pin or recent list entry to view dynamic details</p>
+                    </div>
+                    <div class="detail-active-layout" id="details-active-state" style="display: none;">
+                        <!-- Dynamic layout rendering matching image_e8e7f6.png layout guidelines -->
+                    </div>
+                </section>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ==========================================================================
+        CORE CORE DATA INTERACTION & MAP LIFECYCLE SCRIPTS
+        ========================================================================== -->
+    <script>
+        // Server JSON Context injection fallback matrix[cite: 3]
+        let geoReportsDataset = [];
+        const hardcodedMockMapData = [
+            {
+                "id": 101,
+                "barangay": "Brgy. San Ignacio",
+                "municipality": "San Pablo City",
+                "province": "Laguna",
+                "latitude": 14.0750,
+                "longitude": 121.3280,
+                "pest_type": "Rhinoceros Beetle",
+                "damage_severity": "Mild",
+                "cases_count": 1,
+                "status": "Pending"
+            },
+            {
+                "id": 102,
+                "barangay": "Brgy. Santa Maria",
+                "municipality": "San Pablo City",
+                "province": "Laguna",
+                "latitude": 14.0620,
+                "longitude": 121.3150,
+                "pest_type": "Brontispa",
+                "damage_severity": "Moderate",
+                "cases_count": 67,
+                "status": "Pending"
+            },
+            {
+                "id": 201,
+                "barangay": "Brgy. Concepcion",
+                "municipality": "San Pablo City",
+                "province": "Laguna",
+                "latitude": 14.0820,
+                "longitude": 121.3420,
+                "pest_type": "Rhinoceros Beetle",
+                "damage_severity": "High",
+                "cases_count": 99,
+                "status": "Recommendation Issued"
+            }
+        ];
+
+        try {
+            geoReportsDataset = JSON.parse('{{ map_reports | tojson | safe }}');
+            if (!geoReportsDataset || geoReportsDataset.length === 0) {
+                geoReportsDataset = hardcodedMockMapData;
+            }
+        } catch (e) {
+            geoReportsDataset = hardcodedMockMapData;
+        }
+
+        let mapInstance = null;
+        let markersLayerGroup = null;
+        let activePestFilter = "all";
+        let searchPhrase = "";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initLeafletMapCanvas();
+            initFiltersAndSearch();
+            renderMapDashboardComponents();
+        });
+
+        function initLeafletMapCanvas() {
+            // Instantiate map canvas center coordinate metrics pointing near San Pablo City, Laguna
+            mapInstance = L.map('map-canvas', {
+                zoomControl: true,
+                attributionControl: false
+            }).setView([14.0708, 121.3256], 13);
+
+            // Fetch muted clean presentation layer terrain map styles from OpenStreetMap contributors
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(mapInstance);
+
+            markersLayerGroup = L.layerGroup().addTo(mapInstance);
+        }
+
+        function initFiltersAndSearch() {
+            const searchBar = document.getElementById("map-search-input");
+            if (searchBar) {
+                searchBar.addEventListener("input", (e) => {
+                    searchPhrase = e.target.value.toLowerCase().trim();
+                    evaluateClearFilterButtonState();
+                    renderMapDashboardComponents();
+                });
+            }
+
+            document.querySelectorAll(".chip-filter-btn").forEach(chip => {
+                chip.addEventListener("click", (e) => {
+                    document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
+                    e.target.classList.add("active-chip");
+                    activePestFilter = e.target.getAttribute("data-pest");
+                    evaluateClearFilterButtonState();
+                    renderMapDashboardComponents();
+                });
+            });
+        }
+
+        function evaluateClearFilterButtonState() {
+            const clearBtn = document.getElementById("clear-filters-btn");
+            if (clearBtn) {
+                if (searchPhrase !== "" || activePestFilter !== "all") {
+                    clearBtn.style.display = "inline-flex";
+                } else {
+                    clearBtn.style.display = "none";
+                }
+            }
+        }
+
+        function clearAllActiveFilters() {
+            document.getElementById("map-search-input").value = "";
+            
+            document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
+            const allChip = document.querySelector('.chip-filter-btn[data-pest="all"]');
+            if (allChip) allChip.classList.add("active-chip");
+
+            searchPhrase = "";
+            activePestFilter = "all";
+
+            evaluateClearFilterButtonState();
+            renderMapDashboardComponents();
+        }
+
+        function getPestHexColorCode(pestName) {
+            if (pestName === "Rhinoceros Beetle") return "#164630"; // Deep Green
+            if (pestName === "Brontispa") return "#d97706";         // Orange/Amber
+            return "#64748b";                                       // Fallback gray
+        }
+
+        function renderMapDashboardComponents() {
+            // Clean layer arrays prior to rebuild processing loops
+            markersLayerGroup.clearLayers();
+            const listContainer = document.getElementById("location-list-container");
+            if (listContainer) listContainer.innerHTML = "";
+
+            // Filter context validation
+            let filteredRecords = geoReportsDataset.filter(item => {
+                const fullString = `${item.barangay} ${item.municipality} ${item.province}`.toLowerCase();
+                const matchesSearch = fullString.includes(searchPhrase);
+                const matchesPest = (activePestFilter === "all" || item.pest_type === activePestFilter);
+                return matchesSearch && matchesPest;
+            });
+
+            // Update label metrics counter
+            const labelCount = document.getElementById("chip-count-label");
+            if (labelCount && activePestFilter === "all") {
+                labelCount.textContent = `All (${filteredRecords.length})`;
+            }
+
+            if (filteredRecords.length === 0) {
+                if (listContainer) {
+                    listContainer.innerHTML = `<p style="font-size:0.85rem; color:var(--text-muted); text-align:center; padding-top:12px;">No locations found.</p>`;
+                }
+                return;
+            }
+
+            filteredRecords.forEach(record => {
+                const markerColor = getPestHexColorCode(record.pest_type);
+
+                // Build modern dynamic map pins replacing old system images
+                const dynamicMarkerHtml = `
+                    <div class="custom-map-marker-pin" style="background-color: ${markerColor};">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>`;
+
+                const LeafletCustomIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: dynamicMarkerHtml,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 36]
+                });
+
+                const mapMarker = L.marker([record.latitude, record.longitude], { icon: LeafletCustomIcon });
+                mapMarker.on('click', () => populateDetailsBoxElement(record));
+                markersLayerGroup.addLayer(mapMarker);
+
+                // Populate recent view left-hand element nodes panel automatically
+                if (listContainer) {
+                    const nodeRow = document.createElement("div");
+                    nodeRow.className = "location-node-row";
+                    nodeRow.innerHTML = `
+                        <div class="location-node-info">
+                            <h4>${record.barangay}</h4>
+                            <p>${record.municipality}, ${record.province}</p>
+                            <p style="font-size:0.7rem; font-weight:600; color:${markerColor}; margin-top:3px;">${record.pest_type}</p>
+                        </div>
+                        <div class="pest-indicator-pill" style="background-color: ${markerColor};"></div>
+                    `;
+                    nodeRow.onclick = () => {
+                        mapInstance.panTo([record.latitude, record.longitude]);
+                        populateDetailsBoxElement(record);
+                    };
+                    listContainer.appendChild(nodeRow);
+                }
+            });
+        }
+
+        function populateDetailsBoxElement(record) {
+            const emptyState = document.getElementById("details-empty-state");
+            const activeState = document.getElementById("details-active-state");
+            
+            if (!activeState || !emptyState) return;
+
+            emptyState.style.display = "none";
+            activeState.style.display = "flex";
+            activeState.className = "detail-active-layout";
+
+            let severityClass = "low";
+            if (record.damage_severity === "High" || record.damage_severity === "Severe") severityClass = "high";
+            if (record.damage_severity === "Moderate") severityClass = "moderate";
+
+            // Determine route base path based on case status matrix[cite: 3]
+            const targetDashboardRoute = (record.status === "Pending") 
+                ? `/agriculturist/pending` 
+                : `/agriculturist/reviewed`;
+
+            const cleanDisplayStatus = (record.status === "Pending") ? "Pending Review" : "Reviewed & Issued";
+
+            activeState.innerHTML = `
+                <div style="width:100%;">
+                    <div class="detail-meta-header">
+                        <div>
+                            <h3>${record.barangay}</h3>
+                            <p>${record.municipality}, ${record.province}</p>
+                        </div>
+                        <span class="severity-pill ${severityClass}" style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px;">${record.damage_severity}</span>
+                    </div>
+
+                    <div class="detail-data-table">
+                        <div class="data-table-row">
+                            <span>Detected Pest</span>
+                            <span style="color: ${getPestHexColorCode(record.pest_type)}">${record.pest_type}</span>
+                        </div>
+                        <div class="data-table-row">
+                            <span>Report Matrix Ref</span>
+                            <span>Case ID #${record.id}</span>
+                        </div>
+                        <div class="data-table-row">
+                            <span>Workflow Status</span>
+                            <span style="font-weight: 700; color: ${record.status === 'Pending' ? '#d97706' : '#164630'};">${cleanDisplayStatus}</span>
+                        </div>
+                        <div class="data-table-row">
+                            <span>Coordinates</span>
+                            <span style="font-family:monospace; font-size:0.78rem;">${record.latitude.toFixed(4)}°, ${record.longitude.toFixed(4)}°</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-view-action" onclick="redirectToSpecificReport('${targetDashboardRoute}', ${record.id})">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Specific Report
+                </button>
+            `;
+        }
+
+        function redirectToSpecificReport(baseRoute, reportId) {
+            // Direct workflow path to target report layout file sending parameters to activate the modal automatically[cite: 3]
+            window.location.href = `${baseRoute}?search=${reportId}`;
+        }
+
+        function toggleSidebarMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            const icon = document.getElementById('toggleIcon');
+            sidebar.classList.toggle('show-mobile');
+            if (backdrop) backdrop.classList.toggle('active');
+            
+            if (icon) {
+                icon.className = sidebar.classList.contains('show-mobile') ? "fa-solid fa-xmark" : "fa-solid fa-bars";
+            }
+        }
+    </script>
+</body>
+</html>

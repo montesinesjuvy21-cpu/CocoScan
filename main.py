@@ -855,7 +855,132 @@ def agriculturist_pending():
         flash("An alignment error occurred reading data snapshots.", "error")
         return redirect(url_for('agriculturist_dashboard'))
 
+@app.route('/agriculturist/reviewed')
+def agriculturist_reviewed():
+    """Fetches reports with 'Recommendation Issued' status from Supabase and renders the archive."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role != 'agri_expert':
+        flash("Unauthorized access path.", "error")
+        return redirect(url_for('login'))
+        
+    try:
+        # Load user profile for layout presentation layer
+        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
+        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
+        
+        # Pull reports that have already been reviewed by an expert from the database
+        reports_response = supabase.table("reports")\
+            .select("*")\
+            .eq("status", "Recommendation Issued")\
+            .order("updated_at", desc=True)\
+            .execute()
+            
+        raw_reports = reports_response.data or []
+        reviewed_reports_list = []
+        
+        for item in raw_reports:
+            created_raw = item.get("created_at") or ""
+            try:
+                created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00")) if created_raw else None
+                created_label = created_dt.strftime("%b %d, %Y • %I:%M %p") if created_dt else "No date"
+                created_date_only = created_dt.strftime("%Y-%m-%d") if created_dt else ""
+            except Exception:
+                created_date_only = created_raw.split("T")[0] if created_raw else ""
+                created_label = created_date_only
 
+            # Process geographic tracking constraints
+            loc_summary = item.get("barangay") or "Unknown Location"
+            full_loc = ", ".join(filter(None, [item.get("barangay"), item.get("municipality"), item.get("province")]))
+            
+            # Extract the expert recommendation note (assuming single string inside array matrix or raw fallback)
+            expert_recs = item.get("expert_recommendations") or []
+            expert_note = expert_recs[0] if isinstance(expert_recs, list) and len(expert_recs) > 0 else "No technical recommendations filed."
+            
+            reviewed_reports_list.append({
+                "id": item.get("id"),
+                "date": created_date_only,
+                "timestamp": created_label,
+                "location": loc_summary,
+                "full_location": full_loc or "No location logged",
+                "farmer": item.get("farmer_name") or "Unknown Farmer",
+                "pest": item.get("pest_type") or "Unknown Pest",
+                "severity": item.get("damage_severity") or "Moderate",
+                "status": "Reviewed",
+                "confidence": f"{int(float(item.get('confidence', 0)))}%" if item.get('confidence') else "90%",
+                "farmer_notes": item.get("field_notes") or "No extra notes logged by the farmer.",
+                "img": item.get("image_url") or "",
+                "initial_recommendations": item.get("initial_recommendations") or [],
+                "expert_recommendation": expert_note
+            })
+            
+        return render_template(
+            'agriculturist_reviewed_reports.html', 
+            user_name=user_name, 
+            reviewed_reports=reviewed_reports_list
+        )
+        
+    except Exception as e:
+        logger.error(f"Error serving agriculturist reviewed list module: {str(e)}")
+        flash("An alignment error occurred reading data snapshots.", "error")
+        return redirect(url_for('agriculturist_dashboard'))
+
+@app.route('/agriculturist/map')
+def agriculturist_map():
+    """Fetches incident coordinates and location data aggregates to render the geospatial map."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role != 'agri_expert':
+        flash("Unauthorized access path.", "error")
+        return redirect(url_for('login'))
+        
+    try:
+        # Load user profile for layout presentation layer
+        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
+        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
+        
+        # Retrieve all spatial records containing geographical metrics
+        reports_response = supabase.table("reports")\
+            .select("id, barangay, municipality, province, latitude, longitude, pest_type, damage_severity")\
+            .not_.is_("latitude", "null")\
+            .execute()
+            
+        raw_reports = reports_response.data or []
+        map_reports_list = []
+        
+        # Aggregate tracking data parameters
+        for item in raw_reports:
+            try:
+                lat = float(item.get("latitude"))
+                lng = float(item.get("longitude"))
+            except (ValueError, TypeError):
+                continue  # Skip records missing physical coordinates
+                
+            map_reports_list.append({
+                "id": item.get("id"),
+                "barangay": item.get("barangay") or "Unknown Sector",
+                "municipality": item.get("municipality") or "San Pablo City",
+                "province": item.get("province") or "Laguna",
+                "latitude": lat,
+                "longitude": lng,
+                "pest_type": item.get("pest_type") or "Unknown Pest",
+                "damage_severity": item.get("damage_severity") or "Moderate",
+                "cases_count": 1 # Serves as baseline cluster weight variable
+            })
+            
+        return render_template(
+            'map_view.html', 
+            user_name=user_name, 
+            map_reports=map_reports_list
+        )
+        
+    except Exception as e:
+        logger.error(f"Error serving geospatial map canvas metrics: {str(e)}")
+        flash("An alignment error occurred reading spatial coordinates.", "error")
+        return redirect(url_for('agriculturist_dashboard'))
+    
 @app.route('/agriculturist/approve-report', methods=['POST'])
 def agriculturist_approve_report():
     """Asynchronous pipeline to append specialist recommendations and update status."""
