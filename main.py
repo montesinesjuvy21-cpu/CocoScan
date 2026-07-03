@@ -789,6 +789,116 @@ def agriculturist_dashboard():
         logger.error(f"Agriculturist dashboard routing exception: {str(e)}")
         return redirect(url_for('logout'))
 
+@app.route('/agriculturist/pending')
+def agriculturist_pending():
+    """Fetches reports with 'Pending' status from Supabase and renders the queue."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role != 'agri_expert':
+        flash("Unauthorized access path.", "error")
+        return redirect(url_for('login'))
+        
+    try:
+        # Load user profile for layout presentation layer
+        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
+        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
+        
+        # Pull reports awaiting expert review from database
+        reports_response = supabase.table("reports")\
+            .select("*")\
+            .eq("status", "Pending")\
+            .order("created_at", desc=True)\
+            .execute()
+            
+        raw_reports = reports_response.data or []
+        pending_reports_list = []
+        
+        for item in raw_reports:
+            created_raw = item.get("created_at") or ""
+            try:
+                created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00")) if created_raw else None
+                created_label = created_dt.strftime("%b %d, %Y • %I:%M %p") if created_dt else "No date"
+                created_date_only = created_dt.strftime("%Y-%m-%d") if created_dt else ""
+            except Exception:
+                created_date_only = created_raw.split("T")[0] if created_raw else ""
+                created_label = created_date_only
+
+            # Process geographic tracking constraints
+            loc_summary = item.get("barangay") or "Unknown Location"
+            full_loc = ", ".join(filter(None, [item.get("barangay"), item.get("municipality"), item.get("province")]))
+            
+            pending_reports_list.append({
+                "id": item.get("id"),
+                "date": created_date_only,
+                "timestamp": created_label,
+                "location": loc_summary,
+                "full_location": full_loc or "No location logged",
+                "farmer": item.get("farmer_name") or "Unknown Farmer",
+                "pest": item.get("pest_type") or "Unknown Pest",
+                "severity": item.get("damage_severity") or "Moderate",
+                "status": item.get("status") or "Pending",
+                "confidence": f"{int(float(item.get('confidence', 0)))}%" if item.get('confidence') else "90%",
+                "farmer_notes": item.get("field_notes") or "No extra notes logged by the farmer.",
+                "img": item.get("image_url") or "",
+                "initial_recommendations": item.get("initial_recommendations") or []
+            })
+            
+        return render_template(
+            'agriculturist_pending_reports.html', 
+            user_name=user_name, 
+            pending_reports=pending_reports_list
+        )
+        
+    except Exception as e:
+        logger.error(f"Error serving agriculturist pending list module: {str(e)}")
+        flash("An alignment error occurred reading data snapshots.", "error")
+        return redirect(url_for('agriculturist_dashboard'))
+
+
+@app.route('/agriculturist/approve-report', methods=['POST'])
+def agriculturist_approve_report():
+    """Asynchronous pipeline to append specialist recommendations and update status."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role != 'agri_expert':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+        
+    try:
+        data = request.get_json() or {}
+        report_id = data.get('report_id')
+        expert_advice = data.get('recommendation', '').strip()
+        
+        if not report_id or not expert_advice:
+            return jsonify({'success': False, 'message': 'Missing validation parameters'}), 400
+            
+        now_iso = datetime.now(UTC).isoformat()
+        
+        # Format specialist notes to array wrapper matching expected view parameters
+        expert_recs_array = [expert_advice]
+        
+        # Update row matrix inside Supabase reports data schema
+        update_response = supabase.table("reports").update({
+            "status": "Recommendation Issued",
+            "expert_recommendations": expert_recs_array,
+            "reviewed_by_id": user_id,
+            "updated_at": now_iso
+        }).eq("id", report_id).execute()
+        
+        if not update_response.data:
+            return jsonify({'success': False, 'message': 'Target record failed to save update rows'}), 500
+            
+        logger.info(f"Report ID #{report_id} successfully processed and signed off by expert #{user_id}.")
+        return jsonify({
+            'success': True, 
+            'message': 'Expert diagnostic treatment recommendation logged successfully.'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error running expert approval execution route: {str(e)}")
+        return jsonify({'success': False, 'message': f"Internal validation error: {str(e)}"}), 500
+    
 @app.route('/farmer/submit-report', methods=['POST'])
 def farmer_submit_report():
     """Processes pest scan data from the frontend and inserts it into the Supabase 'reports' table"""

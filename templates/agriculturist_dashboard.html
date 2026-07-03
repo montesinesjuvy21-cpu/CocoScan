@@ -2,119 +2,707 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CocoScan - Agriculturist Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* ==========================================================================
+           1. VARIABLES & BASE STYLES
+           ========================================================================== */
         :root {
             --bg-base: #f4f7f5;
             --bg-card: #ffffff;
             --brand-dark: #0b251a;
             --brand-accent: #4ac68f;
             --primary-green: #528265;
-            --badge-green-bg: #8ba888;
             --text-dark: #1e293b;
             --text-muted: #64748b;
             --border-light: rgba(0, 0, 0, 0.05);
-            --sidebar-width: 260px;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        html, body { height: 100%; }
-        body { background-color: var(--bg-base); color: var(--text-dark); }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
 
-        /* Sidebar - adapted from farmer dashboard but visible on desktop */
+        body {
+            background-color: var(--brand-dark); 
+            color: var(--text-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ==========================================================================
+           2. FIXED HEADER & NAVIGATION
+           ========================================================================== */
+        .mobile-header {
+            width: 100%;
+            height: 64px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            position: fixed;
+            top: 0; 
+            left: 0;
+            z-index: 1000;
+            padding: 0 max(16px, calc((100% - 1400px) / 2 + 24px)); 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .mobile-header .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mobile-header .logo-img-fallback {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-card);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-header h2 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+        }
+
+        .mobile-header p {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+        }
+
+        .hamburger-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.35rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        /* ==========================================================================
+           3. SIDEBAR DRAWER MENU
+           ========================================================================== */
         .sidebar-wrapper {
-            width: var(--sidebar-width);
+            width: 290px;
             background-color: var(--brand-dark);
             color: #ffffff;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             position: fixed;
-            top: 0; bottom: 0; left: 0;
+            top: 64px; 
+            bottom: 0; 
+            right: 0;
             z-index: 999;
-            padding-top: 20px;
-            border-right: 1px solid rgba(0,0,0,0.06);
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: -5px 0 25px rgba(0,0,0,0.25);
         }
-        .menu-label { font-size: 0.75rem; color: rgba(255,255,255,0.6); padding: 18px 20px 10px 20px; font-weight:700; }
-        .sidebar-menu-list { list-style: none; padding: 0 8px; }
-        .menu-item-link { display:flex; gap:12px; align-items:center; padding:12px 14px; color: rgba(255,255,255,0.85); text-decoration:none; border-radius:10px; margin-bottom:6px; }
-        .menu-item-link.active, .menu-item-link:hover { background: rgba(255,255,255,0.04); color: #fff; }
-        .sidebar-user-footer { padding: 18px; display:flex; align-items:center; justify-content:space-between; border-top: 1px solid rgba(255,255,255,0.04); }
-        .user-meta-box { display:flex; gap:10px; align-items:center; }
-        .user-avatar-circle { width:42px; height:42px; border-radius:50%; background: rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; }
-        .user-identity-text h4 { font-size:0.9rem; color:#fff; }
-        .user-identity-text p { font-size:0.75rem; color: rgba(255,255,255,0.5); }
 
-        /* Top header for mobile and narrow screens */
-        .topbar {
-            height: 64px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; background: transparent;
-            position: fixed; top:0; left:0; right:0; z-index: 800; border-bottom: 1px solid rgba(0,0,0,0.03);
-            background-color: rgba(255,255,255,0.98);
+        .sidebar-wrapper.show-mobile {
+            transform: translateX(0);
         }
-        .logo-group { display:flex; gap:10px; align-items:center; }
-        .logo-img-fallback { width:40px; height:40px; background:#e8f6ec; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--primary-green); }
-        .hamburger-btn { background:none; border:none; font-size:1.25rem; cursor:pointer; }
 
-        /* Main content area with left offset for desktop */
+        .menu-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.4);
+            padding: 24px 20px 12px 20px;
+            font-weight: 700;
+        }
+
+        .sidebar-menu-list {
+            list-style: none;
+            padding: 0 10px;
+        }
+
+        .menu-item-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            margin-bottom: 6px;
+        }
+
+        .menu-item-link:hover, 
+        .menu-item-link.active {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .sidebar-user-footer {
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .user-meta-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .user-identity-text h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .user-identity-text p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-logout-trigger {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.2rem;
+            transition: color 0.2s ease;
+            padding: 4px;
+        }
+
+        .btn-logout-trigger:hover {
+            color: #ef4444 !important;
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(11, 37, 26, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 950;
+        }
+        
+        .sidebar-backdrop.active { 
+            display: block; 
+        }
+
+        /* ==========================================================================
+           4. CORE MAIN LAYOUT & TITLES
+           ========================================================================== */
+        .mobile-viewport-container {
+            width: 100%;
+            min-height: 100vh;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
         .main-content-layout {
-            margin-left: 0; /* mobile-first */
-            padding: 88px 16px 24px 16px;
-            transition: margin-left 0.2s ease;
-            max-width: 1200px;
-            margin-right: auto; margin-left: auto; /* centered on wide screens when sidebar hidden */
+            flex: 1;
+            width: 100%;
+            max-width: 1400px; 
+            margin: 0 auto;    
+            padding: 88px 24px 24px 24px; 
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        /* Inner layout cards */
-        .dashboard-header-container { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px; }
-        .dashboard-header-container h1 { font-size:1.6rem; font-weight:800; color:var(--brand-dark); }
-        .dashboard-header-container p { color:var(--text-muted); margin-top:4px; }
-
-        /* Metrics grid: 4 across on desktop, responsive on mobile */
-        .metrics-grid { display:grid; gap:12px; grid-template-columns: 1fr; }
-        .metric-card-node { background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; box-shadow:0 6px 18px rgba(16,24,24,0.04); }
-        .metric-data h5 { font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; }
-        .metric-count { font-size:1.8rem; font-weight:800; color:var(--brand-dark); margin:6px 0; }
-        .metric-icon-box { width:46px; height:46px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.15rem; }
-
-        .weather-analytics-card { background: linear-gradient(135deg, #528265 0%, #3b604a 100%); border-radius:14px; padding:18px; color:#fff; margin-top:10px; }
-        .chart-visual-card { background:var(--bg-card); border-radius:12px; padding:14px; border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(16,24,24,0.03); }
-        .chart-box-render-frame { width:100%; height:240px; }
-
-        /* Quick action card (scan) */
-        .quick-action-card { background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border-light); text-align:center; }
-
-        /* Responsive behavior */
-        @media (min-width: 900px) {
-            /* show permanent sidebar */
-            .sidebar-wrapper { transform:none; }
-            .topbar { display:none; }
-            .main-content-layout { margin-left: calc(var(--sidebar-width) + 40px); padding: 32px; max-width: calc(100% - var(--sidebar-width) - 80px); }
-            .metrics-grid { grid-template-columns: repeat(4, 1fr); }
-            .chart-box-render-frame { height: 240px; }
+        .dashboard-header-container {
+            margin-bottom: 4px;
         }
 
-        @media (max-width: 899px) {
-            .sidebar-wrapper { position: fixed; top: 64px; right: 0; transform: translateX(100%); width: 290px; box-shadow: -6px 0 40px rgba(0,0,0,0.25); }
-            .sidebar-wrapper.show-mobile { transform: translateX(0); }
-            .sidebar-backdrop { display:none; }
-            .main-content-layout { margin-left: 0; padding-top: 88px; }
-            .metrics-grid { grid-template-columns: 1fr; }
-            .chart-box-render-frame { height: 180px; }
+        .dashboard-header-container h1 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: var(--brand-dark);
+            letter-spacing: -0.5px;
         }
 
+        .dashboard-header-container p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ==========================================================================
+           5. METRIC CARDS RESPONSIVE GRID 
+           ========================================================================== */
+        .metrics-grid-matrix {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 12px;
+            width: 100%;
+        }
+
+        @media (min-width: 1024px) {
+            .metrics-grid-matrix {
+                grid-template-columns: repeat(4, 1fr); 
+                gap: 24px;
+            }
+        }
+
+        .metric-card-node {
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            width: 100%;
+        }
+
+        .metric-data h5 {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        .metric-data .metric-count {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: var(--brand-dark);
+            margin: 2px 0;
+            line-height: 1.1;
+        }
+
+        .metric-data p {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+
+        .metric-icon-box {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+        }
+
+        .metric-card-node.cases .metric-icon-box { color: var(--brand-dark); background-color: #f0f4f2; }
+        .metric-card-node.pending .metric-icon-box { color: #d97706; background-color: #fffbeb; }
+        .metric-card-node.resolved .metric-icon-box { color: #059669; background-color: #ecfdf5; }
+        .metric-card-node.affected .metric-icon-box { color: #92400e; background-color: #fff6ed; }
+
+        /* ==========================================================================
+           6. WEATHER WIDGET SECTION
+           ========================================================================== */
+        .weather-analytics-card {
+            background: linear-gradient(135deg, #528265 0%, #3b604a 100%);
+            border-radius: 18px;
+            padding: 20px;
+            color: #ffffff;
+            box-shadow: 0 8px 20px rgba(59, 96, 74, 0.15);
+            width: 100%;
+        }
+
+        .weather-card-header h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            opacity: 0.75;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .weather-card-header h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 1px;
+        }
+
+        .weather-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .weather-stat-node {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .weather-stat-node h6 {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            font-weight: 400;
+        }
+
+        .weather-stat-node p {
+            font-size: 1.45rem;
+            font-weight: 800;
+            margin-top: 2px;
+        }
+
+        .weather-stat-node p span {
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: 1px;
+        }
+
+        .weather-alert-banner {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        /* ==========================================================================
+           7. GRAPH & CHARTS
+           ========================================================================== */
+        .chart-visual-card {
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+            width: 100%;
+        }
+
+        .chart-header-inline {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chart-header-inline i {
+            color: var(--primary-green);
+        }
+
+        .chart-box-render-frame {
+            position: relative;
+            width: 100%;
+            height: 190px;
+        }
+
+        /* ==========================================================================
+           8. QUICK ACTION SYSTEM BUTTONS
+           ========================================================================== */
+        .quick-action-card {
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            text-align: center;
+            width: 100%;
+        }
+
+        .quick-action-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+        }
+
+        .quick-action-card p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin: 6px 0 16px 0;
+            line-height: 1.4;
+        }
+
+        .btn-primary-scan {
+            width: 100%;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            border: none;
+            padding: 14px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* ==========================================================================
+           9. NOTIFICATIONS & RISKS
+           ========================================================================== */
+        .dynamic-risk-card {
+            background-color: var(--risk-bg, #ffffff) !important;
+            border: 1px solid var(--risk-border, rgba(0, 0, 0, 0.08)) !important;
+            color: var(--risk-color, #0b251a) !important;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-top: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .dynamic-risk-card .risk-icon {
+            margin-top: 2px;
+            flex-shrink: 0;
+            font-size: 1.1rem;
+            color: var(--risk-color) !important;
+        }
+
+        .dynamic-risk-card .risk-text {
+            font-size: 0.82rem;
+            line-height: 1.4;
+            color: #1e293b;
+        }
+
+        .dynamic-risk-card .risk-text strong {
+            color: var(--risk-color) !important;
+            font-weight: 700;
+        }
+
+        .notif-item {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid rgba(0,0,0,0.02);
+            transition: background 0.15s ease;
+            text-align: left;
+        }
+        
+        .notif-item.is-unread {
+            background: rgba(22, 70, 48, 0.04);
+            border-left: 3px solid #164630;
+        }
+        
+        .notif-item p {
+            margin: 0;
+            font-size: 0.78rem;
+            line-height: 1.3;
+            color: #334155;
+        }
+        
+        .notif-item span.time {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            display: block;
+            margin-top: 4px;
+        }
+        
+        .notif-filter {
+            transition: all 0.2s ease;
+        }
+        
+        .notif-filter.active {
+            background: #164630 !important;
+            color: #ffffff !important;
+            border-color: #164630 !important;
+        }
+
+        /* ==========================================================================
+           10. RESPONSIVE MEDIA QUERIES
+           ========================================================================== */
+        @media (max-width: 500px) {
+            .main-content-layout {
+                padding: 88px 16px 24px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            /* Heto ang itinama batay sa tunay na structural rules ng Farmer Dashboard: */
+            .main-content-layout {
+                max-width: 1400px;
+                padding: 108px 32px 32px 32px; 
+                gap: 24px; 
+            }
+
+            .mobile-header {
+                height: 72px; 
+                padding: 0 max(32px, calc((100% - 1400px) / 2 + 32px));
+            }
+            
+            /* Tinitiyak na ang close button (X) ay pantay at hindi lumiliit o lumulutang sa ere */
+            .hamburger-btn {
+                background: none;
+                border: none;
+                color: #ffffff;
+                font-size: 1.35rem;
+                cursor: pointer;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+
+            .sidebar-wrapper {
+                top: 72px;
+            }
+
+            .notif-item {
+                padding: 14px;
+                gap: 14px;
+            }
+            
+            /* Kung gumagamit ka ng klase o element para sa bell icon container */
+            .notif-icon-wrapper, .mobile-header .notif-trigger-btn {
+                font-size: 1.4rem; 
+                padding: 6px;
+            }
+
+            .dashboard-header-container h1 {
+                font-size: 1.95rem; 
+            }
+            
+            .dashboard-header-container p {
+                font-size: 0.98rem;
+                margin-top: 4px;
+            }
+
+            /* Pag-scale ng Metric Cards */
+            .metric-card-node {
+                padding: 24px; 
+                border-radius: 20px;
+            }
+            
+            .metric-data h5 {
+                font-size: 0.8rem; 
+            }
+            
+            .metric-data .metric-count {
+                font-size: 2.3rem; 
+                margin: 6px 0;
+            }
+            
+            .metric-data p {
+                font-size: 0.78rem;
+            }
+            
+            .metric-icon-box {
+                width: 52px;
+                height: 52px;
+                font-size: 1.4rem;
+            }
+
+            /* Pag-scale ng Weather & Charts */
+            .weather-analytics-card {
+                padding: 28px;
+                border-radius: 22px;
+            }
+            
+            .weather-card-header h3 {
+                font-size: 1.5rem;
+            }
+            
+            .weather-stat-node p {
+                font-size: 1.8rem;
+            }
+                 
+            .weather-stats-grid {
+                grid-template-columns: repeat(4, 1fr); 
+                gap: 16px;
+            }
+
+            .weather-stat-node {
+                padding: 18px 12px; 
+                min-height: 100px;  
+            }
+
+            .weather-stat-node h6 {
+                font-size: 0.85rem; 
+                margin-bottom: 4px;
+            }
+
+            .weather-stat-node p {
+                font-size: 1.95rem; 
+                line-height: 1.2;
+            }
+
+            .chart-visual-card {
+                padding: 24px;
+                border-radius: 20px;
+            }
+            
+            .chart-header-inline {
+                font-size: 1rem;
+                margin-bottom: 20px;
+            }
+            
+            .chart-box-render-frame {
+                height: 260px; 
+            }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar (permanent on desktop, slide-over on mobile) -->
-    <aside class="sidebar-wrapper" id="sidebar">
-        <div>
-            <div class="menu-label">MAIN MENU</div>
+    <div class="mobile-viewport-container">
+        
+        <!-- Header Synchronized to Farmer Framework Structural Padding -->
+        <header class="mobile-header">
+           <div class="logo-group">
+                <div class="logo-img-fallback">
+                    <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
+                </div>
+                <div>
+                    <h2>CocoScan</h2>
+                    <p>Coconut Pest Detection</p>
+                </div>
+            </div>
+            <button class="hamburger-btn" onclick="toggleSidebarMenu()">
+                <i class="fa-solid fa-bars" id="toggleIcon"></i>
+            </button>
+        </header>
+
+        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
+
+        <!-- Sidebar Configured to Match Exactly the Framework Specifications -->
+        <aside class="sidebar-wrapper" id="sidebar">
+           <div>
+            <div class="menu-label">Main Menu</div>
             <ul class="sidebar-menu-list">
                 <li><a href="/agriculturist/dashboard" class="menu-item-link active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
                 <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-check"></i> Pending Reports</a></li>
@@ -123,303 +711,376 @@
             </ul>
         </div>
 
-        <div class="sidebar-user-footer">
-            <div class="user-meta-box">
-                <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size:0.95rem;"></i></div>
-                <div class="user-identity-text">
-                    <h4>{{ user_name }}</h4>
-                    <p>Agriculturist</p>
+            <div class="sidebar-user-footer">
+                <div class="user-meta-box">
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-identity-text">
+                        <h4>{{ user_name }}</h4>
+                        <p>Agriculturist</p>
+                    </div>
+                </div>
+                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="main-content-layout">
+            
+            <header class="dashboard-header-container" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-bottom: 12px; position: relative;">
+                <div>
+                    <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">Dashboard</h1>
+                    <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview of reported and detected pests</p>
+                </div>
+
+                <div id="notification-container" style="position: relative;">
+                    <div id="bell-trigger" class="bell-notice-wrapper" style="position: relative; margin-top: 6px; width: 38px; height: 38px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; color: #0b251a; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                        <i class="fa-regular fa-bell"></i>
+                        <span id="bell-badge" style="display: none; position: absolute; top: 8px; right: 9px; width: 6px; height: 6px; background-color: #e63946; border-radius: 50%; border: 1.5px solid #ffffff;"></span>
+                    </div>
+
+                    <div id="notif-dropdown" style="display: none; position: absolute; top: 46px; right: 0; width: 320px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 1000; padding: 14px; box-sizing: border-box;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0b251a;">Notifications</h4>
+                            <button id="clear-all-btn" style="background: none; border: none; color: #ef4444; font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0;">Clear All</button>
+                        </div>
+
+                        <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.04); padding-bottom: 8px;">
+                            <button class="notif-filter active" data-filter="all" style="font-size: 0.7rem; border: none; background: #164630; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">All</button>
+                            <button class="notif-filter" data-filter="unread" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Unread</button>
+                            <button class="notif-filter" data-filter="alert" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Risks</button>
+                        </div>
+
+                        <div id="notif-list-wrapper" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+                    </div>
+                </div>
+            </header>
+            
+            <div>
+                 <p id="greeting-banner" style="font-size: 1rem; font-weight: 700; color: #164630; margin: 0; line-height: 1.2;"></p>
+            </div>
+
+            <!-- Metrics Grid Framework -->
+            <div class="metrics-grid-matrix">
+                <div class="metric-card-node cases">
+                    <div class="metric-data">
+                        <h5>Total Reported</h5>
+                        <div class="metric-count">{{ metrics.total_cases }}</div>
+                        <p>This Month</p>
+                    </div>
+                    <div class="metric-icon-box"><i class="fa-solid fa-bug"></i></div>
+                </div>
+                
+                <div class="metric-card-node pending">
+                    <div class="metric-data">
+                        <h5>Pending</h5>
+                        <div class="metric-count">{{ metrics.pending_cases }}</div>
+                        <p>Attention Required</p>
+                    </div>
+                    <div class="metric-icon-box"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                </div>
+
+                <div class="metric-card-node resolved">
+                    <div class="metric-data">
+                        <h5>Resolved</h5>
+                        <div class="metric-count">{{ metrics.resolved_cases }}</div>
+                        <p>This Month</p>
+                    </div>
+                    <div class="metric-icon-box"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+
+                <div class="metric-card-node affected">
+                    <div class="metric-data">
+                        <h5>Affected Areas</h5>
+                        <div class="metric-count">{{ metrics.affected_areas }}</div>
+                        <p>Farms Logged</p>
+                    </div>
+                    <div class="metric-icon-box"><i class="fa-solid fa-location-dot"></i></div>
                 </div>
             </div>
-            <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
-        </div>
-    </aside>
 
-    <!-- Topbar for mobile -->
-    <div class="topbar">
-        <div class="logo-group">
-            <div class="logo-img-fallback"><i class="fa-solid fa-seedling"></i></div>
-            <div>
-                <div style="font-weight:700;">CocoScan</div>
-                <div style="font-size:0.75rem; color:var(--text-muted);">Coconut Pest Detection</div>
+            <!-- Quick Action Unit -->
+            <div class="quick-action-card">
+                <h3>Quick Actions</h3>
+                <p>Launch scanning verification loops or audit recently logged farmer data reports instantly.</p>
+                <a href="{{ url_for('farmer_scan') }}" class="btn-primary-scan" style="text-decoration: none;">
+                    <i class="fa-solid fa-camera"></i> Scan Now
+                </a>
             </div>
-        </div>
-        <button class="hamburger-btn" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
+
+            <!-- Meteorological Conditions & Analytical Risk Core -->
+            <div class="weather-analytics-card">
+                <div class="weather-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                    <div>
+                        <h4>Current Weather</h4>
+                        <h3>{{ weather.location }}</h3>
+                    </div>
+                    {% if weather.is_down %}
+                    <span style="font-size: 0.65rem; background-color: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 10px; border-radius: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px;">
+                        <i class="fa-solid fa-circle-exclamation" style="margin-right: 2px;"></i> Offline
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="weather-stats-grid">
+                    <div class="weather-stat-node">
+                        <h6>Temperature</h6>
+                        <p>{{ weather.temp }}{% if weather.temp != '--' %}<span>°C</span>{% endif %}</p>
+                    </div>
+                    <div class="weather-stat-node">
+                        <h6>Humidity</h6>
+                        <p>{{ weather.humidity }}{% if weather.humidity != '--' %}<span>%</span>{% endif %}</p>
+                    </div>
+                    <div class="weather-stat-node">
+                        <h6>Rainfall</h6>
+                        <p>{{ weather.rainfall }}{% if weather.rainfall != '--' %}<span>mm</span>{% endif %}</p>
+                    </div>
+                    <div class="weather-stat-node">
+                        <h6>Wind</h6>
+                        <p>{{ weather.wind }}{% if weather.wind != '--' %}<span>km/h</span>{% endif %}</p>
+                    </div>
+                </div>
+
+                {% if weather.is_down %}
+                <div class="weather-alert-banner" style="background-color: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.1); color: #ef4444;">
+                    <i class="fa-solid fa-triangle-exclamation" style="margin-top:1px; flex-shrink: 0; color: #ef4444;"></i>
+                    <span>Unable to fetch real-time atmospheric updates. Please check your connection.</span>
+                </div>
+                {% else %}
+               
+                <div class="weather-alert-banner dynamic-risk-card" style="--risk-bg: {{ risk.bg }}; --risk-border: {{ risk.border or 'rgba(0,0,0,0.04)' }}; --risk-color: {{ risk.color }};">
+                    {% if risk.level == 'High Risk' %}
+                        <i class="fa-solid fa-triangle-exclamation risk-icon"></i>
+                    {% elif risk.level == 'Moderate Risk' %}
+                        <i class="fa-solid fa-circle-exclamation risk-icon"></i>
+                    {% elif risk.level == 'Low Risk' %}
+                        <i class="fa-solid fa-circle-check" style="color: #10b981;" class="risk-icon"></i>
+                    {% else %}
+                        <i class="fa-solid fa-circle-info risk-icon"></i>
+                    {% endif %}
+                    <span class="risk-text">
+                        <strong>Environmental Risk: {{ risk.level }}</strong> — {{ risk.text | safe }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Statistical Infographics Charts -->
+            <div class="chart-visual-card">
+                <div class="chart-header-inline"><i class="fa-solid fa-chart-line"></i> Pest Trend Analytics</div>
+                <div class="chart-box-render-frame">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-visual-card">
+                <div class="chart-header-inline"><i class="fa-solid fa-chart-pie"></i> System Scope Distribution</div>
+                <div class="chart-box-render-frame">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+
+        </main>
     </div>
 
-    <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index: 900;"></div>
+    <script>
+        let notifications = [];
 
-    <main class="main-content-layout">
-        <header class="dashboard-header-container">
-            <div>
-                <h1>Dashboard</h1>
-                <p>Overview of reported and detected pests</p>
-            </div>
-            <div id="notification-container" style="position:relative;">
-                <div id="bell-trigger" class="bell-notice-wrapper" style="position:relative; width:38px; height:38px; background:#ffffff; border:1px solid rgba(0,0,0,0.06); border-radius:10px; display:flex; align-items:center; justify-content:center;">
-                    <i class="fa-regular fa-bell"></i>
-                    <span id="bell-badge" style="display:none; position:absolute; top:8px; right:9px; width:6px; height:6px; background-color:#e63946; border-radius:50%; border:1.5px solid #fff;"></span>
-                </div>
-                <div id="notif-dropdown" style="display:none; position:absolute; top:46px; right:0; width:320px; background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:12px; padding:12px; box-shadow:0 8px 28px rgba(0,0,0,0.08); z-index:1000;"></div>
-            </div>
-        </header>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const hour = new Date().getHours();
+            const banner = document.getElementById("greeting-banner");
+            const fullName = "{{ user_name }}".trim();
+            const firstName = fullName.split(" ")[0] || "Agriculturist";
+            
+            let welcome = "Dashboard";
+            if (hour < 12) welcome = `Good Morning, ${firstName}!`;
+            else if (hour < 18) welcome = `Good Afternoon, ${firstName}!`;
+            else welcome = `Good Evening, ${firstName}!`;
+            if (banner) banner.textContent = welcome;
 
-        <div id="greeting-banner" style="font-weight:700; color:#164630; margin-bottom:8px;"></div>
+            await loadDynamicDashboardMetrics();
+            initCharts();
+            initNotificationUiEngine();
+        });
 
-        <section class="metrics-grid" style="margin-bottom:12px;">
-            <div class="metric-card-node cases">
-                <div>
-                    <h5>Total Reported Cases</h5>
-                    <div class="metric-count">{{ metrics.total_cases }}</div>
-                    <p style="color:var(--text-muted); font-size:0.85rem;">This Month</p>
-                </div>
-                <div class="metric-icon-box" style="background:#f0f4f2; color:var(--brand-dark);"><i class="fa-solid fa-bug"></i></div>
-            </div>
-
-            <div class="metric-card-node pending">
-                <div>
-                    <h5>Pending Reports</h5>
-                    <div class="metric-count">{{ metrics.pending_cases }}</div>
-                    <p style="color:var(--text-muted); font-size:0.85rem;">Requires Attention</p>
-                </div>
-                <div class="metric-icon-box" style="background:#fffbeb; color:#d97706;"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            </div>
-
-            <div class="metric-card-node resolved">
-                <div>
-                    <h5>Resolved Cases</h5>
-                    <div class="metric-count">{{ metrics.resolved_cases }}</div>
-                    <p style="color:var(--text-muted); font-size:0.85rem;">This Month</p>
-                </div>
-                <div class="metric-icon-box" style="background:#ecfdf5; color:#059669;"><i class="fa-solid fa-circle-check"></i></div>
-            </div>
-
-            <div class="metric-card-node affected">
-                <div>
-                    <h5>Affected Areas</h5>
-                    <div class="metric-count">{{ metrics.affected_areas }}</div>
-                    <p style="color:var(--text-muted); font-size:0.85rem;">Farms</p>
-                </div>
-                <div class="metric-icon-box" style="background:#fff6ed; color:#92400e;"><i class="fa-solid fa-location-dot"></i></div>
-            </div>
-        </section>
-
-        <div style="display:grid; grid-template-columns: 1fr 380px; gap: 16px; align-items:start; margin-bottom:16px;">
-            <div>
-                <div class="weather-analytics-card">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div>
-                            <h4 style="margin:0; font-size:0.75rem; text-transform:uppercase; opacity:0.85;">Current Weather</h4>
-                            <h3 style="margin:6px 0 0 0;">{{ weather.location }}</h3>
-                        </div>
-                        {% if weather.is_down %}
-                        <span style="font-size:0.7rem; background-color: rgba(239,68,68,0.12); color:#ef4444; padding:6px 10px; border-radius:10px; font-weight:700;">Offline</span>
-                        {% endif %}
-                    </div>
-
-                    <div style="display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-top:14px;">
-                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
-                            <div style="font-size:0.75rem; opacity:0.8;">Temperature</div>
-                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.temp }}<span style="font-size:0.85rem; font-weight:600;">°C</span></div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
-                            <div style="font-size:0.75rem; opacity:0.8;">Humidity</div>
-                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.humidity }}<span style="font-size:0.85rem; font-weight:600;">%</span></div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
-                            <div style="font-size:0.75rem; opacity:0.8;">Rainfall</div>
-                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.rainfall }}<span style="font-size:0.85rem; font-weight:600;">mm</span></div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.07); padding:12px; border-radius:10px; text-align:center;">
-                            <div style="font-size:0.75rem; opacity:0.8;">Wind</div>
-                            <div style="font-weight:800; font-size:1.25rem; margin-top:6px;">{{ weather.wind }}<span style="font-size:0.85rem; font-weight:600;">km/h</span></div>
-                        </div>
-                    </div>
-
-                    <div style="margin-top:12px; background: rgba(255,255,255,0.06); padding:10px; border-radius:8px; font-size:0.85rem;">
-                        <strong>Environmental Risk:</strong> <span>{{ risk.level }}</span> — {{ risk.text }}
-                    </div>
-                </div>
-
-                <div style="height:16px;"></div>
-
-                <div class="chart-visual-card" style="margin-bottom:12px;">
-                    <div style="font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-chart-line" style="margin-right:8px; color:var(--primary-green);"></i> Pest Trends</div>
-                    <div class="chart-box-render-frame"><canvas id="trendChart"></canvas></div>
-                </div>
-
-                <div class="chart-visual-card">
-                    <div style="font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-chart-pie" style="margin-right:8px; color:var(--primary-green);"></i> Pest Distribution</div>
-                    <div class="chart-box-render-frame"><canvas id="distributionChart"></canvas></div>
-                </div>
-            </div>
-
-            <div>
-                <div class="quick-action-card" style="margin-bottom:12px;">
-                    <h3 style="margin:0 0 8px 0;">Quick Actions</h3>
-                    <p style="color:var(--text-muted); margin-bottom:12px;">Launch scanning or review recent reports quickly.</p>
-                    <a href="{{ url_for('farmer_scan') }}" class="btn-primary-scan" style="text-decoration:none; display:inline-block; width:100%;"> <i class="fa-solid fa-camera"></i> Scan Now</a>
-                </div>
-
-                <div class="chart-visual-card" style="margin-bottom:12px;">
-                    <div style="font-weight:700; margin-bottom:10px;">Recent Activity</div>
-                    <div style="min-height:120px; display:flex; align-items:center; justify-content:center; color:var(--text-muted);">No recent activity</div>
-                </div>
-
-                <div class="chart-visual-card">
-                    <div style="font-weight:700; margin-bottom:10px;">Alerts</div>
-                    <div id="notif-list-wrapper" style="min-height:120px; display:flex; flex-direction:column; gap:8px;"></div>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-<script>
-    // Reuse much of the farmer dashboard JS (greetings, notifications, charts)
-    document.addEventListener('DOMContentLoaded', () => {
-        setupMenuToggle();
-        setupGreeting();
-        initNotificationUiEngine();
-        initCharts();
-    });
-
-    function setupMenuToggle() {
-        const toggle = document.getElementById('menuToggle');
-        const sidebar = document.getElementById('sidebar');
-        const backdrop = document.getElementById('backdrop');
-        if (!toggle) return;
-        toggle.addEventListener('click', () => {
-            if (sidebar.classList.contains('show-mobile')) {
-                sidebar.classList.remove('show-mobile');
-                backdrop.style.display = 'none';
-            } else {
-                sidebar.classList.add('show-mobile');
-                backdrop.style.display = 'block';
+        async function loadDynamicDashboardMetrics() {
+            try {
+                notifications = [{
+                    text: "High vector populations identified near Brgy. San Ignacio.",
+                    time: "10 mins ago",
+                    type: "unread",
+                    tag: "alert"
+                }];
+            } catch (err) {
+                console.error("Dashboard initialization failed:", err.message);
             }
-        });
-    }
-
-    function toggleSidebarMenu() { // called by backdrop
-        const sidebar = document.getElementById('sidebar');
-        const backdrop = document.getElementById('backdrop');
-        sidebar.classList.remove('show-mobile');
-        backdrop.style.display = 'none';
-    }
-
-    function setupGreeting() {
-        const banner = document.getElementById('greeting-banner');
-        const fullName = "{{ user_name }}".trim();
-        const firstName = fullName.split(' ')[0] || 'Agriculturist';
-        const hour = new Date().getHours();
-        let welcome = 'Dashboard';
-        if (hour < 12) welcome = `Good Morning, ${firstName}!`;
-        else if (hour < 18) welcome = `Good Afternoon, ${firstName}!`;
-        else welcome = `Good Evening, ${firstName}!`;
-        if (banner) banner.textContent = welcome;
-    }
-
-    let notifications = [{ text: 'High vector populations identified near Brgy. San Ignacio.', time: '10 mins ago', type: 'unread', tag: 'alert' }];
-
-    function initNotificationUiEngine() {
-        const bellTrigger = document.getElementById('bell-trigger');
-        const dropdown = document.getElementById('notif-dropdown');
-        const badge = document.getElementById('bell-badge');
-        const listWrapper = document.getElementById('notif-list-wrapper');
-
-        if (!bellTrigger) return;
-        bellTrigger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-        });
-        document.addEventListener('click', (e) => {
-            if (dropdown && !dropdown.contains(e.target) && e.target !== bellTrigger) dropdown.style.display = 'none';
-        });
-
-        function renderNotifications() {
-            if (!listWrapper) return;
-            listWrapper.innerHTML = '';
-            notifications.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'notif-item ' + (item.type === 'unread' ? 'is-unread' : '');
-                div.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b; margin-top:4px;"></i><div><p style="margin:0;">${item.text}</p><span style="font-size:0.72rem;color:var(--text-muted);">${item.time}</span></div>`;
-                listWrapper.appendChild(div);
-            });
-            if (badge) badge.style.display = notifications.filter(n => n.type === 'unread').length > 0 ? 'block' : 'none';
         }
 
-        renderNotifications();
-    }
+        function initNotificationUiEngine() {
+            const bellTrigger = document.getElementById("bell-trigger");
+            const dropdown = document.getElementById("notif-dropdown");
+            const badge = document.getElementById("bell-badge");
+            const listWrapper = document.getElementById("notif-list-wrapper");
+            const clearBtn = document.getElementById("clear-all-btn");
+            
+            let currentFilter = "all";
 
-     function initCharts() {
-        const trendEl = document.getElementById('trendChart');
-        if (trendEl) {
-            const ctxTrend = trendEl.getContext('2d');
-            new Chart(ctxTrend, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    datasets: [
-                        {
-                            label: 'Rhinoceros Beetle',
-                            data: [8, 12, 11, 18, 14, 22],
-                            borderColor: '#0b251a',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            tension: 0.2,
-                            pointRadius: 3
+            bellTrigger.addEventListener("click", (e) => {
+                e.stopPropagation();
+                dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!dropdown.contains(e.target) && e.target !== bellTrigger) {
+                    dropdown.style.display = "none";
+                }
+            });
+
+            function renderNotifications() {
+                if (!listWrapper) return;
+                listWrapper.innerHTML = "";
+                
+                const unreadCount = notifications.filter(n => n.type === "unread").length;
+                if(badge) badge.style.display = unreadCount > 0 ? "block" : "none";
+
+                let filtered = notifications;
+                if (currentFilter === "unread") filtered = notifications.filter(n => n.type === "unread");
+                if (currentFilter === "alert") filtered = notifications.filter(n => n.tag === "alert");
+
+                if (filtered.length === 0) {
+                    listWrapper.innerHTML = `
+                        <div style="text-align: center; padding: 30px 10px;">
+                            <i class="fa-regular fa-bell-slashed" style="font-size: 1.3rem; color: #cbd5e1; margin-bottom: 6px;"></i>
+                            <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">No notifications found.</p>
+                        </div>`;
+                    return;
+                }
+
+                filtered.forEach(item => {
+                    const div = document.createElement("div");
+                    div.className = `notif-item ${item.type === 'unread' ? 'is-unread' : ''}`;
+                    
+                    const icon = item.tag === 'alert' ? 'fa-triangle-exclamation' : 'fa-camera';
+                    const iconColor = item.tag === 'alert' ? '#f59e0b' : '#164630';
+
+                    div.innerHTML = `
+                        <i class="fa-solid ${icon}" style="color:${iconColor}; margin-top:2px; font-size:0.85rem;"></i>
+                        <div>
+                            <p>${item.text}</p>
+                            <span class="time">${item.time}</span>
+                        </div>`;
+                    
+                    div.addEventListener("click", () => {
+                        item.type = "read";
+                        renderNotifications();
+                    });
+
+                    listWrapper.appendChild(div);
+                });
+            }
+
+            document.querySelectorAll(".notif-filter").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    document.querySelectorAll(".notif-filter").forEach(b => b.classList.remove("active"));
+                    e.target.classList.add("active");
+                    currentFilter = e.target.getAttribute("data-filter");
+                    renderNotifications();
+                });
+            });
+
+            clearBtn.addEventListener("click", () => {
+                if (notifications.length === 0) return;
+                if (confirm("Are you sure you want to delete all notifications? This action cannot be undone.")) {
+                    notifications = [];
+                    renderNotifications();
+                }
+            });
+
+            renderNotifications();
+        }
+
+        function toggleSidebarMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            const icon = document.getElementById('toggleIcon');
+            
+            sidebar.classList.toggle('show-mobile');
+            backdrop.classList.toggle('active');
+            
+            if(sidebar.classList.contains('show-mobile')) {
+                icon.className = "fa-solid fa-xmark";
+            } else {
+                icon.className = "fa-solid fa-bars";
+            }
+        }
+
+        function initCharts() {
+            const trendEl = document.getElementById('trendChart');
+            if (trendEl) {
+                const ctxTrend = trendEl.getContext('2d');
+                new Chart(ctxTrend, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                        datasets: [
+                            {
+                                label: 'Rhinoceros Beetle',
+                                data: [8, 12, 11, 18, 14, 22],
+                                borderColor: '#0b251a',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2,
+                                tension: 0.2,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'Brontispa',
+                                data: [4, 7, 4, 7, 8, 8],
+                                borderColor: '#4ac68f',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2,
+                                tension: 0.2,
+                                pointRadius: 3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10, weight: '600' } } } 
                         },
-                        {
-                            label: 'Brontispa',
-                            data: [4, 7, 4, 7, 8, 8],
-                            borderColor: '#4ac68f',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            tension: 0.2,
-                            pointRadius: 3
+                        scales: { 
+                            y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                            x: { grid: { display: false } }
                         }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10, weight: '600' } } } 
-                    },
-                    scales: { 
-                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
-                        x: { grid: { display: false } }
                     }
-                }
-            });
-        }
+                });
+            }
 
-        const distEl = document.getElementById('distributionChart');
-        if (distEl) {
-            const ctxDist = distEl.getContext('2d');
-            new Chart(ctxDist, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Rhinoceros Beetle', 'Brontispa'],
-                    datasets: [{
-                        data: [65, 35],
-                        backgroundColor: ['#0b251a', '#528265'],
-                        borderWidth: 3,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11, weight: '500' } } }
+            const distEl = document.getElementById('distributionChart');
+            if (distEl) {
+                const ctxDist = distEl.getContext('2d');
+                new Chart(ctxDist, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Rhinoceros Beetle', 'Brontispa'],
+                        datasets: [{
+                            data: [65, 35],
+                            backgroundColor: ['#0b251a', '#528265'],
+                            borderWidth: 3,
+                            borderColor: '#ffffff'
+                        }]
                     },
-                    cutout: '65%'
-                }
-            });
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11, weight: '500' } } }
+                        },
+                        cutout: '65%'
+                    }
+                });
+            }
         }
-    }
-
-</script>
+    </script>
 </body>
 </html>

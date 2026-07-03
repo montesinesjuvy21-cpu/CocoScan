@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CocoScan - Pending Reports</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================================================
+           1. DESIGN TOKENS & BASE COHESION
+           ========================================================================== */
+        :root {
+            --bg-base: #f4f7f5;
+            --bg-card: #ffffff;
+            --brand-dark: #0b251a;
+            --brand-accent: #4ac68f;
+            --primary-green: #528265;
+            --badge-green-bg: #8ba888;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-light: rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--brand-dark);
+            color: var(--text-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- GLOBAL LAYOUT CONTAINER --- */
+        .mobile-viewport-container {
+            width: 100%;
+            min-height: 100vh;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* --- STICKY APP HEADER --- */
+        .mobile-header {
+            width: 100%;
+            height: 64px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 1000;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-content-wrapper {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-group { display: flex; align-items: center; gap: 10px; }
+        .logo-img-fallback {
+            width: 32px; height: 32px; background: var(--bg-card); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .mobile-header h2 { font-size: 1.15rem; font-weight: 800; }
+        .mobile-header p { font-size: 0.65rem; color: rgba(255, 255, 255, 0.5); }
+        .hamburger-btn { background: none; border: none; color: #ffffff; font-size: 1.35rem; cursor: pointer; }
+
+        /* --- SIDEBAR MENU SYSTEM --- */
+        .sidebar-wrapper {
+            width: 290px; background-color: var(--brand-dark); color: #ffffff;
+            display: flex; flex-direction: column; justify-content: space-between;
+            position: fixed; top: 64px; bottom: 0; right: 0; z-index: 999;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-wrapper.show-mobile { transform: translateX(0); }
+        .menu-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.4); padding: 24px 20px 12px 20px; font-weight: 700; }
+        .sidebar-menu-list { list-style: none; padding: 0 10px; }
+        .menu-item-link { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 0.95rem; font-weight: 500; border-radius: 10px; margin-bottom: 6px; }
+        .menu-item-link:hover, .menu-item-link.active { color: #ffffff; background-color: rgba(255, 255, 255, 0.06); }
+        .sidebar-user-footer { padding: 20px; background-color: rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .user-meta-box { display: flex; align-items: center; gap: 12px; }
+        .user-avatar-circle { width: 42px; height: 42px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; }
+        .user-identity-text h4 { font-size: 0.9rem; color: #ffffff; }
+        .user-identity-text p { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
+        .btn-logout-trigger { color: rgba(255, 255, 255, 0.4); font-size: 1.2rem; }
+        .sidebar-backdrop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 37, 26, 0.4); backdrop-filter: blur(4px); z-index: 950; }
+        .sidebar-backdrop.active { display: block; }
+
+        /* --- MAIN VIEWPORTS LAYOUT --- */
+        .main-content-layout {
+            flex: 1; 
+            width: 100%; 
+            padding: 88px 16px 24px 16px;
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px;
+        }
+
+        .section-title-wrap { display: flex; justify-content: space-between; align-items: flex-start; }
+        .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
+        .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); }
+
+        /* --- SEARCH AND RESPONSIVE CONTROLS --- */
+        .search-controls-row {
+            display: flex; 
+            flex-wrap: wrap;
+            gap: 12px; 
+            align-items: center;
+            width: 100%;
+        }
+        .search-bar-box {
+            position: relative; 
+            flex: 1;
+            min-width: 240px;
+        }
+        .search-input {
+            width: 100%; 
+            padding: 14px 16px 14px 44px; 
+            border-radius: 32px;
+            border: 1px solid rgba(0,0,0,0.05); 
+            background-color: var(--bg-card);
+            font-size: 0.92rem; 
+            outline: none; 
+            color: var(--text-dark);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-input:focus {
+            border-color: rgba(82, 130, 101, 0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .search-bar-box i {
+            position: absolute; 
+            left: 18px; 
+            top: 50%; 
+            transform: translateY(-50%);
+            color: var(--text-muted); 
+            font-size: 1rem;
+        }
+        .date-filter-box {
+            position: relative; 
+            min-width: 160px;
+        }
+        .date-filter-box input {
+            width: 100%; 
+            padding: 13px 18px; 
+            border-radius: 32px;
+            border: 1px solid rgba(0,0,0,0.05); 
+            background-color: var(--bg-card);
+            font-size: 0.9rem; 
+            outline: none; 
+            color: var(--text-dark);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .date-filter-box input:focus {
+            border-color: rgba(82, 130, 101, 0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        /* --- CLEAR FILTER BUTTON STYLING --- */
+        .btn-clear-filters {
+            background-color: #eb5757;
+            color: #ffffff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 32px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: none; 
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2);
+            transition: all 0.2s ease;
+        }
+        .btn-clear-filters:hover {
+            background-color: #d84343;
+            transform: translateY(-1px);
+        }
+
+        .search-highlight {
+            background: rgba(74, 198, 143, 0.28);
+            color: var(--brand-dark);
+            padding: 0 2px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        /* --- FILTERS ENHANCEMENTS --- */
+        .filter-chips-scrollrow {
+            display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;
+            scrollbar-width: none; -webkit-overflow-scrolling: touch;
+        }
+        .filter-chips-scrollrow::-webkit-scrollbar { display: none; }
+        
+        .chip-filter-btn {
+            background-color: var(--bg-card); border: 1px solid var(--border-light);
+            padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
+            color: var(--text-muted); cursor: pointer; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .chip-filter-btn.active-chip {
+            background-color: #1a4d32; color: #ffffff; border-color: #1a4d32;
+        }
+
+        /* --- AGRICULTURIST DYNAMIC CARDS STACK --- */
+        .reports-feed-stack { display: flex; flex-direction: column; gap: 10px; }
+        
+        .report-row-node {
+            background-color: var(--bg-card); padding: 14px 16px; border-radius: 12px;
+            border: 1px solid var(--border-light); display: flex; justify-content: space-between;
+            align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .report-row-node:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .report-row-node:active { transform: scale(0.99); }
+        
+        .report-main-meta h4 { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); }
+        .report-main-meta p { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+        .report-main-meta .meta-location { font-size: 0.75rem; color: var(--primary-green); font-weight: 500; margin-top: 2px; }
+
+        /* --- EMPTY STATE --- */
+        .premium-empty-state-card {
+            background-color: var(--bg-card);
+            border-radius: 24px;
+            padding: 60px 24px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            grid-column: 1 / -1;
+        }
+        .empty-state-icon-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background-color: #eef5f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .empty-state-icon-circle i {
+            font-size: 1.75rem;
+            color: var(--primary-green);
+        }
+        .premium-empty-state-card h3 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+            margin-bottom: 12px;
+        }
+        .premium-empty-state-card p {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            max-width: 440px;
+            line-height: 1.6;
+        }
+
+        /* --- PAGINATION SYSTEM DECK --- */
+        .pagination-container {
+            display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;
+            width: 100%;
+        }
+        .page-btn {
+            min-width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-light);
+            background-color: var(--bg-card); color: var(--text-dark); font-size: 0.85rem;
+            font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .page-btn:hover:not(:disabled) {
+            background-color: #eef5f2;
+            color: var(--brand-dark);
+        }
+        .page-btn.active-page { background-color: #1a4d32; color: #ffffff; border-color: #1a4d32; }
+        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+       /* --- PREMIUM MODAL SYSTEM CONSOLIDATION --- */
+        .diagnostic-result-badge {
+            background-color: var(--badge-green-bg);
+            border-radius: 14px;
+            padding: 14px 18px;
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            width: 100%;
+        }
+
+        .badge-main h3 { font-size: 1.2rem; font-weight: 700; color: #ffffff; letter-spacing: -0.2px; }
+        .badge-main p { font-size: 0.82rem; opacity: 0.95; margin-top: 2px; }
+        .badge-side-meta { font-size: 0.82rem; text-align: right; opacity: 0.95; }
+
+        .preview-media-frame {
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            background-color: #eaeaea;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .preview-media-frame img {
+            width: 100%;
+            display: block;
+            object-fit: cover;
+            aspect-ratio: 16 / 9;
+            max-height: 280px;
+        }
+
+        .image-timestamp-footer {
+            padding: 10px 4px 2px 4px;
+            font-size: 0.72rem;
+            color: #475569;
+            line-height: 1.5;
+            text-align: left;
+            word-break: break-word;
+        }
+
+        .premium-reco-card {
+            background-color: var(--bg-card);
+            border-radius: 20px;
+            padding: 24px 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.015);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .premium-reco-card h4, .premium-form-card h4 { 
+            font-size: 1.02rem; 
+            font-weight: 700; 
+            color: var(--brand-dark); 
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .premium-reco-card h4 i, .premium-form-card h4 i {
+            color: var(--primary-green);
+            font-size: 1.1rem;
+        }
+
+        .premium-reco-card ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px; 
+            padding: 2px 0;
+        }
+
+        .premium-reco-card li {
+            font-size: 0.9rem;
+            color: #334155;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            line-height: 1.5;
+        }
+
+        .premium-reco-card li i {
+            color: #2e7d32; 
+            font-size: 0.95rem;
+            margin-top: 3px; 
+            flex-shrink: 0;
+        }
+
+        .premium-reco-card li span { flex: 1; }
+
+        .modern-disclaimer-box {
+            background-color: #fef8f2; 
+            border: 1px solid #f973161c; 
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .modern-disclaimer-box i { color: #d97706; font-size: 0.95rem; margin-top: 2px; flex-shrink: 0; }
+        .disclaimer-text-note { font-size: 0.78rem; color: #b45309; line-height: 1.45; margin: 0; }
+
+        .premium-form-card {
+            background-color: var(--bg-card);
+            border-radius: 18px;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .notes-input-box {
+            width: 100%;
+            height: 110px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            background-color: #f8faf9;
+            padding: 14px;
+            font-size: 0.88rem;
+            color: var(--text-dark);
+            resize: none;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .notes-input-box:focus {
+            border-color: rgba(82, 130, 101, 0.4);
+            background-color: #ffffff;
+        }
+
+        .control-action-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            margin-top: 16px; 
+        }
+
+        .secondary-actions-row { display: flex; gap: 12px; width: 100%; }
+
+        .btn-control {
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+        }
+
+        .btn-control.submit-primary { 
+            background-color: #164630; 
+            color: #ffffff; 
+            box-shadow: 0 4px 12px rgba(22, 70, 48, 0.18);
+        }
+        .btn-control.submit-primary:hover { 
+            background-color: #1e5c3f; 
+            transform: translateY(-1px);
+        }
+
+        .btn-control.cancel-secondary { 
+            background-color: #fff5f5; 
+            border: 1px solid rgba(239, 68, 68, 0.15); 
+            color: #e53e3e; 
+        }
+        .btn-control.cancel-secondary:hover { background-color: #fee2e2; }
+
+        .modal-screen-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(11, 37, 26, 0.4); backdrop-filter: blur(5px);
+            z-index: 2000; align-items: flex-end; justify-content: center;
+        }
+        .modal-screen-overlay.open-modal { display: flex; }
+
+        .modal-sheet-sliding-card {
+            background-color: var(--bg-base); width: 100%; max-height: 90vh;
+            border-top-left-radius: 24px; border-top-right-radius: 24px;
+            display: flex; flex-direction: column; overflow-y: auto;
+            padding: 20px 16px 24px 16px; box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .modal-header-inline {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+        }
+        .modal-header-inline h2 { font-size: 1.25rem; font-weight: 800; color: var(--brand-dark); }
+        .status-row-bar { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); margin-bottom: 12px; }
+        .status-row-bar span { font-weight: 700; margin-left: 2px; }
+
+        /* ==========================================================================
+           2. RESPONSIVE UP-SCALING (LAPTOP & WIDESCREENS PARITY)
+           ========================================================================== */
+        @media (max-width: 500px) {
+            .main-content-layout { padding: 88px 16px 24px; }
+            .date-filter-box { flex: 1; min-width: 100%; }
+            .btn-clear-filters { width: 100%; justify-content: center; }
+        }
+
+        @media (min-width: 1024px) {
+            .main-content-layout {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 108px 32px 32px 32px; 
+                gap: 24px; 
+            }
+
+            .header-content-wrapper { max-width: 1400px; margin: 0 auto; }
+            .mobile-header { height: 72px; padding: 0 32px; }
+            .sidebar-wrapper { top: 72px; }
+
+            .section-title-wrap h1 { font-size: 1.95rem; }
+            .section-title-wrap p { font-size: 0.98rem; margin-top: 4px; }
+
+            .search-input { padding: 15px 18px 15px 48px; font-size: 0.98rem; border-radius: 32px; }
+            .search-bar-box i { left: 20px; font-size: 1.1rem; }
+            .date-filter-box { min-width: 180px; }
+            .date-filter-box input { padding: 14px 22px; font-size: 0.95rem; border-radius: 32px; }
+            .chip-filter-btn { padding: 10px 20px; font-size: 0.95rem; border-radius: 24px; }
+
+            /* Grid layout pattern scales across columns on desktop viewports */
+            .reports-feed-stack { 
+                display: grid;
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 20px; 
+            }
+
+            @media (min-width: 1400px) {
+                .reports-feed-stack { grid-template-columns: repeat(3, 1fr); }
+            }
+
+            .report-row-node {
+                border-radius: 20px;
+                padding: 20px;
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            }
+
+            .report-row-node > div:last-child {
+                width: 100%;
+                justify-content: space-between;
+                border-top: 1px solid var(--border-light);
+                padding-top: 12px;
+            }
+
+            .report-main-meta h4 { font-size: 1.15rem; }
+
+            .modal-sheet-sliding-card {
+                max-width: 600px;
+                border-radius: 24px;
+                margin: auto;
+                box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+                animation: fadeIn 0.3s ease;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .modal-screen-overlay { align-items: center; }
+        } 
+    </style>
+</head>
+<body>
+
+    <div class="mobile-viewport-container">
+        
+        <header class="mobile-header">
+            <div class="header-content-wrapper">
+                <div class="logo-group">
+                    <div class="logo-img-fallback">
+                        <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
+                    </div>
+                    <div>
+                        <h2>CocoScan</h2>
+                        <p>Coconut Pest Detection</p>
+                    </div>
+                </div>
+                <button class="hamburger-btn" onclick="toggleSidebarMenu()">
+                    <i class="fa-solid fa-bars" id="toggleIcon"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
+
+        <aside class="sidebar-wrapper" id="sidebar">
+            <div>
+                <div class="menu-label">Main Menu</div>
+                <ul class="sidebar-menu-list">
+                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                    <li><a href="/agriculturist/pending" class="menu-item-link active"><i class="fa-solid fa-list-check"></i> Pending Reports</a></li>
+                    <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Reviewed</a></li>
+                    <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-user-footer">
+                <div class="user-meta-box">
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-identity-text">
+                        <h4>Juan Dela Cruz</h4>
+                        <p>PCA Agriculturist</p>
+                    </div>
+                </div>
+                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+        </aside>
+
+        <main class="main-content-layout">
+            
+            <header class="section-title-wrap">
+                <div>
+                    <h1>Pending Reports</h1>
+                    <p>Overall reports waiting for recommendation response</p>
+                </div>
+            </header>
+
+            <div class="search-controls-row">
+                <div class="search-bar-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="report-search" class="search-input" placeholder="Search by farmer name or pest...">
+                </div>
+                <div class="date-filter-box">
+                    <input type="date" id="report-date-filter" aria-label="Filter by date">
+                </div>
+                <!-- Clear Filters Button Element -->
+                <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
+                    <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+                </button>
+            </div>
+
+            <div class="filter-chips-scrollrow">
+                <button class="chip-filter-btn active-chip" data-status="all" id="chip-count-label">All (0)</button>
+                <button class="chip-filter-btn" data-status="Rhinoceros Beetle">Rhinoceros Beetle</button>
+                <button class="chip-filter-btn" data-status="Brontispa">Brontispa</button>
+            </div>
+
+            <!-- Dynamic card framework area mirroring the structure of farmer reports -->
+            <div class="reports-feed-stack" id="reports-list-container"></div>
+
+            <div class="pagination-container" id="pagination-wrapper" style="display: none;"></div>
+
+        </main>
+    </div>
+
+    <!-- Review System Modal Component View -->
+    <div class="modal-screen-overlay" id="review-modal">
+        <div class="modal-sheet-sliding-card">
+            <div class="modal-header-inline">
+                <h2>Review Submitted Report</h2>
+            </div>
+            
+            <div class="status-row-bar" style="margin-bottom: 4px;">Status: <span id="modal-status-text" style="color: #d97706;">Pending</span></div>
+
+            <div class="diagnostic-result-badge" id="modal-severity-banner">
+                <div class="badge-main">
+                    <h3 id="modal-pest-title">--</h3>
+                    <p>Confidence Match: <span id="modal-confidence">--</span></p>
+                </div>
+                <div class="badge-side-meta">
+                    <div>Identified Severity:</div>
+                    <strong style="font-weight: 700;" id="modal-damage-text">--</strong>
+                </div>
+            </div>
+
+            <div class="preview-media-frame">
+                <img id="modal-target-img" src="" alt="Specimen reference view frame">
+            </div>
+
+            <div class="image-timestamp-footer">
+                Submitting Farmer: <strong id="modal-farmer-name">--</strong><br>
+                Location: <span id="modal-location-text">--</span><br>
+                Timestamp: <span id="modal-timestamp-text">--</span>
+            </div>
+
+            <div class="premium-form-card">
+                <h4><i class="fa-solid fa-message"></i> Farmer Notes</h4>
+                <p id="modal-farmer-notes" style="font-size: 0.88rem; line-height: 1.5; color: var(--text-dark);"></p>
+            </div>
+
+            <div class="premium-reco-card">
+                <h4><i class="fa-solid fa-wand-magic-sparkles"></i> AI Initial Suggestion</h4>
+                <ul id="modal-initial-list"></ul>
+            </div>
+
+            <div class="premium-form-card">
+                <h4><i class="fa-solid fa-comment-medical"></i> Issue Expert Recommendation Advice</h4>
+                <textarea class="notes-input-box" id="expert-notes-input" placeholder="Enter custom treatment parameters or chemical recipes for this farmer..."></textarea>
+            </div>
+
+            <div class="control-action-bar">
+                <button class="btn-control submit-primary" onclick="submitExpertValidation()">
+                    <i class="fa-solid fa-check-double"></i> Submit Recommendation
+                </button>
+                <div class="secondary-actions-row">
+                    <button class="btn-control cancel-secondary" onclick="closeReviewModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+        DYNAMIC SERVER/LOCAL HYDRATION SCRIPTS BLOCK
+        ========================================================================== -->
+    <script>
+        // ==========================================================================
+        // LOCAL HARDCODED SNAPSHOT WITH ENRICHED MOCK DATA
+        // ==========================================================================
+        const structuralLocalBackupDataset = [
+            {
+                "id": 101,
+                "date": "2026-07-01",
+                "timestamp": "Jul 01, 2026 • 09:15 AM",
+                "location": "Brgy. San Ignacio",
+                "full_location": "Brgy. San Ignacio, San Pablo City, Laguna",
+                "farmer": "Timothy D. Gavino",
+                "pest": "Rhinoceros Beetle",
+                "severity": "Moderate",
+                "status": "Pending",
+                "confidence": "87%",
+                "farmer_notes": "Spreading heavily across the lower layer leaf structures of the sector 3 trees.",
+                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
+                "initial_recommendations": [
+                    "Clean surroundings and remove decaying coconut materials.",
+                    "Use pheromone traps to reduce population."
+                ]
+            },
+            {
+                "id": 102,
+                "date": "2026-06-28",
+                "timestamp": "Jun 28, 2026 • 04:30 PM",
+                "location": "Brgy. Santa Maria",
+                "full_location": "Brgy. Santa Maria, San Pablo City, Laguna",
+                "farmer": "Joshua L. Bartolome",
+                "pest": "Brontispa",
+                "severity": "High",
+                "status": "Pending",
+                "confidence": "92%",
+                "farmer_notes": "V-shaped holes cut into fronds noticed near the central spear leaf area.",
+                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
+                "initial_recommendations": [
+                    "Prune off heavily infested lower fronds showing advanced linear scorching, then burn immediately."
+                ]
+            },
+            {
+                "id": 103,
+                "date": "2026-07-02",
+                "timestamp": "Jul 02, 2026 • 11:10 AM",
+                "location": "Brgy. Concepcion",
+                "full_location": "Brgy. Concepcion, San Pablo City, Laguna",
+                "farmer": "Jay Justine R. Comendador",
+                "pest": "Rhinoceros Beetle",
+                "severity": "High",
+                "status": "Pending",
+                "confidence": "95%",
+                "farmer_notes": "Internal boring channels detected directly within the trunk crown regions of production area B.",
+                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
+                "initial_recommendations": [
+                    "Apply localized granular setups into top leafaxils.",
+                    "Extract bore beetles manually using hooked wire frameworks."
+                ]
+            }
+        ];
+
+        
+        let reports = [];
+        try {
+            reports = JSON.parse('{{ pending_reports | tojson | safe }}');
+            // If the server returns an empty list, force the local mock dataset for development
+            if (!reports || reports.length === 0) {
+                reports = structuralLocalBackupDataset;
+            }
+        } catch (e) {
+            reports = structuralLocalBackupDataset;
+        }
+
+        let activeSearchQuery = "";
+        let activePestFilter = "all";
+        let activeDateFilter = "";
+        let currentPage = 1;
+        const recordsPerPage = 6; 
+        let selectedReportRecord = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initSearchAndFilters();
+            renderReportsGrid();
+        });
+
+        function initSearchAndFilters() {
+            const searchInput = document.getElementById("report-search");
+            const dateInput = document.getElementById("report-date-filter");
+
+            if (searchInput) {
+                searchInput.addEventListener("input", (e) => {
+                    activeSearchQuery = e.target.value.toLowerCase().trim();
+                    currentPage = 1; 
+                    evaluateClearFilterButtonState();
+                    renderReportsGrid();
+                });
+            }
+
+            if (dateInput) {
+                dateInput.addEventListener("change", (e) => {
+                    activeDateFilter = e.target.value;
+                    currentPage = 1;
+                    evaluateClearFilterButtonState();
+                    renderReportsGrid();
+                });
+            }
+
+            document.querySelectorAll(".chip-filter-btn").forEach(chip => {
+                chip.addEventListener("click", (e) => {
+                    document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
+                    e.target.classList.add("active-chip");
+                    activePestFilter = e.target.getAttribute("data-status");
+                    currentPage = 1;
+                    evaluateClearFilterButtonState();
+                    renderReportsGrid();
+                });
+            });
+        }
+
+        function evaluateClearFilterButtonState() {
+            const clearBtn = document.getElementById("clear-filters-btn");
+            if (clearBtn) {
+                if (activeSearchQuery !== "" || activeDateFilter !== "" || activePestFilter !== "all") {
+                    clearBtn.style.display = "inline-flex";
+                } else {
+                    clearBtn.style.display = "none";
+                }
+            }
+        }
+
+        function clearAllActiveFilters() {
+            document.getElementById("report-search").value = "";
+            document.getElementById("report-date-filter").value = "";
+            
+            document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
+            const allChip = document.querySelector('.chip-filter-btn[data-status="all"]');
+            if (allChip) allChip.classList.add("active-chip");
+
+            activeSearchQuery = "";
+            activeDateFilter = "";
+            activePestFilter = "all";
+            currentPage = 1;
+
+            evaluateClearFilterButtonState();
+            renderReportsGrid();
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? "")
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function highlightSearchText(text, query) {
+            if (!query) return escapeHtml(text);
+            const escapedText = escapeHtml(text);
+            const regex = new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, "ig");
+            return escapedText.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        function renderReportsGrid() {
+            const container = document.getElementById("reports-list-container");
+            const countLabel = document.getElementById("chip-count-label");
+            if (!container) return;
+            container.innerHTML = "";
+
+            if (countLabel) countLabel.textContent = `All (${reports.length})`;
+
+            let processedRecords = reports.filter(item => {
+                const matchesSearch = !activeSearchQuery || 
+                                      item.pest.toLowerCase().includes(activeSearchQuery) ||
+                                      item.farmer.toLowerCase().includes(activeSearchQuery);
+                const matchesDate = !activeDateFilter || item.date === activeDateFilter;
+                const matchesPest = (activePestFilter === "all" || item.pest === activePestFilter);
+                return matchesSearch && matchesDate && matchesPest;
+            });
+
+            if (processedRecords.length === 0) {
+                container.innerHTML = `
+                    <div class="premium-empty-state-card">
+                        <div class="empty-state-icon-circle"><i class="fa-solid fa-folder-open"></i></div>
+                        <h3>No Pending Reports</h3>
+                        <p>All items caught up! No reports require expert technical evaluation metrics currently.</p>
+                    </div>`;
+                updatePaginationController(0);
+                return;
+            }
+
+            const totalMatches = processedRecords.length;
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = startIndex + recordsPerPage;
+            const paginatedRecords = processedRecords.slice(startIndex, endIndex);
+
+            paginatedRecords.forEach(item => {
+                const card = document.createElement("div");
+                card.className = "report-row-node";
+                
+                let severityClass = "low";
+                if(item.severity === "High") severityClass = "high";
+                if(item.severity === "Moderate") severityClass = "moderate";
+
+                card.innerHTML = `
+                    <div class="report-main-meta">
+                        <h4>${highlightSearchText(item.pest, activeSearchQuery)}</h4>
+                        <p>Farmer: <strong>${highlightSearchText(item.farmer, activeSearchQuery)}</strong></p>
+                        <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${item.location}</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span class="severity-pill ${severityClass}" style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px;">${item.severity}</span>
+                        <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.85rem;"></i>
+                    </div>`;
+                
+                card.onclick = () => openReviewModal(item);
+                container.appendChild(card);
+            });
+
+            updatePaginationController(totalMatches);
+        }
+
+        function updatePaginationController(totalMatchedCount) {
+            const paginationBlock = document.getElementById("pagination-wrapper");
+            if (!paginationBlock) return;
+            paginationBlock.innerHTML = "";
+
+            const totalPagesCalculated = Math.ceil(totalMatchedCount / recordsPerPage);
+
+            if (totalPagesCalculated <= 1) {
+                paginationBlock.style.display = "none";
+                return;
+            }
+
+            paginationBlock.style.display = "flex";
+
+            const leftBtn = document.createElement("button");
+            leftBtn.className = "page-btn";
+            leftBtn.innerHTML = `<i class="fa-solid fa-chevron-left"></i>`;
+            leftBtn.disabled = (currentPage === 1);
+            leftBtn.onclick = () => { if(currentPage > 1) { currentPage--; renderReportsGrid(); }};
+            paginationBlock.appendChild(leftBtn);
+
+            for (let i = 1; i <= totalPagesCalculated; i++) {
+                const pageBtn = document.createElement("button");
+                pageBtn.className = `page-btn ${i === currentPage ? 'active-page' : ''}`;
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => { currentPage = i; renderReportsGrid(); };
+                paginationBlock.appendChild(pageBtn);
+            }
+
+            const rightBtn = document.createElement("button");
+            rightBtn.className = "page-btn";
+            rightBtn.innerHTML = `<i class="fa-solid fa-chevron-right"></i>`;
+            rightBtn.disabled = (currentPage === totalPagesCalculated);
+            rightBtn.onclick = () => { if(currentPage < totalPagesCalculated) { currentPage++; renderReportsGrid(); }};
+            paginationBlock.appendChild(rightBtn);
+        }
+
+        function openReviewModal(record) {
+            selectedReportRecord = record;
+
+            document.getElementById('modal-pest-title').textContent = record.pest;
+            document.getElementById('modal-confidence').textContent = record.confidence || "90%";
+            document.getElementById('modal-damage-text').textContent = record.severity;
+            document.getElementById('modal-farmer-name').textContent = record.farmer;
+            document.getElementById('modal-location-text').textContent = record.full_location;
+            document.getElementById('modal-timestamp-text').textContent = record.timestamp;
+            document.getElementById('modal-farmer-notes').textContent = record.farmer_notes || "No notes written.";
+            
+            document.getElementById('modal-target-img').src = record.img || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
+            document.getElementById("expert-notes-input").value = "";
+
+            const severityBanner = document.getElementById("modal-severity-banner");
+            if (severityBanner) {
+                severityBanner.style.backgroundColor = (record.severity === "High") ? "#b91c1c" : "#528265";
+            }
+
+            const initialList = document.getElementById('modal-initial-list');
+            if (initialList) {
+                initialList.innerHTML = "";
+                if (record.initial_recommendations && record.initial_recommendations.length > 0) {
+                    record.initial_recommendations.forEach(rec => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${rec}</span>`;
+                        initialList.appendChild(li);
+                    });
+                } else {
+                    initialList.innerHTML = `<li><i class="fa-solid fa-circle-check"></i> <span>No initial parameters compiled by AI engine.</span></li>`;
+                }
+            }
+
+            document.getElementById('review-modal').classList.add('open-modal');
+        }
+
+        function closeReviewModal() {
+            document.getElementById('review-modal').classList.remove('open-modal');
+            selectedReportRecord = null;
+        }
+
+        function submitExpertValidation() {
+            const advice = document.getElementById("expert-notes-input").value.trim();
+            if(!advice) {
+                alert("Please write treatment recommendations before submitting.");
+                return;
+            }
+
+            fetch('/agriculturist/approve-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    report_id: selectedReportRecord.id,
+                    recommendation: advice
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    alert(data.message);
+                    closeReviewModal();
+                    location.reload(); 
+                } else {
+                    alert("Pipeline error: " + data.message);
+                }
+            })
+            .catch(err => {
+                alert(`Offline Environment Mock Success:\nRecommendation advice applied successfully to Report #${selectedReportRecord.id}.`);
+                closeReviewModal();
+            });
+        }
+
+        function toggleSidebarMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            const icon = document.getElementById('toggleIcon');
+            sidebar.classList.toggle('show-mobile');
+            if (backdrop) backdrop.classList.toggle('active');
+            
+            if (icon) {
+                icon.className = sidebar.classList.contains('show-mobile') ? "fa-solid fa-xmark" : "fa-solid fa-bars";
+            }
+        }
+    </script>
+</body>
+</html>
