@@ -575,54 +575,15 @@
         CORE CORE DATA INTERACTION & MAP LIFECYCLE SCRIPTS
         ========================================================================== -->
     <script>
-        // Server JSON Context injection fallback matrix[cite: 3]
         let geoReportsDataset = [];
-        const hardcodedMockMapData = [
-            {
-                "id": 101,
-                "barangay": "Brgy. San Ignacio",
-                "municipality": "San Pablo City",
-                "province": "Laguna",
-                "latitude": 14.0750,
-                "longitude": 121.3280,
-                "pest_type": "Rhinoceros Beetle",
-                "damage_severity": "Mild",
-                "cases_count": 1,
-                "status": "Pending"
-            },
-            {
-                "id": 102,
-                "barangay": "Brgy. Santa Maria",
-                "municipality": "San Pablo City",
-                "province": "Laguna",
-                "latitude": 14.0620,
-                "longitude": 121.3150,
-                "pest_type": "Brontispa",
-                "damage_severity": "Moderate",
-                "cases_count": 67,
-                "status": "Pending"
-            },
-            {
-                "id": 201,
-                "barangay": "Brgy. Concepcion",
-                "municipality": "San Pablo City",
-                "province": "Laguna",
-                "latitude": 14.0820,
-                "longitude": 121.3420,
-                "pest_type": "Rhinoceros Beetle",
-                "damage_severity": "High",
-                "cases_count": 99,
-                "status": "Recommendation Issued"
-            }
-        ];
 
         try {
             geoReportsDataset = JSON.parse('{{ map_reports | tojson | safe }}');
             if (!geoReportsDataset || geoReportsDataset.length === 0) {
-                geoReportsDataset = hardcodedMockMapData;
+                geoReportsDataset = [];
             }
         } catch (e) {
-            geoReportsDataset = hardcodedMockMapData;
+            geoReportsDataset = [];
         }
 
         let mapInstance = null;

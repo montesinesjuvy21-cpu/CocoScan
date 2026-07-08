@@ -25,6 +25,8 @@ from app.validators import (
     ValidationError
 )
 from app.password_utils import hash_password, verify_password
+from app.report_storage import build_report_payload, resolve_field_notes
+from app.dashboard_data import build_dashboard_chart_payload
 
 # Configure logging
 logging.basicConfig(
@@ -478,28 +480,19 @@ def farmer_dashboard():
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Farmer"
         
-        # -------------------------------------------------------------
-        # PRODUCTION REPLACEMENT: LIVE REAL-TIME DATA METRICS DOCKING
-        # -------------------------------------------------------------
-        # Total report count query
-        { 'count': 'exact', 'head': True }
-        total_res = supabase.table('reports').select('*', count='exact', head=True).execute()
-        total_cases = total_res.count if hasattr(total_res, 'count') else 0
+        reports_response = supabase.table('reports').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+        reports = getattr(reports_response, 'data', []) or []
 
-        # Unresolved cases query
-        pending_res = supabase.table('reports').select('*', count='exact', head=True).eq('status', 'Pending').execute()
-        pending_cases = pending_res.count if hasattr(pending_res, 'count') else 0
-
-        # Resolved cases query
-        resolved_res = supabase.table('reports').select('*', count='exact', head=True).eq('status', 'Recommendation Issued').execute()
-        resolved_cases = resolved_res.count if hasattr(resolved_res, 'count') else 0
+        total_cases = len(reports)
+        pending_cases = sum(1 for report in reports if str(report.get('status') or '').strip() == 'Pending')
+        resolved_cases = sum(1 for report in reports if str(report.get('status') or '').strip() == 'Recommendation Issued')
 
         metrics = {
-            "total_cases": total_cases, 
-            "pending_cases": pending_cases, 
+            "total_cases": total_cases,
+            "pending_cases": pending_cases,
             "resolved_cases": resolved_cases
         }
-        # -------------------------------------------------------------
+        chart_data = build_dashboard_chart_payload(reports)
         
         weather = {
             "location": "San Pablo City, Laguna",
@@ -531,7 +524,7 @@ def farmer_dashboard():
 
         risk = calculate_environmental_risk(weather["temp"], weather["humidity"], weather["rainfall"])
 
-        return render_template('farmer_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk)
+        return render_template('farmer_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk, chart_data=chart_data)
         
     except Exception as e:
         logger.error(f"Dashboard routing exception: {str(e)}")
@@ -588,44 +581,44 @@ def farmer_predict():
             logger.error(f"Image file decoding error: {str(e)}")
             return jsonify({'success': False, 'error': 'Invalid uploaded image file'}), 400
         
-        # Get model paths from environment or use defaults (YOLO removed)
-        pest_model_path = os.getenv('PEST_MODEL_PATH',
-            os.path.join(os.path.dirname(__file__), '..', 'cocoscan-model', 'models', 'pest_classifier.tflite'))
-        severity_model_path = os.getenv('SEVERITY_MODEL_PATH',
-            os.path.join(os.path.dirname(__file__), '..', 'cocoscan-model', 'models', 'severity_classifier.tflite'))
+        # Get the single TFLite model path from the model folder.
+        pest_model_path = os.getenv(
+            'PEST_MODEL_PATH',
+            os.path.join(os.path.dirname(__file__), 'model', 'pest_classifier_YOLO.tflite')
+        )
 
-        # Verify classification model paths exist
-        for model_path in [pest_model_path, severity_model_path]:
-            if not os.path.exists(model_path):
-                logger.error(f"Model not found: {model_path}")
-                return jsonify({'success': False, 'error': f'Model not found: {model_path}'}), 500
-        
-        # Run inference pipeline (YOLO removed; pass empty string in the yolo slot)
+        if not os.path.exists(pest_model_path):
+            logger.error(f"Model not found: {pest_model_path}")
+            return jsonify({'success': False, 'error': f'Model not found: {pest_model_path}'}), 500
+
         result = run_full_inference_pipeline(
             image,
             '',
             pest_model_path,
-            severity_model_path,
+            None,
             use_lite_size=False
         )
-        
+
         if not result.get('success', False):
             logger.warning(f"Inference pipeline failed: {result.get('error', 'Unknown error')}")
             return jsonify({
                 'success': False,
                 'error': result.get('error', 'Failed to process image'),
                 'pest': 'Unknown',
-                'severity': 'Unknown'
+                'severity': 'Not available'
             }), 400
-        
-        # Format response
+
+        severity_confidence = result.get('severity_confidence')
+        if severity_confidence is not None:
+            severity_confidence = round(severity_confidence * 100, 1)
+
         response = {
             'success': True,
             'pest': result['pest'],
-            'severity': result['severity'],
+            'severity': result.get('severity', 'Not available'),
             'pest_confidence': round(result['pest_confidence'] * 100, 1),
-            'severity_confidence': round(result['severity_confidence'] * 100, 1),
-            'damage_percentage': result['damage_percentage'],
+            'severity_confidence': severity_confidence,
+            'damage_percentage': result.get('damage_percentage'),
             'recommendations': result['recommendations'],
             'risk_level': result['risk_level'],
             'urgency': result['urgency'],
@@ -738,22 +731,21 @@ def agriculturist_dashboard():
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
         
-        # Fetch metrics (reusing farmer dashboard logic)
-        total_res = supabase.table('reports').select('*', count='exact', head=True).execute()
-        total_cases = total_res.count if hasattr(total_res, 'count') else 0
+        reports_response = supabase.table('reports').select('*').order('created_at', desc=True).execute()
+        reports = getattr(reports_response, 'data', []) or []
 
-        pending_res = supabase.table('reports').select('*', count='exact', head=True).eq('status', 'Pending').execute()
-        pending_cases = pending_res.count if hasattr(pending_res, 'count') else 0
-
-        resolved_res = supabase.table('reports').select('*', count='exact', head=True).eq('status', 'Recommendation Issued').execute()
-        resolved_cases = resolved_res.count if hasattr(resolved_res, 'count') else 0
+        total_cases = len(reports)
+        pending_cases = sum(1 for report in reports if str(report.get('status') or '').strip() == 'Pending')
+        resolved_cases = sum(1 for report in reports if str(report.get('status') or '').strip() == 'Recommendation Issued')
+        affected_areas = len({str(report.get('barangay') or '').strip() for report in reports if str(report.get('barangay') or '').strip()})
 
         metrics = {
-            "total_cases": total_cases, 
-            "pending_cases": pending_cases, 
+            "total_cases": total_cases,
+            "pending_cases": pending_cases,
             "resolved_cases": resolved_cases,
-            "affected_areas": 3  # Sample: number of affected areas
+            "affected_areas": affected_areas
         }
+        chart_data = build_dashboard_chart_payload(reports)
         
         weather = {
             "location": "San Pablo City, Laguna",
@@ -785,7 +777,7 @@ def agriculturist_dashboard():
 
         risk = calculate_environmental_risk(weather["temp"], weather["humidity"], weather["rainfall"])
 
-        return render_template('agriculturist_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk)
+        return render_template('agriculturist_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk, chart_data=chart_data)
         
     except Exception as e:
         logger.error(f"Agriculturist dashboard routing exception: {str(e)}")
@@ -1039,7 +1031,7 @@ def farmer_submit_report():
         # 1. Extract data sent by your scanning interface/form
         pest_type = request.form.get('pest_type', 'Unknown Pest').strip()
         damage_severity = request.form.get('damage_severity', 'Low').strip()
-        field_notes = request.form.get('field_notes', '').strip()
+        field_notes = resolve_field_notes(request.form)
         confidence = request.form.get('confidence', '0').strip()
         latitude = request.form.get('gps_latitude', '').strip()
         longitude = request.form.get('gps_longitude', '').strip()
@@ -1079,27 +1071,27 @@ def farmer_submit_report():
         except Exception as user_lookup_error:
             logger.warning(f"Unable to load farmer name for report insert: {str(user_lookup_error)}")
 
-        report_payload = {
-            'farmer_name': farmer_name,
-            'pest_type': pest_type,
-            'confidence': confidence,
-            'damage_severity': damage_severity,
-            'image_url': '',
-            'field_notes': field_notes,
-            'status': 'Pending',
-            'created_at': now_iso,
-            'initial_recommendations': initial_recommendations,
-            'latitude': latitude,
-            'longitude': longitude,
-            'gps_accuracy': gps_accuracy,
-            'location_source': location_source,
-            'photo_taken_at': photo_taken_at,
-            'barangay': barangay,
-            'municipality': municipality,
-            'province': province,
-            'submitted_at': now_iso,
-            'updated_at': now_iso,
-        }
+        report_payload = build_report_payload(
+            user_id=user_id,
+            pest_type=pest_type,
+            damage_severity=damage_severity,
+            field_notes=field_notes,
+            confidence=confidence,
+            latitude=latitude,
+            longitude=longitude,
+            gps_accuracy=gps_accuracy,
+            location_source=location_source,
+            photo_taken_at=photo_taken_at,
+            initial_recommendations=initial_recommendations,
+            farmer_name=farmer_name,
+            created_at=now_iso,
+            submitted_at=now_iso,
+            status='Pending',
+            image_url='',
+            barangay=barangay,
+            municipality=municipality,
+            province=province,
+        )
 
         report_insert = supabase.table('reports').insert(report_payload).execute()
         if getattr(report_insert, 'error', None):

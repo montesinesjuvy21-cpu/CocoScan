@@ -391,6 +391,23 @@
         .btn-action-trigger.camera { background-color: var(--brand-dark); color: #ffffff; }
         .btn-action-trigger.camera:hover { background-color: #1f382f; transform: translateY(-1px); }
 
+        .gps-status-banner {
+            display: none;
+            width: 100%;
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background-color: #fff7ed;
+            border: 1px solid #fdba74;
+            color: #9a2c10;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .gps-status-banner.active {
+            display: block;
+        }
+
         .guidance-tips-card {
             background-color: #e8f0ec;
             border-radius: 16px;
@@ -914,6 +931,7 @@
                             <i class="fa-solid fa-camera"></i> Scan Coconut Leaf
                         </button>
                     </div>
+                    <div id="gps-status-banner" class="gps-status-banner" role="status" aria-live="polite"></div>
                     <p style="font-size:0.75rem; color: var(--text-muted); margin-top: 6px;">Primary image capture is camera-only for verified field scan workflow.</p>
                     <input type="file" id="hidden-camera-input" accept="image/*" capture="environment" onchange="handleImagePipeline(event)">
                 </div>
@@ -1023,26 +1041,6 @@
         </main>
     </div>
 
-    <!-- REPLACEME: Mock Dataset Configuration -->
-    <script id="recent-history-mock-data" type="application/json">
-        [
-            {
-                "pest": "Rhinoceros Beetle",
-                "confidence": "87%",
-                "damage": "Moderate",
-                "time_string": "May 02, 2:30 AM",
-                "raw_timestamp": "2026-05-02 02:30:06"
-            },
-            {
-                "pest": "Brontispa",
-                "confidence": "92%",
-                "damage": "High",
-                "time_string": "Apr 28, 11:15 AM",
-                "raw_timestamp": "2026-04-28 11:15:22"
-            }
-        ]
-    </script>
-
     <script>
         let globalActiveImagePayload = "";
         let globalActiveImageFile = null;
@@ -1072,12 +1070,6 @@
             logTargetContainer.innerHTML = '';
 
             let historyDataset = [];
-            try {
-                const rawMockJson = document.getElementById('recent-history-mock-data')?.textContent;
-                historyDataset = JSON.parse(rawMockJson || "[]");
-            } catch(e) {
-                historyDataset = [];
-            }
 
             if (!historyDataset || historyDataset.length === 0) {
                 logTargetContainer.innerHTML = `
@@ -1108,6 +1100,22 @@
         function triggerNativeCamera() { document.getElementById('hidden-camera-input').click(); }
         function triggerSupportingPhotoUpload() { document.getElementById('supporting-photos-input').click(); }
 
+        function showGpsNotice(message) {
+            const banner = document.getElementById('gps-status-banner');
+            if (banner) {
+                banner.textContent = message;
+                banner.classList.add('active');
+            }
+        }
+
+        function clearGpsNotice() {
+            const banner = document.getElementById('gps-status-banner');
+            if (banner) {
+                banner.textContent = '';
+                banner.classList.remove('active');
+            }
+        }
+
         function handleImagePipeline(event) {
             const input = event.target;
             if (input.files && input.files[0]) {
@@ -1118,15 +1126,17 @@
                     globalActiveImagePayload = e.target.result;
                     gatherCameraLocation((position, error, status) => {
                         if (error || !position) {
-                            console.error('GPS error:', error);
+                            console.warn('GPS unavailable or timed out:', error || status);
                             const userMessage = status === 'timeout'
-                                ? 'Location lookup timed out. Ensure location services are enabled and try again.'
-                                : 'Unable to retrieve GPS location. Please enable location services and try again.';
-                            alert(userMessage);
-                            resetWorkflowStateToHome();
+                                ? 'GPS is unavailable on this device. Location will only be captured when using a mobile device.'
+                                : 'GPS is unavailable on this device. Location will only be captured when using a mobile device.';
+                            showGpsNotice(userMessage);
+                            globalPrimaryGPS = null;
+                            executePseudoInferenceEngine();
                             return;
                         }
                         globalPrimaryGPS = position;
+                        clearGpsNotice();
                         executePseudoInferenceEngine();
                     });
                 };
@@ -1182,12 +1192,6 @@
                 alert('Please capture a coconut leaf photo before scanning.');
                 document.getElementById('step-loading-view').classList.remove('active-view');
                 document.getElementById('step-upload-view').classList.add('active-view');
-                return;
-            }
-
-            if (!globalPrimaryGPS) {
-                alert('Unable to read GPS coordinates. Please try again.');
-                resetWorkflowStateToHome();
                 return;
             }
 
@@ -1272,6 +1276,7 @@
             const formData = new FormData();
             formData.append('pest_type', compiledPest);
             formData.append('damage_severity', compiledDamage);
+            formData.append('field_notes', additionalNotes);
             formData.append('location_notes', additionalNotes);
             formData.append('confidence', predictionData.pest_confidence || 0);
             formData.append('gps_latitude', globalPrimaryGPS?.latitude || '');
@@ -1305,14 +1310,26 @@
             .then(data => {
                 if (data.success) {
                     alert(`SUCCESS: Report for ${compiledPest} has been submitted successfully.`);
+                    resetWorkflowStateToHome();
+                    return;
+                }
+
+                const shouldSaveDraft = confirm('The report could not be synced right now. Save this scan as a draft instead?');
+                if (shouldSaveDraft) {
+                    saveDraftToIndexedDB(false);
                 } else {
-                    alert(`Warning: Report saved but there was an issue: ${data.message || 'Unknown error'}`);
+                    alert(`Warning: ${data.message || 'Unknown error'}`);
                 }
                 resetWorkflowStateToHome();
             })
             .catch(error => {
                 console.error('Error submitting report:', error);
-                alert(`Report saved locally but failed to sync: ${error.message}`);
+                const shouldSaveDraft = confirm('The report could not be synced right now. Save this scan as a draft instead?');
+                if (shouldSaveDraft) {
+                    saveDraftToIndexedDB(false);
+                } else {
+                    alert(`Report could not be synced: ${error.message}`);
+                }
                 resetWorkflowStateToHome();
             });
         }
@@ -1323,7 +1340,7 @@
             const compiledDamage = document.getElementById('res-damage').textContent;
             const additionalNotes = document.getElementById('field-notes-capture').value.trim();
 
-            if (!globalActiveImagePayload || !globalPrimaryGPS || !compiledPest) {
+            if (!globalActiveImagePayload || !compiledPest) {
                 alert('Please perform a scan first before saving a draft.');
                 return;
             }

@@ -678,57 +678,14 @@
     </div>
 
     <script>
-        // ==========================================================================
-        // LOCAL HARDCODED SNAPSHOT WITH ENRICHED MOCK ARCHIVE DATA
-        // ==========================================================================
-        const structuralLocalBackupDataset = [
-            {
-                "id": 201,
-                "date": "2026-06-25",
-                "timestamp": "Jun 25, 2026 • 10:20 AM",
-                "location": "Brgy. Rizal",
-                "full_location": "Brgy. Rizal, San Pablo City, Laguna",
-                "farmer": "Crispin M. Delgado",
-                "pest": "Rhinoceros Beetle",
-                "severity": "High",
-                "status": "Reviewed",
-                "confidence": "94%",
-                "farmer_notes": "Crown leaves turning yellow with distinct triangular cuts.",
-                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "initial_recommendations": [
-                    "Clean surroundings and remove decaying coconut materials.",
-                    "Use pheromone traps to reduce population."
-                ],
-                "expert_recommendation": "Confirmed severe infestation. Applied granular setups into the top leafaxils and set up 4 regional pheromone traps around perimeter area."
-            },
-            {
-                "id": 202,
-                "date": "2026-06-20",
-                "timestamp": "Jun 20, 2026 • 02:15 PM",
-                "location": "Brgy. San Francisco",
-                "full_location": "Brgy. San Francisco, San Pablo City, Laguna",
-                "farmer": "Maria Clara Santos",
-                "pest": "Brontispa",
-                "severity": "Moderate",
-                "status": "Reviewed",
-                "confidence": "89%",
-                "farmer_notes": "Larvae discovered on newly opened heart leaves.",
-                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "initial_recommendations": [
-                    "Prune off heavily infested lower fronds showing advanced linear scorching, then burn immediately."
-                ],
-                "expert_recommendation": "Targeted deployment of biological control agents (Earwigs) initiated. Fronds pruned successfully."
-            }
-        ];
-
         let reports = [];
         try {
             reports = JSON.parse('{{ reviewed_reports | tojson | safe }}');
             if (!reports || reports.length === 0) {
-                reports = structuralLocalBackupDataset;
+                reports = [];
             }
         } catch (e) {
-            reports = structuralLocalBackupDataset;
+            reports = [];
         }
 
         let activeSearchQuery = "";

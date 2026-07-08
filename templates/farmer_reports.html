@@ -899,52 +899,9 @@
         </div>
     </div>
 
-    <!-- REPLACEME: Synced Mock Data Array to match exact Scan types parameters -->
-    <script id="reports-data" type="application/json">
-        [
-            {
-                "pest": "Rhinoceros Beetle",
-                "date": "2026-07-01",
-                "timestamp": "Jul 01, 2026 • 09:15 AM",
-                "status": "Recommendation Issued",
-                "confidence": "87%",
-                "damage": "Moderate",
-                "notes": "Spreading heavily across the lower layer leaf structures of the sector 3 trees.",
-                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "initial_recommendations": [
-                    "Clean surroundings and remove decaying coconut materials.",
-                    "Check and remove beetles if seen.",
-                    "Use pheromone traps to reduce population.",
-                    "Inspect trees regularly for damage."
-                ],
-                "expert_recommendations": [
-                    "Apply localized neem extract directly onto target tree crowns."
-                ]
-            },
-            {
-                "pest": "Brontispa",
-                "date": "2026-06-28",
-                "timestamp": "Jun 28, 2026 • 04:30 PM",
-                "status": "Under Review",
-                "confidence": "92%",
-                "damage": "High",
-                "notes": "V-shaped holes cut into fronds noticed near the central spear leaf area.",
-                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "initial_recommendations": [
-                    "Prune off heavily infested lower fronds showing advanced linear scorching, then burn immediately."
-                ]
-            }
-        ]
-    </script>
-
     <script>
         // Production State Containers
         let reports = [];
-        try {
-            reports = JSON.parse(document.getElementById("reports-data")?.textContent || "[]");
-        } catch (e) {
-            reports = [];
-        }
         let notifications = [];
 
         let activeSearchQuery = "";

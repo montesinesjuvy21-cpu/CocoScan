@@ -1014,37 +1014,26 @@
         }
 
        function initCharts() {
+        const chartPayload = {{ chart_data | tojson | safe }};
         const trendEl = document.getElementById('trendChart');
         if (trendEl) {
             const ctxTrend = trendEl.getContext('2d');
+            const trendLabels = Array.isArray(chartPayload?.trend_labels) && chartPayload.trend_labels.length ? chartPayload.trend_labels : ['No data'];
+            const trendDatasets = Array.isArray(chartPayload?.trend_datasets) && chartPayload.trend_datasets.length ? chartPayload.trend_datasets : [{
+                label: 'No reports yet',
+                data: [0],
+                borderColor: '#94a3b8',
+                backgroundColor: 'rgba(148, 163, 184, 0.15)',
+                borderWidth: 2,
+                tension: 0.2,
+                pointRadius: 3,
+                fill: true
+            }];
             new Chart(ctxTrend, {
                 type: 'line',
                 data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    datasets: [
-                        {
-                            label: 'Rhinoceros Beetle',
-                            data: [8, 12, 11, 18, 14, 22],
-                            borderColor: '#164630',
-                            // Added 15% opacity semi-transparent fill color matching your system token
-                            backgroundColor: 'rgba(22, 70, 48, 0.15)', 
-                            borderWidth: 2,
-                            tension: 0.2,
-                            pointRadius: 3,
-                            fill: true // Enables the shaded area below the line
-                        },
-                        {
-                            label: 'Brontispa',
-                            data: [4, 7, 4, 7, 8, 8],
-                            borderColor: '#d97706',
-                            // Added 15% opacity semi-transparent fill color matching your system token
-                            backgroundColor: 'rgba(217, 119, 6, 0.15)', 
-                            borderWidth: 2,
-                            tension: 0.2,
-                            pointRadius: 3,
-                            fill: true // Enables the shaded area below the line
-                        }
-                    ]
+                    labels: trendLabels,
+                    datasets: trendDatasets
                 },
                 options: {
                 responsive: true,
@@ -1096,13 +1085,16 @@
         const distEl = document.getElementById('distributionChart');
         if (distEl) {
             const ctxDist = distEl.getContext('2d');
+            const distributionLabels = Array.isArray(chartPayload?.distribution_labels) && chartPayload.distribution_labels.length ? chartPayload.distribution_labels : ['No reports yet'];
+            const distributionData = Array.isArray(chartPayload?.distribution_data) && chartPayload.distribution_data.length ? chartPayload.distribution_data : [0];
+            const distributionColors = distributionLabels.map((_, index) => ['#164630', '#d97706', '#0f766e', '#3b82f6', '#f59e0b'][index % 5]);
             new Chart(ctxDist, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Rhinoceros Beetle', 'Brontispa'],
+                    labels: distributionLabels,
                     datasets: [{
-                        data: [65, 35],
-                        backgroundColor: ['#164630', '#d97706'],
+                        data: distributionData,
+                        backgroundColor: distributionColors,
                         borderWidth: 3,
                         borderColor: '#ffffff'
                     }]

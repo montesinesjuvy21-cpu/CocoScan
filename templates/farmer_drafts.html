@@ -535,43 +535,6 @@
         </main>
     </div>
 
-    <!-- ==========================================================================
-       START HARDCODED MOCK DATA (REMOVE THIS SCRIPT COMPLETELY FOR PRODUCTION)
-       ========================================================================== -->
-    <script id="mock-drafts-payload" type="application/json">
-        [
-            {
-                "id": 9991,
-                "pest": "Rhinoceros Beetle",
-                "damage_severity": "Moderate",
-                "photo_taken_at": "2026-07-03T09:15:00.000Z",
-                "saved_at": "2026-07-03T09:20:00.000Z",
-                "primary_image_data": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "gps": {
-                    "latitude": 14.14021,
-                    "longitude": 121.32845
-                },
-                "location_source": "camera_gps"
-            },
-            {
-                "id": 9992,
-                "pest": "Coconut Scale Insect",
-                "damage_severity": "High",
-                "photo_taken_at": "2026-07-02T14:30:00.000Z",
-                "saved_at": "2026-07-02T14:35:00.000Z",
-                "primary_image_data": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "gps": {
-                    "latitude": 14.14115,
-                    "longitude": 121.32991
-                },
-                "location_source": "camera_gps"
-            }
-        ]
-    </script>
-    <!-- ==========================================================================
-       END HARDCODED MOCK DATA
-       ========================================================================== -->
-
     <script>
         function toggleSidebarMenu() {
             const sidebar = document.getElementById('sidebar');
@@ -603,33 +566,11 @@
                 const request = store.getAll();
                 request.onsuccess = () => {
                     const localResults = request.result || [];
-                    
-                    // START HARDCODED MOCK DATA LOGIC
-                    if (localResults.length === 0) {
-                        try {
-                            const mockPayloadRaw = document.getElementById('mock-drafts-payload').textContent;
-                            const mockDrafts = JSON.parse(mockPayloadRaw || "[]");
-                            renderDrafts(mockDrafts);
-                            return;
-                        } catch (e) {
-                            console.warn("Failed to parse fallback mock data", e);
-                        }
-                    }
-                    // END HARDCODED MOCK DATA LOGIC
-                    
                     renderDrafts(localResults);
                 };
                 request.onerror = () => showEmptyState(true, 'Unable to load saved drafts.');
             }).catch(() => {
-                // START HARDCODED MOCK DATA FALLBACK FOR STORAGE ACCESS FAILURES
-                try {
-                    const mockPayloadRaw = document.getElementById('mock-drafts-payload').textContent;
-                    const mockDrafts = JSON.parse(mockPayloadRaw || "[]");
-                    renderDrafts(mockDrafts);
-                } catch(e) {
-                    showEmptyState(true, 'Unable to access saved drafts.');
-                }
-                // END HARDCODED MOCK DATA FALLBACK FOR STORAGE ACCESS FAILURES
+                showEmptyState(true, 'Unable to access saved drafts.');
             });
         }
 
@@ -714,13 +655,6 @@
         }
 
         function continueDraft(id) {
-            // START HARDCODED MOCK DATA CHECK
-            if (String(id).startsWith('999')) {
-                alert('Mock data interaction: Simulating draft restoration payload pipeline.');
-                return;
-            }
-            // END HARDCODED MOCK DATA CHECK
-
             getDraftById(id).then((draft) => {
                 if (!draft) { alert('Draft not found.'); return; }
                 sessionStorage.setItem('cocoscan_resume_draft', JSON.stringify(draft));
@@ -739,13 +673,6 @@
         }
 
         function deleteDraft(id) {
-            // START HARDCODED MOCK DATA CHECK
-            if (String(id).startsWith('999')) {
-                alert('Mock data interaction: Discarding standalone interface preview card container node.');
-                return;
-            }
-            // END HARDCODED MOCK DATA CHECK
-
             if (!confirm('Are you sure you want to delete this saved draft?')) return;
             deleteDraftById(id).then(() => { loadDrafts(); }).catch(() => alert('Unable to delete draft.'));
         }
@@ -755,13 +682,6 @@
         }
 
         function submitDraft(id) {
-            // START HARDCODED MOCK DATA CHECK
-            if (String(id).startsWith('999')) {
-                alert('Mock data interaction: Executing live telemetry server ingestion synchronization test.');
-                return;
-            }
-            // END HARDCODED MOCK DATA CHECK
-
             getDraftById(id).then(async (draft) => {
                 if (!draft) { alert('Draft not found.'); return; }
                 if (!navigator.onLine) {

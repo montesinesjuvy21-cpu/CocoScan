@@ -719,75 +719,14 @@
         DYNAMIC SERVER/LOCAL HYDRATION SCRIPTS BLOCK
         ========================================================================== -->
     <script>
-        // ==========================================================================
-        // LOCAL HARDCODED SNAPSHOT WITH ENRICHED MOCK DATA
-        // ==========================================================================
-        const structuralLocalBackupDataset = [
-            {
-                "id": 101,
-                "date": "2026-07-01",
-                "timestamp": "Jul 01, 2026 • 09:15 AM",
-                "location": "Brgy. San Ignacio",
-                "full_location": "Brgy. San Ignacio, San Pablo City, Laguna",
-                "farmer": "Timothy D. Gavino",
-                "pest": "Rhinoceros Beetle",
-                "severity": "Moderate",
-                "status": "Pending",
-                "confidence": "87%",
-                "farmer_notes": "Spreading heavily across the lower layer leaf structures of the sector 3 trees.",
-                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "initial_recommendations": [
-                    "Clean surroundings and remove decaying coconut materials.",
-                    "Use pheromone traps to reduce population."
-                ]
-            },
-            {
-                "id": 102,
-                "date": "2026-06-28",
-                "timestamp": "Jun 28, 2026 • 04:30 PM",
-                "location": "Brgy. Santa Maria",
-                "full_location": "Brgy. Santa Maria, San Pablo City, Laguna",
-                "farmer": "Joshua L. Bartolome",
-                "pest": "Brontispa",
-                "severity": "High",
-                "status": "Pending",
-                "confidence": "92%",
-                "farmer_notes": "V-shaped holes cut into fronds noticed near the central spear leaf area.",
-                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "initial_recommendations": [
-                    "Prune off heavily infested lower fronds showing advanced linear scorching, then burn immediately."
-                ]
-            },
-            {
-                "id": 103,
-                "date": "2026-07-02",
-                "timestamp": "Jul 02, 2026 • 11:10 AM",
-                "location": "Brgy. Concepcion",
-                "full_location": "Brgy. Concepcion, San Pablo City, Laguna",
-                "farmer": "Jay Justine R. Comendador",
-                "pest": "Rhinoceros Beetle",
-                "severity": "High",
-                "status": "Pending",
-                "confidence": "95%",
-                "farmer_notes": "Internal boring channels detected directly within the trunk crown regions of production area B.",
-                "img": "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80",
-                "initial_recommendations": [
-                    "Apply localized granular setups into top leafaxils.",
-                    "Extract bore beetles manually using hooked wire frameworks."
-                ]
-            }
-        ];
-
-        
         let reports = [];
         try {
             reports = JSON.parse('{{ pending_reports | tojson | safe }}');
-            // If the server returns an empty list, force the local mock dataset for development
             if (!reports || reports.length === 0) {
-                reports = structuralLocalBackupDataset;
+                reports = [];
             }
         } catch (e) {
-            reports = structuralLocalBackupDataset;
+            reports = [];
         }
 
         let activeSearchQuery = "";
