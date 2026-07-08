@@ -73,6 +73,26 @@ def normalize_role(value) -> str:
     return str(value or "").strip().lower()
 
 
+def normalize_submission_error(error_str: str) -> str:
+    """Convert technical database errors into user-friendly messages."""
+    error_lower = error_str.lower()
+    
+    if "invalid input syntax for type" in error_lower:
+        if "integer" in error_lower or "numeric" in error_lower:
+            return "GPS coordinates are invalid. Please ensure location data is properly captured before submitting."
+    
+    if "not null violation" in error_lower or "null value" in error_lower:
+        return "Some required fields are missing. Please fill in all information before submitting."
+    
+    if "duplicate" in error_lower or "unique" in error_lower:
+        return "This report may have already been submitted. Please refresh and try again."
+    
+    if "connection" in error_lower or "timeout" in error_lower:
+        return "Unable to connect to the server. Please check your internet connection and try again."
+    
+    return "Failed to submit report. Please try again or contact support if the issue persists."
+
+
 def reverse_geocode_latlng(latitude, longitude):
     try:
         response = requests.get(
@@ -1168,8 +1188,11 @@ def farmer_submit_report():
         return jsonify({'success': True, 'message': 'Report submitted and synchronized cleanly!'})
 
     except Exception as e:
-        logger.error(f"Cloud instance synchronization failed: {str(e)}")
-        return jsonify({'success': False, 'message': f"Cloud instance synchronization failed: {str(e)}"}), 500
+        error_str = str(e)
+        logger.error(f"Report submission failed: {error_str}")
+        # Return a user-friendly error message
+        friendly_message = normalize_submission_error(error_str)
+        return jsonify({'success': False, 'message': friendly_message}), 500
 
 # Admin
 @app.route('/admin/user-management')

@@ -50,6 +50,23 @@ def build_report_payload(
     if initial_recommendations is None:
         initial_recommendations = []
 
+    # Convert coordinate strings to floats for database compatibility
+    try:
+        latitude = float(latitude) if latitude else None
+    except (ValueError, TypeError):
+        latitude = None
+    
+    try:
+        longitude = float(longitude) if longitude else None
+    except (ValueError, TypeError):
+        longitude = None
+    
+    # Convert confidence to float
+    try:
+        confidence = float(confidence) if confidence else 0.0
+    except (ValueError, TypeError):
+        confidence = 0.0
+
     return {
         "user_id": user_id,
         "farmer_name": farmer_name,

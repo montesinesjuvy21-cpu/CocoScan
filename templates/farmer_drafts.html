@@ -614,7 +614,6 @@
                         <div class="draft-thumb"><img src="${draft.primary_image_data || ''}" alt="Draft thumbnail"></div>
                         <div class="draft-meta">
                             <h3>${draft.pest || 'Unknown Pest'}</h3>
-                            <p>Severity: ${draft.damage_severity || 'Unknown'}</p>
                             <p>Captured: ${formatDateLocal(draft.photo_taken_at)}</p>
                             <p>Saved: ${formatDateLocal(draft.saved_at)}</p>
                         </div>
@@ -677,6 +676,27 @@
             deleteDraftById(id).then(() => { loadDrafts(); }).catch(() => alert('Unable to delete draft.'));
         }
 
+        function normalizeDraftErrorMessage(rawError) {
+            if (!rawError) return 'An unexpected error occurred.';
+            const lowerError = rawError.toLowerCase();
+            if (lowerError.includes('invalid input syntax for type integer') || lowerError.includes('invalid input syntax for type numeric')) {
+                return 'GPS coordinates are invalid. Please ensure location data is properly captured before submitting.';
+            }
+            if (lowerError.includes('not null violation')) {
+                return 'Some required fields are missing. Please fill in all information before submitting.';
+            }
+            if (lowerError.includes('duplicate') || lowerError.includes('unique')) {
+                return 'This report may have already been submitted. Please refresh and try again.';
+            }
+            if (lowerError.includes('cloud instance') || lowerError.includes('synchronization')) {
+                return 'Unable to connect to the server. Please check your internet connection and try again.';
+            }
+            if (lowerError.includes('connection') || lowerError.includes('timeout')) {
+                return 'Unable to connect to the server. Please check your internet connection and try again.';
+            }
+            return 'Failed to submit report. Please try again or contact support if the issue persists.';
+        }
+
         function fetchDataURLFile(dataUrl, filename) {
             return fetch(dataUrl).then((res) => res.blob()).then((blob) => new File([blob], filename, { type: blob.type || 'image/jpeg' }));
         }
@@ -694,8 +714,10 @@
                 formData.append('damage_severity', draft.damage_severity || 'Moderate');
                 formData.append('location_notes', draft.field_notes || '');
                 formData.append('confidence', draft.confidence_value !== undefined ? draft.confidence_value : parseFloat((draft.confidence || '').replace('%', '')) || 0);
-                formData.append('gps_latitude', draft.gps?.latitude || '');
-                formData.append('gps_longitude', draft.gps?.longitude || '');
+                const lat = draft.gps?.latitude ? parseFloat(draft.gps.latitude) : '';
+                const lng = draft.gps?.longitude ? parseFloat(draft.gps.longitude) : '';
+                formData.append('gps_latitude', lat);
+                formData.append('gps_longitude', lng);
                 formData.append('gps_accuracy', draft.gps?.accuracy || '');
                 formData.append('location_source', draft.location_source || 'camera_gps');
                 formData.append('photo_taken_at', draft.photo_taken_at || new Date().toISOString());
@@ -724,9 +746,11 @@
                     alert('Draft submitted successfully. It has been removed from local drafts.');
                     loadDrafts();
                 } else {
-                    alert(`Unable to submit draft: ${data.message || data.error || 'Server error'}`);
+                    const errorMsg = data.message || data.error || 'Server error';
+                    const friendlyMsg = normalizeDraftErrorMessage(errorMsg);
+                    alert(`Submission Error: ${friendlyMsg}`);
                 }
-            }).catch(() => alert('Unable to submit draft at this time.'));
+            }).catch((error) => alert(`Network Error: Please check your connection and try again. ${error.message}`));
         }
 
         document.addEventListener('DOMContentLoaded', () => {
