@@ -671,10 +671,7 @@
                     <h3 id="modal-pest-title">--</h3>
                     <p>Confidence Match: <span id="modal-confidence">--</span></p>
                 </div>
-                <div class="badge-side-meta">
-                    <div>Identified Severity:</div>
-                    <strong style="font-weight: 700;" id="modal-damage-text">--</strong>
-                </div>
+
             </div>
 
             <div class="preview-media-frame">
@@ -916,7 +913,7 @@
 
             document.getElementById('modal-pest-title').textContent = record.pest;
             document.getElementById('modal-confidence').textContent = record.confidence || "90%";
-            document.getElementById('modal-damage-text').textContent = record.severity;
+
             document.getElementById('modal-farmer-name').textContent = record.farmer;
             document.getElementById('modal-location-text').textContent = record.full_location;
             document.getElementById('modal-timestamp-text').textContent = record.timestamp;

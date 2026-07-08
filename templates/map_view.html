@@ -368,16 +368,7 @@
             color: var(--text-muted);
             margin-top: 2px;
         }
-        .severity-badge {
-            font-size: 0.72rem;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 20px;
-            text-transform: capitalize;
-        }
-        .severity-badge.high { background-color: #fee2e2; color: #b91c1c; }
-        .severity-badge.moderate { background-color: #fef3c7; color: #d97706; }
-        .severity-badge.low { background-color: #eef5f2; color: #164630; }
+
 
         .detail-data-table {
             margin-top: 16px;
@@ -742,10 +733,6 @@
             activeState.style.display = "flex";
             activeState.className = "detail-active-layout";
 
-            let severityClass = "low";
-            if (record.damage_severity === "High" || record.damage_severity === "Severe") severityClass = "high";
-            if (record.damage_severity === "Moderate") severityClass = "moderate";
-
             // Determine route base path based on case status matrix[cite: 3]
             const targetDashboardRoute = (record.status === "Pending") 
                 ? `/agriculturist/pending` 
@@ -760,7 +747,6 @@
                             <h3>${record.barangay}</h3>
                             <p>${record.municipality}, ${record.province}</p>
                         </div>
-                        <span class="severity-pill ${severityClass}" style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px;">${record.damage_severity}</span>
                     </div>
 
                     <div class="detail-data-table">

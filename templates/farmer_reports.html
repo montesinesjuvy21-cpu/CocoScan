@@ -168,6 +168,22 @@
             border-color: rgba(82, 130, 101, 0.3);
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
+        
+        @media (max-width: 500px) {
+            .search-controls-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .search-bar-box {
+                min-width: 100%;
+            }
+            .date-filter-box {
+                min-width: 100%;
+            }
+            .btn-clear-filters {
+                width: 100%;
+            }
+        }
 
         /* --- CLEAR FILTER BUTTON STYLING --- */
         .btn-clear-filters {
@@ -794,10 +810,6 @@
                     <h3 id="sum-pest-title">--</h3>
                     <p>Confidence: <span id="sum-confidence">--</span></p>
                 </div>
-                <div class="badge-side-meta">
-                    <div>Leaf Damage:</div>
-                    <strong style="font-weight: 600;" id="sum-damage">--</strong>
-                </div>
             </div>
 
             <!-- Binalik ang nawawalang lagayan ng imahe katulad ng sa scan page -->
@@ -1173,7 +1185,6 @@
             document.getElementById('sum-pest-title').textContent = record.pest;
             document.getElementById('sum-timestamp').textContent = record.timestamp;
             document.getElementById('sum-confidence').textContent = record.confidence || "90%";
-            document.getElementById('sum-damage').textContent = record.damage || "Moderate";
             document.getElementById('sum-notes-text').textContent = record.notes || "No notes logged.";
             
             const imgElement = document.getElementById('sum-media-img');
@@ -1225,7 +1236,6 @@
             
             document.getElementById('fup-label-title').textContent = selectedReportRecord.pest;
             document.getElementById('fup-conf-span').textContent = selectedReportRecord.confidence || "90%";
-            document.getElementById('fup-damage-span').textContent = selectedReportRecord.damage || "Moderate";
             document.getElementById('fup-notes-fallback').textContent = selectedReportRecord.notes || "No notes logged.";
             document.getElementById('fup-mini-img').src = document.getElementById('sum-media-img').src;
             document.getElementById('fup-input-text').value = "";

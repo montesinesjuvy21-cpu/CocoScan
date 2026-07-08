@@ -781,18 +781,32 @@
         }
 
         .btn-control {
-            padding: 14px;
-            border-radius: 14px;
-            font-size: 0.95rem;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
             font-weight: 700;
             cursor: pointer;
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px; 
+            gap: 6px; 
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             width: 100%;
+        }
+        
+        @media (max-width: 500px) {
+            .btn-control {
+                padding: 10px 12px;
+                font-size: 0.8rem;
+            }
+            .control-action-bar {
+                gap: 8px;
+            }
+            .date-filter-box input {
+                padding: 11px 14px;
+                font-size: 0.85rem;
+            }
         }
 
         .btn-control.submit-primary { 
@@ -971,10 +985,6 @@
                         <h3 id="res-pest-title">Rhinoceros Beetle</h3>
                         <p>Confidence: <span id="res-confidence">87%</span></p>
                     </div>
-                    <div class="badge-side-meta">
-                        <div>Leaf Damage:</div>
-                        <strong style="font-weight: 600;" id="res-damage">Moderate</strong>
-                    </div>
                 </div>
 
                 <div class="preview-media-frame">
@@ -983,7 +993,7 @@
                 
                 <div class="image-timestamp-footer">
                     Farmer: <span style="font-weight: 600;">{{ user_name }}</span> 
-                    <br> Brgy. San Ignacio, San Pablo City, Laguna <br>
+                    <br> <span id="res-location">Location from GPS</span> <br>
                     <span id="res-timestamp">2026-05-02 02:30:06</span>
                 </div>
 
@@ -1216,8 +1226,12 @@
                 
                 document.getElementById('res-pest-title').textContent = data.pest;
                 document.getElementById('res-confidence').textContent = data.pest_confidence + '%';
-                document.getElementById('res-damage').textContent = data.severity;
                 document.getElementById('res-timestamp').textContent = formattedTimestamp;
+                if (globalPrimaryGPS) {
+                    document.getElementById('res-location').textContent = `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}`;
+                } else {
+                    document.getElementById('res-location').textContent = 'Location unavailable';
+                }
                 
                 const badgeElement = document.getElementById('result-badge-color');
                 if (data.pest === "Brontispa") {
@@ -1337,7 +1351,6 @@
         function saveDraftToIndexedDB(isOfflineSubmit = false) {
             const compiledPest = document.getElementById('res-pest-title').textContent;
             const compiledConfidence = document.getElementById('res-confidence').textContent;
-            const compiledDamage = document.getElementById('res-damage').textContent;
             const additionalNotes = document.getElementById('field-notes-capture').value.trim();
 
             if (!globalActiveImagePayload || !compiledPest) {
@@ -1350,7 +1363,7 @@
                 status: isOfflineSubmit ? 'offline-draft' : 'draft',
                 pest: compiledPest,
                 confidence: compiledConfidence,
-                damage_severity: compiledDamage,
+                damage_severity: 'Moderate',
                 field_notes: additionalNotes,
                 recommendations: Array.from(document.querySelectorAll('#res-recommendations-list li')).map(li => li.textContent),
                 primary_image_name: globalActiveImageFile?.name || 'camera_capture.jpg',
@@ -1386,8 +1399,8 @@
                     const store = transaction.objectStore('drafts');
                     store.add(draft);
                     transaction.oncomplete = () => {
-                        alert('Draft saved locally. You can resume it later when online.');
-                        if (isOfflineSubmit) resetWorkflowStateToHome();
+                        alert('Draft saved successfully!');
+                        resetWorkflowStateToHome();
                     };
                 };
             });
@@ -1513,7 +1526,6 @@
             document.getElementById('field-notes-capture').value = draft.field_notes || '';
             document.getElementById('res-pest-title').textContent = draft.pest || 'Unknown Pest';
             document.getElementById('res-confidence').textContent = draft.confidence || (draft.confidence_value ? `${draft.confidence_value}%` : '0%');
-            document.getElementById('res-damage').textContent = draft.damage_severity || 'Unknown';
             document.getElementById('res-img-placeholder').src = draft.primary_image_data || defaultImages[draft.pest] || defaultImages['Rhinoceros Beetle'];
             document.getElementById('res-timestamp').textContent = draft.photo_taken_at ? new Date(draft.photo_taken_at).toISOString().replace('T', ' ').substring(0, 19) : new Date().toISOString().replace('T', ' ').substring(0, 19);
 

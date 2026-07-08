@@ -691,7 +691,7 @@
 
                 const formData = new FormData();
                 formData.append('pest_type', draft.pest || 'Unknown Pest');
-                formData.append('damage_severity', draft.damage_severity || 'Low');
+                formData.append('damage_severity', draft.damage_severity || 'Moderate');
                 formData.append('location_notes', draft.field_notes || '');
                 formData.append('confidence', draft.confidence_value !== undefined ? draft.confidence_value : parseFloat((draft.confidence || '').replace('%', '')) || 0);
                 formData.append('gps_latitude', draft.gps?.latitude || '');
