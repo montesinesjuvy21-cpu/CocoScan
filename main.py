@@ -27,6 +27,7 @@ from app.validators import (
 from app.password_utils import hash_password, verify_password
 from app.report_storage import build_report_payload, resolve_field_notes
 from app.dashboard_data import build_dashboard_chart_payload
+from app.model_paths import resolve_model_path
 
 # Configure logging
 logging.basicConfig(
@@ -581,10 +582,9 @@ def farmer_predict():
             logger.error(f"Image file decoding error: {str(e)}")
             return jsonify({'success': False, 'error': 'Invalid uploaded image file'}), 400
         
-        # Get the single TFLite model path from the model folder.
-        pest_model_path = os.getenv(
+        pest_model_path = resolve_model_path(
             'PEST_MODEL_PATH',
-            os.path.join(os.path.dirname(__file__), 'model', 'pest_classifier_YOLO.tflite')
+            'pest_classifier_YOLO.tflite'
         )
 
         if not os.path.exists(pest_model_path):
