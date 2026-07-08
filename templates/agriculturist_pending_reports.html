@@ -812,6 +812,16 @@
             return escapedText.replace(regex, '<span class="search-highlight">$1</span>');
         }
 
+        function resolveReportImageUrl(imageUrl) {
+            if (!imageUrl) return "";
+            const resolved = String(imageUrl).trim();
+            if (!resolved) return "";
+            if (resolved.startsWith("http://") || resolved.startsWith("https://") || resolved.startsWith("data:") || resolved.startsWith("blob:")) {
+                return resolved;
+            }
+            return `https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/${resolved.replace(/^\/+/, "")}`;
+        }
+
         function renderReportsGrid() {
             const container = document.getElementById("reports-list-container");
             const countLabel = document.getElementById("chip-count-label");
@@ -919,7 +929,7 @@
             document.getElementById('modal-timestamp-text').textContent = record.timestamp;
             document.getElementById('modal-farmer-notes').textContent = record.farmer_notes || "No notes written.";
             
-            document.getElementById('modal-target-img').src = record.img || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
+            document.getElementById('modal-target-img').src = resolveReportImageUrl(record.img || record.image_url) || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
             document.getElementById("expert-notes-input").value = "";
 
             const severityBanner = document.getElementById("modal-severity-banner");

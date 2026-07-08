@@ -342,6 +342,43 @@
             max-height: 280px;
         }
 
+        #summary-modal .modal-sheet-sliding-card {
+            gap: 14px;
+        }
+
+        #summary-modal .preview-media-frame {
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+
+        #summary-modal .image-timestamp-footer {
+            padding: 8px 4px 0 4px;
+            line-height: 1.6;
+        }
+
+        #summary-modal .premium-reco-card,
+        #summary-modal .premium-form-card {
+            gap: 14px;
+        }
+
+        #summary-modal .premium-reco-card {
+            padding: 20px 18px;
+        }
+
+        #summary-modal .premium-form-card {
+            padding: 18px;
+        }
+
+        #summary-modal .premium-reco-card ul,
+        #summary-modal .expert-reco-clean-list {
+            gap: 10px;
+        }
+
+        #summary-modal .premium-reco-card li,
+        #summary-modal .expert-reco-clean-list li {
+            line-height: 1.65;
+        }
+
         .image-timestamp-footer {
             padding: 10px 4px 2px 4px;
             font-size: 0.68rem;
@@ -818,8 +855,8 @@
             </div>
             
             <div class="image-timestamp-footer">
-                Farmer: <span style="font-weight: 600;">Alezer Boyore</span> 
-                <br> Brgy. San Ignacio, San Pablo City, Laguna <br>
+                Farmer: <span id="sum-farmer-name" style="font-weight: 600;">--</span> 
+                <br> <span id="sum-location-text">--</span> <br>
                 <span id="sum-timestamp">--</span>
             </div>
 
@@ -849,7 +886,7 @@
 
             <!-- Minimalist Actions Console Layout (Inalis ang kalituhang icons sa secondary rows) -->
             <div class="control-action-bar">
-                <button class="btn-control submit-primary" onclick="transitionToFollowUp()">
+                <button class="btn-control submit-primary" id="summary-followup-button" onclick="transitionToFollowUp()">
                     <i class="fa-solid fa-rotate"></i> Update Status
                 </button>
                 <div class="secondary-actions-row">
@@ -914,6 +951,15 @@
     <script>
         // Production State Containers
         let reports = [];
+        try {
+            reports = JSON.parse('{{ reports_data | tojson | safe }}');
+            if (!Array.isArray(reports)) {
+                reports = [];
+            }
+        } catch (e) {
+            reports = [];
+        }
+
         let notifications = [];
 
         let activeSearchQuery = "";
@@ -922,6 +968,9 @@
         let currentPage = 1;
         const recordsPerPage = 6; 
         let selectedReportRecord = null;
+        const reportLookupParams = new URLSearchParams(window.location.search);
+        const reportIdToOpen = reportLookupParams.get("report_id");
+        const openMode = reportLookupParams.get("mode") || "";
 
         document.addEventListener("DOMContentLoaded", () => {
             const rawName = "{{ user_name }}".trim();
@@ -931,6 +980,7 @@
             initNotificationsSystem();
             initSearchAndFilters();
             renderReportsGrid();
+            openReportFromQueryParams();
         });
 
         /* ================== NOTIFICATION OVERLAY ENGINE ================== */
@@ -1179,16 +1229,40 @@
         }
 
         /* ================== DISPLAY INTERACTION PANEL CONTROLLERS ================== */
-        function openReportSummary(record) {
+        function openReportFromQueryParams() {
+            if (!reportIdToOpen || !Array.isArray(reports) || reports.length === 0) {
+                return;
+            }
+
+            const targetRecord = reports.find(item => String(item.id) === String(reportIdToOpen));
+            if (targetRecord) {
+                openReportSummary(targetRecord, { viewOnly: openMode === "view" });
+            }
+        }
+
+        function resolveReportImageUrl(imageUrl) {
+            if (!imageUrl) return "";
+            const resolved = String(imageUrl).trim();
+            if (!resolved) return "";
+            if (resolved.startsWith("http://") || resolved.startsWith("https://") || resolved.startsWith("data:") || resolved.startsWith("blob:")) {
+                return resolved;
+            }
+            return `https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/${resolved.replace(/^\/+/, "")}`;
+        }
+
+        function openReportSummary(record, options = {}) {
             selectedReportRecord = record;
+            const viewOnly = Boolean(options.viewOnly);
 
             document.getElementById('sum-pest-title').textContent = record.pest;
             document.getElementById('sum-timestamp').textContent = record.timestamp;
             document.getElementById('sum-confidence').textContent = record.confidence || "90%";
             document.getElementById('sum-notes-text').textContent = record.notes || "No notes logged.";
+            document.getElementById('sum-farmer-name').textContent = record.farmer || "Farmer";
+            document.getElementById('sum-location-text').textContent = record.full_location || "No location logged";
             
             const imgElement = document.getElementById('sum-media-img');
-            imgElement.src = record.img || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
+            imgElement.src = resolveReportImageUrl(record.img || record.image_url) || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
 
             const statusTarget = document.getElementById('sum-status-text');
             statusTarget.textContent = record.status;
@@ -1227,6 +1301,11 @@
                 expertListElement.innerHTML = `<li><i class="fa-solid fa-circle-info" style="color: #d97706;"></i> <span><span style='color:var(--text-muted); font-style:italic;'>Awaiting verified expert recommendation check-in data response...</span></span></li>`;
             }
 
+            const followUpButton = document.getElementById('summary-followup-button');
+            if (followUpButton) {
+                followUpButton.style.display = viewOnly ? 'none' : 'flex';
+            }
+
             document.getElementById('summary-modal').classList.add('open-modal');
         }
 
@@ -1255,9 +1334,38 @@
         }
 
         function submitFollowUpData() {
+            if (!selectedReportRecord) {
+                alert('Please open a report before submitting a follow-up.');
+                return;
+            }
+
             const extraNotes = document.getElementById('fup-input-text').value.trim();
-            alert("Follow-up treatment metrics logged successfully.");
-            closeAllModals();
+            if (!extraNotes) {
+                alert('Please describe the follow-up update before submitting.');
+                return;
+            }
+
+            fetch('/farmer/follow-up-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    report_id: selectedReportRecord.id,
+                    notes: extraNotes
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Follow-up submitted successfully.');
+                    window.location.reload();
+                    return;
+                }
+                alert(data.message || 'Unable to submit the follow-up right now.');
+            })
+            .catch(error => {
+                console.error('Follow-up submission error:', error);
+                alert('Unable to submit the follow-up right now.');
+            });
         }
 
         function toggleSidebarMenu() {

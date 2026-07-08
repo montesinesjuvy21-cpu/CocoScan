@@ -994,7 +994,7 @@
                 <div class="image-timestamp-footer">
                     Farmer: <span style="font-weight: 600;">{{ user_name }}</span> 
                     <br> <span id="res-location">Location from GPS</span> <br>
-                    <span id="res-timestamp">2026-05-02 02:30:06</span>
+                    <span id="res-timestamp">Awaiting scan time</span>
                 </div>
 
         
@@ -1031,7 +1031,7 @@
                     <div class="supporting-preview-grid" id="supporting-preview-grid"></div>
                 </div>
 
-                <!-- Balanced Control Setup Box Consoles -->
+                
                 <!-- Balanced Control Setup Box Consoles -->
                     <div class="control-action-bar">
                         <div class="main-actions-row">
@@ -1051,11 +1051,22 @@
         </main>
     </div>
 
+    <script id="recent-reports-data" type="application/json">{{ recent_reports | tojson | safe }}</script>
     <script>
         let globalActiveImagePayload = "";
         let globalActiveImageFile = null;
         let globalPrimaryGPS = null;
         let supportingImages = [];
+        let recentReports = (function(){
+            try {
+                const node = document.getElementById('recent-reports-data');
+                if (!node) return [];
+                const txt = node.textContent || node.innerText || '[]';
+                return JSON.parse(txt);
+            } catch (e) {
+                return [];
+            }
+        })();
         let notifications = [
             { id: 1, type: "unread", tag: "alert", text: "High vector populations identified near Brgy. San Ignacio.", time: "10 mins ago" }
         ];
@@ -1079,7 +1090,7 @@
             const logTargetContainer = document.getElementById('historical-log-target');
             logTargetContainer.innerHTML = '';
 
-            let historyDataset = [];
+            const historyDataset = Array.isArray(recentReports) ? recentReports : [];
 
             if (!historyDataset || historyDataset.length === 0) {
                 logTargetContainer.innerHTML = `
@@ -1096,11 +1107,11 @@
             historyDataset.forEach(log => {
                 const nodeRow = document.createElement('div');
                 nodeRow.className = "history-item-node";
-                nodeRow.setAttribute('onclick', `viewHistoricalReport('${log.pest}', '${log.confidence}', '${log.damage}', '${log.raw_timestamp}')`);
+                nodeRow.setAttribute('onclick', `openHistoricalReport('${log.id}')`);
                 nodeRow.innerHTML = `
                     <div class="history-info-meta">
                         <h5>${log.pest}</h5>
-                        <p>${log.time_string} | Damage: ${log.damage}</p>
+                        <p>${log.time_string || log.timestamp || 'Timestamp unavailable'}</p>
                     </div>
                     <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.8rem;"></i>`;
                 logTargetContainer.appendChild(nodeRow);
@@ -1222,7 +1233,10 @@
                 }
                 
                 const activeDate = new Date();
-                const formattedTimestamp = activeDate.toISOString().replace('T', ' ').substring(0, 19);
+                const captureTimestamp = globalPrimaryGPS?.timestamp ? new Date(globalPrimaryGPS.timestamp) : activeDate;
+                const formattedTimestamp = isNaN(captureTimestamp.getTime())
+                    ? activeDate.toISOString().replace('T', ' ').substring(0, 19)
+                    : captureTimestamp.toISOString().replace('T', ' ').substring(0, 19);
                 
                 document.getElementById('res-pest-title').textContent = data.pest;
                 document.getElementById('res-confidence').textContent = data.pest_confidence + '%';
@@ -1283,13 +1297,13 @@
         function commitReportPayload() {
             const compiledPest = document.getElementById('res-pest-title').textContent;
             const compiledConfidence = document.getElementById('res-confidence').textContent;
-            const compiledDamage = document.getElementById('res-damage').textContent;
+            const damageElement = document.getElementById('res-damage');
+            const compiledDamage = (damageElement?.textContent || 'Moderate').trim();
             const additionalNotes = document.getElementById('field-notes-capture').value.trim();
             const predictionData = window.currentPrediction || {};
 
             const formData = new FormData();
             formData.append('pest_type', compiledPest);
-            formData.append('damage_severity', compiledDamage);
             formData.append('field_notes', additionalNotes);
             formData.append('location_notes', additionalNotes);
             formData.append('confidence', predictionData.pest_confidence || 0);
@@ -1324,7 +1338,7 @@
             .then(data => {
                 if (data.success) {
                     alert(`SUCCESS: Report for ${compiledPest} has been submitted successfully.`);
-                    resetWorkflowStateToHome();
+                    window.location.reload();
                     return;
                 }
 
@@ -1363,7 +1377,6 @@
                 status: isOfflineSubmit ? 'offline-draft' : 'draft',
                 pest: compiledPest,
                 confidence: compiledConfidence,
-                damage_severity: 'Moderate',
                 field_notes: additionalNotes,
                 recommendations: Array.from(document.querySelectorAll('#res-recommendations-list li')).map(li => li.textContent),
                 primary_image_name: globalActiveImageFile?.name || 'camera_capture.jpg',
@@ -1449,32 +1462,9 @@
             });
         }
 
-        function viewHistoricalReport(pest, conf, damage, time) {
-            document.getElementById('res-pest-title').textContent = pest;
-            document.getElementById('res-confidence').textContent = conf;
-            document.getElementById('res-damage').textContent = damage;
-            document.getElementById('res-timestamp').textContent = time;
-            document.getElementById('res-img-placeholder').src = defaultImages[pest];
-            
-            const listNode = document.getElementById('res-recommendations-list');
-            if (pest === 'Rhinoceros Beetle') {
-                document.getElementById('result-badge-color').style.backgroundColor = "var(--badge-green-bg)";
-                listNode.innerHTML = `
-                    <li>Clean surroundings and remove decaying coconut materials.</li>
-                    <li>Check and remove beetles if seen.</li>
-                    <li>Use pheromone traps to reduce population.</li>
-                    <li>Inspect trees regularly for damage.</li>
-                `;
-            } else {
-                document.getElementById('result-badge-color').style.backgroundColor = "#528265";
-                listNode.innerHTML = `
-                    <li>Prune off heavily infested lower fronds showing advanced linear scorching, then burn immediately.</li>
-                    <li>Spray crop canopy crowns thoroughly with custom localized organic neem extracts or approved biological solutions.</li>
-                `;
-            }
-
-            document.getElementById('step-upload-view').classList.remove('active-view');
-            document.getElementById('step-results-view').classList.add('active-view');
+        function openHistoricalReport(reportId) {
+            if (!reportId) return;
+            window.location.href = `/farmer/reports?report_id=${encodeURIComponent(reportId)}&mode=view`;
         }
 
         function abortReportWorkflow() {
@@ -1545,7 +1535,7 @@
             window.currentPrediction = {
                 pest: draft.pest,
                 pest_confidence: draft.confidence_value || parseFloat((draft.confidence || '').replace('%', '')) || 0,
-                severity: draft.damage_severity,
+                severity: 'Moderate',
                 recommendations: recommendations
             };
 

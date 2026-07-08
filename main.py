@@ -25,7 +25,14 @@ from app.validators import (
     ValidationError
 )
 from app.password_utils import hash_password, verify_password
-from app.report_storage import build_report_payload, resolve_field_notes
+from app.report_storage import (
+    build_report_payload,
+    is_pending_report_status,
+    is_reviewed_report_status,
+    normalize_report_status,
+    resolve_field_notes,
+    resolve_report_image_url,
+)
 from app.dashboard_data import build_dashboard_chart_payload
 from app.model_paths import resolve_model_path
 
@@ -138,11 +145,7 @@ def upload_image_to_supabase(file_bytes, filename, content_type="application/oct
             logger.warning(f"Supabase Storage upload error: {upload_result.error}")
             return ''
 
-        public_url_response = storage.get_public_url(storage_path)
-        if isinstance(public_url_response, dict):
-            return public_url_response.get('publicUrl') or public_url_response.get('data', {}).get('publicUrl', '')
-        if hasattr(public_url_response, 'data') and public_url_response.data:
-            return public_url_response.data.get('publicUrl', '')
+        return storage_path
     except Exception as upload_err:
         logger.warning(f"Supabase Storage helper error: {str(upload_err)}")
     return ''
@@ -505,8 +508,8 @@ def farmer_dashboard():
         reports = getattr(reports_response, 'data', []) or []
 
         total_cases = len(reports)
-        pending_cases = sum(1 for report in reports if str(report.get('status') or '').strip() == 'Pending')
-        resolved_cases = sum(1 for report in reports if str(report.get('status') or '').strip() == 'Recommendation Issued')
+        pending_cases = sum(1 for report in reports if is_pending_report_status(report.get('status')))
+        resolved_cases = sum(1 for report in reports if is_reviewed_report_status(report.get('status')))
 
         metrics = {
             "total_cases": total_cases,
@@ -563,8 +566,28 @@ def farmer_scan():
     try:
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Farmer"
-        
-        return render_template('farmer_scan.html', user_name=user_name)
+
+        reports_response = supabase.table('reports').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+        recent_reports = []
+        for item in getattr(reports_response, 'data', []) or []:
+            created_raw = item.get('submitted_at') or item.get('created_at') or ''
+            try:
+                created_dt = datetime.fromisoformat(created_raw.replace('Z', '+00:00')) if created_raw else None
+                created_label = created_dt.strftime('%b %d, %Y • %I:%M %p') if created_dt else 'Timestamp unavailable'
+            except Exception:
+                created_label = created_raw.replace('T', ' ').replace('Z', '')[:19] if created_raw else 'Timestamp unavailable'
+
+            recent_reports.append({
+                'id': item.get('id'),
+                'pest': item.get('pest_type') or 'Unknown Pest',
+                'confidence': f"{int(float(item.get('confidence', 0)))}%" if item.get('confidence') else '90%',
+                'raw_timestamp': created_label,
+                'time_string': created_label,
+                'timestamp': created_label,
+                'status': normalize_report_status(item.get('status'), default='Pending')
+            })
+
+        return render_template('farmer_scan.html', user_name=user_name, recent_reports=recent_reports[:6])
     except Exception as e:
         logger.error(f"Scan Pest routing exception: {str(e)}")
         return redirect(url_for('logout'))
@@ -691,7 +714,7 @@ def farmer_reports():
             if not initial_recommendations:
                 # Fallback to default recommendations based on pest type
                 pest_type = item.get("pest_type") or "Unknown Pest"
-                severity = item.get("damage_severity") or "Moderate"
+                severity = "Moderate"
                 from app.recommendations import recommend_actions
                 rec_data = recommend_actions(pest_type, severity)
                 initial_recommendations = rec_data.get("recommendation", [])
@@ -701,13 +724,15 @@ def farmer_reports():
                 "pest": item.get("pest_type") or "Unknown Pest",
                 "timestamp": created_label,
                 "date": created_value,
-                "status": item.get("status") or "Under Review",
+                "status": normalize_report_status(item.get("status"), default="Pending"),
                 "confidence": item.get("confidence") or "90%",
-                "damage": item.get("damage_severity") or "Moderate",
+                "damage": "Moderate",
                 "notes": item.get("field_notes") or "No notes logged.",
-                "img": item.get("image_url") or "",
+                "img": resolve_report_image_url(item.get("image_url") or ""),
+                "farmer": item.get("farmer_name") or "Farmer",
+                "full_location": ", ".join(filter(None, [item.get("barangay"), item.get("municipality"), item.get("province")])) or "No location logged",
                 "initial_recommendations": initial_recommendations,
-                "expert_recommendations": []
+                "expert_recommendations": item.get("expert_recommendations") or []
             })
     except Exception as e:
         logger.warning(f"Unable to load reports data for reports page: {str(e)}")
@@ -755,8 +780,8 @@ def agriculturist_dashboard():
         reports = getattr(reports_response, 'data', []) or []
 
         total_cases = len(reports)
-        pending_cases = sum(1 for report in reports if str(report.get('status') or '').strip() == 'Pending')
-        resolved_cases = sum(1 for report in reports if str(report.get('status') or '').strip() == 'Recommendation Issued')
+        pending_cases = sum(1 for report in reports if is_pending_report_status(report.get('status')))
+        resolved_cases = sum(1 for report in reports if is_reviewed_report_status(report.get('status')))
         affected_areas = len({str(report.get('barangay') or '').strip() for report in reports if str(report.get('barangay') or '').strip()})
 
         metrics = {
@@ -821,7 +846,6 @@ def agriculturist_pending():
         # Pull reports awaiting expert review from database
         reports_response = supabase.table("reports")\
             .select("*")\
-            .eq("status", "Pending")\
             .order("created_at", desc=True)\
             .execute()
             
@@ -829,6 +853,8 @@ def agriculturist_pending():
         pending_reports_list = []
         
         for item in raw_reports:
+            if not is_pending_report_status(item.get("status")):
+                continue
             created_raw = item.get("created_at") or ""
             try:
                 created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00")) if created_raw else None
@@ -850,11 +876,11 @@ def agriculturist_pending():
                 "full_location": full_loc or "No location logged",
                 "farmer": item.get("farmer_name") or "Unknown Farmer",
                 "pest": item.get("pest_type") or "Unknown Pest",
-                "severity": item.get("damage_severity") or "Moderate",
-                "status": item.get("status") or "Pending",
+                "severity": "Moderate",
+                "status": normalize_report_status(item.get("status"), default="Pending"),
                 "confidence": f"{int(float(item.get('confidence', 0)))}%" if item.get('confidence') else "90%",
                 "farmer_notes": item.get("field_notes") or "No extra notes logged by the farmer.",
-                "img": item.get("image_url") or "",
+                "img": resolve_report_image_url(item.get("image_url") or ""),
                 "initial_recommendations": item.get("initial_recommendations") or []
             })
             
@@ -887,7 +913,6 @@ def agriculturist_reviewed():
         # Pull reports that have already been reviewed by an expert from the database
         reports_response = supabase.table("reports")\
             .select("*")\
-            .eq("status", "Recommendation Issued")\
             .order("updated_at", desc=True)\
             .execute()
             
@@ -895,6 +920,8 @@ def agriculturist_reviewed():
         reviewed_reports_list = []
         
         for item in raw_reports:
+            if not is_reviewed_report_status(item.get("status")):
+                continue
             created_raw = item.get("created_at") or ""
             try:
                 created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00")) if created_raw else None
@@ -920,11 +947,11 @@ def agriculturist_reviewed():
                 "full_location": full_loc or "No location logged",
                 "farmer": item.get("farmer_name") or "Unknown Farmer",
                 "pest": item.get("pest_type") or "Unknown Pest",
-                "severity": item.get("damage_severity") or "Moderate",
-                "status": "Reviewed",
+                "severity": "Moderate",
+                "status": normalize_report_status(item.get("status"), default="Recommendation Issued"),
                 "confidence": f"{int(float(item.get('confidence', 0)))}%" if item.get('confidence') else "90%",
                 "farmer_notes": item.get("field_notes") or "No extra notes logged by the farmer.",
-                "img": item.get("image_url") or "",
+                "img": resolve_report_image_url(item.get("image_url") or ""),
                 "initial_recommendations": item.get("initial_recommendations") or [],
                 "expert_recommendation": expert_note
             })
@@ -957,8 +984,8 @@ def agriculturist_map():
         
         # Retrieve all spatial records containing geographical metrics
         reports_response = supabase.table("reports")\
-            .select("id, barangay, municipality, province, latitude, longitude, pest_type, damage_severity")\
-            .not_.is_("latitude", "null")\
+            .select("id, barangay, municipality, province, latitude, longitude, pest_type, status")\
+            .order("created_at", desc=True)\
             .execute()
             
         raw_reports = reports_response.data or []
@@ -980,7 +1007,7 @@ def agriculturist_map():
                 "latitude": lat,
                 "longitude": lng,
                 "pest_type": item.get("pest_type") or "Unknown Pest",
-                "damage_severity": item.get("damage_severity") or "Moderate",
+                "status": normalize_report_status(item.get("status"), default="Pending"),
                 "cases_count": 1 # Serves as baseline cluster weight variable
             })
             
@@ -994,6 +1021,55 @@ def agriculturist_map():
         logger.error(f"Error serving geospatial map canvas metrics: {str(e)}")
         flash("An alignment error occurred reading spatial coordinates.", "error")
         return redirect(url_for('agriculturist_dashboard'))
+
+@app.route('/farmer/follow-up-report', methods=['POST'])
+def farmer_follow_up_report():
+    """Reopen a previously reviewed report when the farmer submits a new update."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'farmer':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        report_id = data.get('report_id') or request.form.get('report_id')
+        follow_up_notes = (data.get('notes') or request.form.get('notes') or '').strip()
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+
+        existing_response = supabase.table('reports').select('*').eq('id', report_id).execute()
+        existing_rows = getattr(existing_response, 'data', None) or []
+        existing_report = existing_rows[0] if existing_rows else {}
+        if not existing_report:
+            return jsonify({'success': False, 'message': 'Report not found'}), 404
+
+        existing_notes = str(existing_report.get('field_notes') or '').strip()
+        if follow_up_notes:
+            combined_notes = "\n\n".join(filter(None, [existing_notes, f"Follow-up update: {follow_up_notes}"]))
+        else:
+            combined_notes = existing_notes
+
+        now_iso = datetime.now(UTC).isoformat()
+        update_response = supabase.table('reports').update({
+            'status': 'Pending',
+            'field_notes': combined_notes,
+            'updated_at': now_iso,
+            'expert_recommendations': [],
+            'reviewed_by_id': None,
+        }).eq('id', report_id).execute()
+
+        if getattr(update_response, 'error', None):
+            logger.error(f"Follow-up report update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The report could not be reopened for review.'}), 500
+
+        logger.info(f"Report ID #{report_id} reopened for follow-up review by farmer #{user_id}.")
+        return jsonify({'success': True, 'message': 'Your update has been submitted and the report has been sent back for review.'})
+
+    except Exception as e:
+        logger.error(f"Error reopening report for follow-up: {str(e)}")
+        return jsonify({'success': False, 'message': 'The follow-up could not be saved.'}), 500
     
 @app.route('/agriculturist/approve-report', methods=['POST'])
 def agriculturist_approve_report():
@@ -1050,7 +1126,6 @@ def farmer_submit_report():
     try:
         # 1. Extract data sent by your scanning interface/form
         pest_type = request.form.get('pest_type', 'Unknown Pest').strip()
-        damage_severity = request.form.get('damage_severity', 'Low').strip()
         field_notes = resolve_field_notes(request.form)
         confidence = request.form.get('confidence', '0').strip()
         latitude = request.form.get('gps_latitude', '').strip()
@@ -1094,7 +1169,6 @@ def farmer_submit_report():
         report_payload = build_report_payload(
             user_id=user_id,
             pest_type=pest_type,
-            damage_severity=damage_severity,
             field_notes=field_notes,
             confidence=confidence,
             latitude=latitude,
@@ -1130,11 +1204,6 @@ def farmer_submit_report():
                 storage_name = f"primary_{timestamp}_{filename}"
                 image_bytes = image_file.read()
                 saved_image_url = upload_image_to_supabase(image_bytes, storage_name, image_file.mimetype)
-                if not saved_image_url:
-                    save_path = os.path.join(app.config['UPLOAD_FOLDER'], storage_name)
-                    with open(save_path, 'wb') as f:
-                        f.write(image_bytes)
-                    saved_image_url = url_for('static', filename=f'uploads/{os.path.basename(save_path)}')
             elif image_field:
                 if image_field.startswith('data:'):
                     header, encoded = image_field.split(',', 1)
@@ -1146,10 +1215,7 @@ def farmer_submit_report():
                     decoded = base64.b64decode(encoded)
                     timestamp = now_value.strftime('%Y%m%d%H%M%S')
                     filename = f"{timestamp}_capture.{ext}"
-                    save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
-                    with open(save_path, 'wb') as f:
-                        f.write(decoded)
-                    saved_image_url = url_for('static', filename=f'uploads/{os.path.basename(save_path)}')
+                    saved_image_url = upload_image_to_supabase(decoded, secure_filename(filename), f"image/{ext}")
                 else:
                     saved_image_url = image_field
         except Exception as image_error:
@@ -1171,11 +1237,6 @@ def farmer_submit_report():
                 support_path_name = f"support_{support_timestamp}_{support_name}"
                 support_bytes = support_file.read()
                 support_url = upload_image_to_supabase(support_bytes, support_path_name, support_file.mimetype)
-                if not support_url:
-                    support_save_path = os.path.join(app.config['UPLOAD_FOLDER'], support_path_name)
-                    with open(support_save_path, 'wb') as f:
-                        f.write(support_bytes)
-                    support_url = url_for('static', filename=f'uploads/{os.path.basename(support_save_path)}')
                 supporting_rows.append({
                     'report_id': report_id,
                     'image_url': support_url,

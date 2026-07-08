@@ -3,6 +3,11 @@ import json
 from typing import Any, Mapping
 
 
+SUPABASE_REPORT_IMAGE_BASE_URL = (
+    "https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/"
+)
+
+
 def resolve_field_notes(form_data: Mapping[str, Any]) -> str:
     """Return the farmer notes from the submitted form data."""
     for key in ("field_notes", "location_notes", "notes"):
@@ -14,11 +19,71 @@ def resolve_field_notes(form_data: Mapping[str, Any]) -> str:
     return ""
 
 
+def normalize_report_status(value: Any, *, default: str = "Pending") -> str:
+    """Normalize report status values from the UI and database to a canonical workflow state."""
+    if value is None:
+        return default
+
+    normalized = str(value).strip()
+    if not normalized:
+        return default
+
+    aliases = {
+        "pending": "Pending",
+        "pending review": "Pending",
+        "pending-review": "Pending",
+        "pending_review": "Pending",
+        "submitted": "Pending",
+        "submitted for review": "Pending",
+        "for review": "Pending",
+        "awaiting review": "Pending",
+        "under review": "Pending",
+        "reviewed": "Recommendation Issued",
+        "reviewed & issued": "Recommendation Issued",
+        "recommendation issued": "Recommendation Issued",
+        "recommendation-issued": "Recommendation Issued",
+        "recommendation_issued": "Recommendation Issued",
+        "resolved": "Recommendation Issued",
+        "completed": "Recommendation Issued",
+    }
+
+    key = normalized.lower().replace("_", " ").replace("-", " ")
+    return aliases.get(key, normalized)
+
+
+def is_pending_report_status(value: Any) -> bool:
+    return not is_reviewed_report_status(value)
+
+
+def is_reviewed_report_status(value: Any) -> bool:
+    return normalize_report_status(value) == "Recommendation Issued"
+
+
+def resolve_report_image_url(image_url: Any) -> str:
+    """Return a usable public URL for a report image stored in Supabase Storage."""
+    if not image_url:
+        return ""
+
+    resolved = str(image_url).strip()
+    if not resolved:
+        return ""
+
+    if resolved.startswith(("http://", "https://", "data:", "blob:")):
+        return resolved
+
+    resolved = resolved.lstrip("/")
+    if resolved.startswith("storage/v1/object/public/reports/"):
+        resolved = resolved.split("storage/v1/object/public/reports/", 1)[-1]
+    elif resolved.startswith("report_media/"):
+        resolved = resolved
+
+    return f"{SUPABASE_REPORT_IMAGE_BASE_URL}{resolved}"
+
+
 def build_report_payload(
     *,
     user_id: str,
     pest_type: str,
-    damage_severity: str,
     field_notes: str,
     confidence: Any,
     latitude: str,
@@ -67,12 +132,13 @@ def build_report_payload(
     except (ValueError, TypeError):
         confidence = 0.0
 
+    status = normalize_report_status(status, default="Pending")
+
     return {
         "user_id": user_id,
         "farmer_name": farmer_name,
         "pest_type": pest_type,
         "confidence": confidence,
-        "damage_severity": damage_severity,
         "image_url": image_url,
         "field_notes": field_notes,
         "status": status,
