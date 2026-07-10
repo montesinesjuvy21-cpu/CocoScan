@@ -510,18 +510,19 @@
 
             .report-row-node {
                 border-radius: 20px;
-                padding: 20px;
+                padding: 24px;
                 align-items: flex-start;
                 flex-direction: column;
-                gap: 16px;
+                gap: 18px;
                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             }
 
             .report-row-node > div:last-child {
                 width: 100%;
-                justify-content: space-between;
+                display: flex;
+                justify-content: flex-end;
                 border-top: 1px solid var(--border-light);
-                padding-top: 12px;
+                padding-top: 14px;
             }
 
             .report-main-meta h4 { font-size: 1.15rem; }
@@ -827,14 +828,23 @@
 
         function openReviewModal(record) {
             selectedReportRecord = record;
-            openReportModal({
+            const payload = {
                 ...record,
                 mode: 'agriculturist',
                 primary_image: record.primary_image || record.img || record.image_url,
                 additional_images: record.additional_images || record.supporting_images || [],
                 notes: record.farmer_notes || record.notes || '',
                 expert_recommendations: record.expert_recommendations || [record.expert_recommendation].filter(Boolean),
-            }, 'agriculturist');
+            };
+
+            if (typeof window.openReportModal === 'function') {
+                window.openReportModal(payload, 'agriculturist');
+            } else {
+                setTimeout(() => {
+                    if (typeof window.openReportModal === 'function') window.openReportModal(payload, 'agriculturist');
+                    else console.warn('openReportModal not available to open agriculturist reviewed modal');
+                }, 150);
+            }
         }
 
         function closeReviewModal() {

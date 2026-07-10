@@ -1198,7 +1198,14 @@
                 };
 
                 renderSupportingPreviews();
-                openReportModal(window.currentPrediction, 'scan');
+                if (typeof window.openReportModal === 'function') {
+                    window.openReportModal(window.currentPrediction, 'scan');
+                } else {
+                    setTimeout(() => {
+                        if (typeof window.openReportModal === 'function') window.openReportModal(window.currentPrediction, 'scan');
+                        else console.warn('openReportModal not available after inference');
+                    }, 150);
+                }
 
                 document.getElementById('step-loading-view').classList.remove('active-view');
                 document.getElementById('step-results-view').classList.add('active-view');
@@ -1450,7 +1457,14 @@
             };
 
             document.getElementById('field-notes-capture').value = draft.field_notes || '';
-            openReportModal(window.currentPrediction, 'scan');
+            if (typeof window.openReportModal === 'function') {
+                window.openReportModal(window.currentPrediction, 'scan');
+            } else {
+                setTimeout(() => {
+                    if (typeof window.openReportModal === 'function') window.openReportModal(window.currentPrediction, 'scan');
+                    else console.warn('openReportModal not available when restoring draft');
+                }, 150);
+            }
             renderSupportingPreviews();
             document.getElementById('step-upload-view').classList.remove('active-view');
             document.getElementById('step-results-view').classList.add('active-view');
@@ -1489,5 +1503,6 @@
             }
         });
     </script>
+    <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
 </body>
 </html>

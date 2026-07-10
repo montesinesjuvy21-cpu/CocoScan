@@ -1176,13 +1176,22 @@
 
         function openReportSummary(record, options = {}) {
             selectedReportRecord = record;
-            openReportModal({
+            const payload = {
                 ...record,
                 mode: 'farmer',
                 primary_image: record.primary_image || record.img || record.image_url,
                 additional_images: record.additional_images || record.supporting_images || [],
                 notes: record.notes || record.farmer_notes || '',
-            }, 'farmer');
+            };
+
+            if (typeof window.openReportModal === 'function') {
+                window.openReportModal(payload, 'farmer');
+            } else {
+                setTimeout(() => {
+                    if (typeof window.openReportModal === 'function') window.openReportModal(payload, 'farmer');
+                    else console.warn('openReportModal not available to open farmer summary');
+                }, 150);
+            }
         }
 
         function transitionToFollowUp() {
