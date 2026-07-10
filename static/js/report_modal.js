@@ -377,6 +377,12 @@
         const notesDisplay = document.getElementById("report-notes-display");
         const expertInput = document.getElementById("expert-notes-input");
         const expertCard = document.getElementById("report-expert-card");
+        const closeHeaderBtn = document.getElementById("report-close-btn-header");
+
+        const isReviewed = isRecommendationIssuedStatus(report?.status || "");
+        if (closeHeaderBtn) {
+            setDisplay(closeHeaderBtn, mode === "agriculturist" && isReviewed, "inline-flex");
+        }
 
         if (pestTitle) pestTitle.textContent = report.pest;
         if (confidenceNode) confidenceNode.textContent = report.confidence;
@@ -460,6 +466,7 @@
             tag: payload.tag || "alert",
             created_at: payload.created_at || new Date().toISOString(),
             report_id: payload.report_id || null,
+            recipient_role: payload.recipient_role || null,
         };
         list.unshift(nextItem);
         saveSharedNotifications(list);

@@ -245,11 +245,11 @@
         }
         .report-row-node:active { transform: scale(0.99); }
         .report-row-node.is-unread {
-            border-color: rgba(245, 158, 11, 0.35);
-            background: linear-gradient(90deg, #fff8ed 0%, #ffffff 100%);
+            border-color: rgba(5, 150, 105, 0.35);
+            background: linear-gradient(90deg, #ecfdf5 0%, #ffffff 100%);
         }
         .report-row-node.is-unread .report-main-meta h4 {
-            color: #92400e;
+            color: #065f46;
         }
         
         .report-main-meta h4 { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
@@ -944,11 +944,14 @@
 
             function drawNotifications() {
                 wrapper.innerHTML = "";
-                const displayItems = notifications.map(item => ({
-                    ...item,
-                    text: item.text || item.message || item.title || "Report update",
-                    time: item.time || new Date(item.created_at || Date.now()).toLocaleString(),
-                }));
+                const userRole = "{{ user_role }}".toLowerCase() || "farmer";
+                const displayItems = notifications
+                    .filter(item => !item.recipient_role || item.recipient_role === userRole)
+                    .map(item => ({
+                        ...item,
+                        text: item.text || item.message || item.title || "Report update",
+                        time: item.time || new Date(item.created_at || Date.now()).toLocaleString(),
+                    }));
                 const unread = displayItems.filter(n => n.type === "unread").length;
                 badge.style.display = unread > 0 ? "block" : "none";
 
@@ -1153,7 +1156,15 @@
                         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.85rem;"></i>
                     </div>`;
                 
-                row.onclick = () => openReportSummary(item);
+                row.onclick = () => {
+                    if (unreadRecommendationUpdate) {
+                        window.cocoScanSharedNotifications?.markSharedNotificationsRead?.(unreadRecommendationUpdate.id);
+                        notifications = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
+                        drawNotifications?.();
+                        renderReportsGrid();
+                    }
+                    openReportSummary(item);
+                };
                 container.appendChild(row);
             });
 

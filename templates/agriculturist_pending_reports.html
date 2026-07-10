@@ -909,13 +909,15 @@
 
             function renderSharedNotifications() {
                 const items = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
-                const unreadCount = items.filter(item => item.type === 'unread').length;
+                const userRole = "agriculturist";
+                const filteredItems = items.filter(item => !item.recipient_role || item.recipient_role === userRole);
+                const unreadCount = filteredItems.filter(item => item.type === 'unread').length;
                 if (badge) badge.style.display = unreadCount > 0 ? 'block' : 'none';
-                if (items.length === 0) {
-                    dropdown.innerHTML = '<p style="margin:0; font-size:0.8rem; color:#64748b;">No shared notifications yet.</p>';
+                if (filteredItems.length === 0) {
+                    dropdown.innerHTML = '<p style="margin:0; font-size:0.8rem; color:#64748b;">No notifications yet.</p>';
                     return;
                 }
-                dropdown.innerHTML = items.slice(0, 8).map(item => `
+                dropdown.innerHTML = filteredItems.slice(0, 8).map(item => `
                     <div style="padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
                         <strong style="display:block; font-size:0.84rem; color:#0f172a;">${item.title}</strong>
                         <span style="display:block; font-size:0.74rem; color:#64748b; margin-top:2px;">${item.message}</span>

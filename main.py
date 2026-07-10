@@ -1219,11 +1219,12 @@ def farmer_follow_up_report():
             'success': True,
             'message': 'Your update has been submitted and the report has been sent back for review.',
             'notification': {
-                'title': 'Report reopened',
-                'message': f"Farmer #{user_id} submitted a follow-up for report #{report_id}.",
+                'title': 'Report status updated',
+                'message': f"Farmer #{user_id} updated the status for report #{report_id}.",
                 'tag': 'alert',
                 'type': 'unread',
                 'report_id': report_id,
+                'recipient_role': 'agriculturist',
             },
         })
 
@@ -1270,10 +1271,11 @@ def agriculturist_approve_report():
             'message': 'Expert diagnostic treatment recommendation logged successfully.',
             'notification': {
                 'title': 'Recommendation Updated',
-                'message': f"The agriculturist updated the treatment recommendation for report #{report_id}.",
+                'message': f"The agriculturist issued a new treatment recommendation for report #{report_id}.",
                 'tag': 'alert',
                 'type': 'unread',
                 'report_id': report_id,
+                'recipient_role': 'farmer',
             },
         }), 200
         
@@ -1413,7 +1415,18 @@ def farmer_submit_report():
                 supabase.table('report_supporting_images').insert(supporting_rows).execute()
 
         logger.info(f"Pest report logged successfully for user {user_id}. Report ID: {report_id}")
-        return jsonify({'success': True, 'message': 'Report submitted and synchronized cleanly!'})
+        return jsonify({
+            'success': True,
+            'message': 'Report submitted and synchronized cleanly!',
+            'notification': {
+                'title': 'New report submitted',
+                'message': f"Farmer {farmer_name} submitted a new report for review.",
+                'tag': 'alert',
+                'type': 'unread',
+                'report_id': report_id,
+                'recipient_role': 'agriculturist',
+            },
+        })
 
     except Exception as e:
         error_str = str(e)
