@@ -829,74 +829,8 @@
         </main>
     </div>
 
-    <!-- Modals Layout Block -->
-    <!-- ==========================================================================
-        MODAL OVERLAYS (PERFECTLY SYNCED WITH DETECT PEST VISUAL PARITY)
-        ========================================================================== -->
-    <div class="modal-screen-overlay" id="summary-modal">
-        <div class="modal-sheet-sliding-card">
-            <div class="modal-header-inline">
-                <h2>Report Summary</h2>
-                <!-- Tinanggal ang siksik na Close button dito dahil may Cancel na sa ilalim -->
-            </div>
-            
-            <div class="status-row-bar" style="margin-bottom: 4px;">Status: <span id="sum-status-text">--</span></div>
-
-            <div class="diagnostic-result-badge" id="sum-severity-banner">
-                <div class="badge-main">
-                    <h3 id="sum-pest-title">--</h3>
-                    <p>Confidence: <span id="sum-confidence">--</span></p>
-                </div>
-            </div>
-
-            <!-- Binalik ang nawawalang lagayan ng imahe katulad ng sa scan page -->
-            <div class="preview-media-frame">
-                <img id="sum-media-img" src="" alt="Coconut Leaf Scan Target Frame">
-            </div>
-            
-            <div class="image-timestamp-footer">
-                Farmer: <span id="sum-farmer-name" style="font-weight: 600;">--</span> 
-                <br> <span id="sum-location-text">--</span> <br>
-                <span id="sum-timestamp">--</span>
-            </div>
-
-            <!-- Premium Initial Suggestion Card -->
-            <div class="premium-reco-card">
-                <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Initial Recommendation</h4>
-                <ul id="sum-initial-list"></ul>
-                
-                <div class="modern-disclaimer-box">
-                    <i class="fa-solid fa-circle-info"></i>
-                    <p class="disclaimer-text-note">
-                        <strong>Initial Suggestion Only:</strong> An agricultural expert will thoroughly review and confirm the final treatment metrics.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Verified Expert Validation Card -->
-            <div class="premium-reco-card" id="sum-expert-card" style="border-left: 4px solid #164630;">
-                <h4><i class="fa-solid fa-user-shield"></i> Expert Recommendation</h4>
-                <ul id="sum-expert-list" class="expert-reco-clean-list"></ul>
-            </div>
-
-            <div class="premium-form-card">
-                <h4><i class="fa-solid fa-pen-to-square"></i> Additional Notes</h4>
-                <p id="sum-notes-text" style="font-size: 0.88rem; color: var(--text-dark); line-height: 1.5; padding: 2px 0;">--</p>
-            </div>
-
-            <!-- Minimalist Actions Console Layout (Inalis ang kalituhang icons sa secondary rows) -->
-            <div class="control-action-bar">
-                <button class="btn-control submit-primary" id="summary-followup-button" onclick="transitionToFollowUp()">
-                    <i class="fa-solid fa-rotate"></i> Update Status
-                </button>
-                <div class="secondary-actions-row">
-                    <button class="btn-control cancel-secondary" onclick="closeAllModals()">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Shared report summary modal reused across the app -->
+    {% include 'components/report_modal.html' %}
 
     <div class="modal-screen-overlay" id="followup-modal">
         <div class="modal-sheet-sliding-card">
@@ -1236,87 +1170,31 @@
 
             const targetRecord = reports.find(item => String(item.id) === String(reportIdToOpen));
             if (targetRecord) {
-                openReportSummary(targetRecord, { viewOnly: openMode === "view" });
+                openReportSummary(targetRecord);
             }
-        }
-
-        function resolveReportImageUrl(imageUrl) {
-            if (!imageUrl) return "";
-            const resolved = String(imageUrl).trim();
-            if (!resolved) return "";
-            if (resolved.startsWith("http://") || resolved.startsWith("https://") || resolved.startsWith("data:") || resolved.startsWith("blob:")) {
-                return resolved;
-            }
-            return `https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/${resolved.replace(/^\/+/, "")}`;
         }
 
         function openReportSummary(record, options = {}) {
             selectedReportRecord = record;
-            const viewOnly = Boolean(options.viewOnly);
-
-            document.getElementById('sum-pest-title').textContent = record.pest;
-            document.getElementById('sum-timestamp').textContent = record.timestamp;
-            document.getElementById('sum-confidence').textContent = record.confidence || "90%";
-            document.getElementById('sum-notes-text').textContent = record.notes || "No notes logged.";
-            document.getElementById('sum-farmer-name').textContent = record.farmer || "Farmer";
-            document.getElementById('sum-location-text').textContent = record.full_location || "No location logged";
-            
-            const imgElement = document.getElementById('sum-media-img');
-            imgElement.src = resolveReportImageUrl(record.img || record.image_url) || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
-
-            const statusTarget = document.getElementById('sum-status-text');
-            statusTarget.textContent = record.status;
-            statusTarget.style.color = (record.status === "Recommendation Issued") ? "#059669" : "#d97706";
-
-            const severityBanner = document.getElementById("sum-severity-banner");
-            severityBanner.style.backgroundColor = (record.damage === "High") ? "#b91c1c" : "#528265";
-
-            // Initial Recommendations Loop
-            const initialListElement = document.getElementById('sum-initial-list');
-            initialListElement.innerHTML = "";
-            if (record.initial_recommendations && record.initial_recommendations.length > 0) {
-                record.initial_recommendations.forEach(rec => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${rec}</span>`;
-                    initialListElement.appendChild(li);
-                });
-            } else {
-                initialListElement.innerHTML = `<li><i class="fa-solid fa-circle-check"></i> <span>Clean surroundings and verify leaf node structure tracks.</span></li>`;
-            }
-
-            // Expert Recommendations Loop
-            const expertListElement = document.getElementById('sum-expert-list');
-            const expertCardBlock = document.getElementById('sum-expert-card');
-            expertListElement.innerHTML = "";
-
-            if (record.status === "Recommendation Issued" && record.expert_recommendations) {
-                expertCardBlock.style.display = "flex";
-                record.expert_recommendations.forEach(rec => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${rec}</span>`;
-                    expertListElement.appendChild(li);
-                });
-            } else {
-                expertCardBlock.style.display = "flex";
-                expertListElement.innerHTML = `<li><i class="fa-solid fa-circle-info" style="color: #d97706;"></i> <span><span style='color:var(--text-muted); font-style:italic;'>Awaiting verified expert recommendation check-in data response...</span></span></li>`;
-            }
-
-            const followUpButton = document.getElementById('summary-followup-button');
-            if (followUpButton) {
-                followUpButton.style.display = viewOnly ? 'none' : 'flex';
-            }
-
-            document.getElementById('summary-modal').classList.add('open-modal');
+            openReportModal({
+                ...record,
+                mode: 'farmer',
+                primary_image: record.primary_image || record.img || record.image_url,
+                additional_images: record.additional_images || record.supporting_images || [],
+                notes: record.notes || record.farmer_notes || '',
+            }, 'farmer');
         }
 
         function transitionToFollowUp() {
             if(!selectedReportRecord) return;
-            document.getElementById('summary-modal').classList.remove('open-modal');
+            const reportSnapshot = { ...selectedReportRecord };
+            closeReportModal();
             
-            document.getElementById('fup-label-title').textContent = selectedReportRecord.pest;
-            document.getElementById('fup-conf-span').textContent = selectedReportRecord.confidence || "90%";
-            document.getElementById('fup-notes-fallback').textContent = selectedReportRecord.notes || "No notes logged.";
-            document.getElementById('fup-mini-img').src = document.getElementById('sum-media-img').src;
+            document.getElementById('fup-label-title').textContent = reportSnapshot.pest;
+            document.getElementById('fup-conf-span').textContent = reportSnapshot.confidence || "--";
+            document.getElementById('fup-damage-span').textContent = reportSnapshot.damage || "Moderate";
+            document.getElementById('fup-notes-fallback').textContent = reportSnapshot.notes || "No notes logged.";
+            document.getElementById('fup-mini-img').src = reportSnapshot.primary_image || reportSnapshot.img || reportSnapshot.image_url || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
             document.getElementById('fup-input-text').value = "";
 
             document.getElementById('followup-modal').classList.add('open-modal');
@@ -1324,12 +1202,13 @@
 
         function backToSummary() {
             document.getElementById('followup-modal').classList.remove('open-modal');
-            document.getElementById('summary-modal').classList.add('open-modal');
+            if (selectedReportRecord) {
+                openReportSummary(selectedReportRecord);
+            }
         }
 
         function closeAllModals() {
-            document.getElementById('summary-modal').classList.remove('open-modal');
-            document.getElementById('followup-modal').classList.remove('open-modal');
+            closeReportModal();
             selectedReportRecord = null;
         }
 
@@ -1382,5 +1261,6 @@
             }
         }
     </script>
+    <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
 </body>
 </html>

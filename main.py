@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 from datetime import datetime, UTC
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 import base64
@@ -27,6 +28,8 @@ from app.validators import (
 from app.password_utils import hash_password, verify_password
 from app.report_storage import (
     build_report_payload,
+    format_report_date,
+    format_report_timestamp,
     is_pending_report_status,
     is_reviewed_report_status,
     normalize_report_status,
@@ -489,6 +492,182 @@ def calculate_environmental_risk(temp, humidity, rainfall):
             "text": "<strong>Low Risk</strong>: Current climate conditions are within baseline stability parameters for pest development."
         }
 
+
+def _format_report_confidence(value):
+    if value is None:
+        return "--"
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return "--"
+        if stripped.endswith("%"):
+            return stripped
+        try:
+            numeric_value = float(stripped)
+        except ValueError:
+            return stripped
+    else:
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return str(value)
+
+    if numeric_value <= 1:
+        numeric_value *= 100
+
+    return f"{round(numeric_value)}%"
+
+
+def _normalize_string_list(value):
+    """Normalize recommendations: parse JSON strings, clean list items"""
+    if isinstance(value, str):
+        # Try to parse as JSON first (stored as string in database)
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, list):
+                return [str(item).strip() for item in parsed if str(item).strip()]
+        except (json.JSONDecodeError, TypeError):
+            pass
+        # If not JSON, treat as single string
+        cleaned = value.strip()
+        return [cleaned] if cleaned else []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return []
+
+
+def _format_report_location(item):
+    latitude = item.get("latitude")
+    longitude = item.get("longitude")
+
+    coordinate_label = ""
+    try:
+        if latitude is not None and longitude is not None:
+            coordinate_label = f"{float(latitude):.4f}, {float(longitude):.4f}"
+    except (TypeError, ValueError):
+        coordinate_label = ""
+
+    full_location = ", ".join(
+        filter(
+            None,
+            [item.get("barangay"), item.get("municipality"), item.get("province")],
+        )
+    )
+
+    return full_location or coordinate_label or "No location logged"
+
+
+def _fetch_report_supporting_images(report_ids):
+    report_ids = [str(report_id) for report_id in report_ids if report_id is not None]
+    if not report_ids:
+        return {}
+
+    try:
+        response = (
+            supabase.table("report_supporting_images")
+            .select("report_id, image_url")
+            .in_("report_id", report_ids)
+            .order("uploaded_at", desc=False)
+            .execute()
+        )
+    except Exception as error:
+        logger.warning(f"Unable to load supporting images: {str(error)}")
+        return {}
+
+    grouped_images = {}
+    for row in getattr(response, "data", None) or []:
+        report_id = str(row.get("report_id") or "").strip()
+        if not report_id:
+            continue
+        grouped_images.setdefault(report_id, []).append(resolve_report_image_url(row.get("image_url") or ""))
+
+    return grouped_images
+
+
+def _fetch_weather_snapshot(latitude, longitude):
+    try:
+        if latitude is None or longitude is None:
+            raise ValueError("Missing coordinates")
+
+        lat_value = float(latitude)
+        lng_value = float(longitude)
+        weather_url = (
+            "https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat_value}&longitude={lng_value}"
+            "&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m"
+        )
+        response = requests.get(weather_url, timeout=4)
+        if response.status_code != 200:
+            raise RuntimeError(f"Weather service returned {response.status_code}")
+
+        current_data = response.json().get("current", {})
+        temperature = current_data.get("temperature_2m")
+        humidity = current_data.get("relative_humidity_2m")
+        rainfall = current_data.get("precipitation", 0.0)
+        wind = current_data.get("wind_speed_10m")
+
+        return {
+            "location": f"{lat_value:.4f}, {lng_value:.4f}",
+            "temp": round(temperature) if temperature is not None else "--",
+            "humidity": round(humidity) if humidity is not None else "--",
+            "rainfall": rainfall if rainfall is not None else "--",
+            "wind": round(wind) if wind is not None else "--",
+            "is_down": False,
+        }
+    except Exception as error:
+        logger.warning(f"Weather snapshot unavailable: {str(error)}")
+        return {
+            "location": "Weather unavailable",
+            "temp": "--",
+            "humidity": "--",
+            "rainfall": "--",
+            "wind": "--",
+            "is_down": True,
+        }
+
+
+def _build_report_modal_payload(item, *, supporting_images=None, weather=None, default_status="Pending"):
+    if supporting_images is None:
+        supporting_images = []
+    if weather is None:
+        weather = {
+            "location": "Weather unavailable",
+            "temp": "--",
+            "humidity": "--",
+            "rainfall": "--",
+            "wind": "--",
+            "is_down": True,
+        }
+
+    report_id = item.get("id")
+    raw_initial_recommendations = item.get("initial_recommendations") or []
+    raw_expert_recommendations = item.get("expert_recommendations") or []
+
+    return {
+        "id": report_id,
+        "pest": item.get("pest_type") or item.get("pest") or "Unknown Pest",
+        "confidence": _format_report_confidence(item.get("confidence")),
+        "status": normalize_report_status(item.get("status"), default=default_status),
+        "timestamp": format_report_timestamp(item.get("created_at") or item.get("submitted_at") or item.get("photo_taken_at")),
+        "date": format_report_date(item.get("created_at") or item.get("submitted_at") or item.get("photo_taken_at")),
+        "farmer": item.get("farmer_name") or item.get("farmer") or "Farmer",
+        "notes": item.get("field_notes") or item.get("notes") or item.get("farmer_notes") or "No notes logged.",
+        "location_text": _format_report_location(item),
+        "gps": {
+            "latitude": item.get("latitude"),
+            "longitude": item.get("longitude"),
+            "accuracy": item.get("gps_accuracy") or "",
+            "source": item.get("location_source") or "",
+        },
+        "primary_image": resolve_report_image_url(item.get("image_url") or item.get("img") or ""),
+        "additional_images": [img for img in supporting_images if img],
+        "initial_recommendations": _normalize_string_list(raw_initial_recommendations),
+        "expert_recommendations": _normalize_string_list(raw_expert_recommendations),
+        "weather": weather,
+        "weather_status": "down" if weather.get("is_down") else "ready",
+    }
+
 # Farmer
 @app.route('/farmer/dashboard')
 def farmer_dashboard():
@@ -571,11 +750,7 @@ def farmer_scan():
         recent_reports = []
         for item in getattr(reports_response, 'data', []) or []:
             created_raw = item.get('submitted_at') or item.get('created_at') or ''
-            try:
-                created_dt = datetime.fromisoformat(created_raw.replace('Z', '+00:00')) if created_raw else None
-                created_label = created_dt.strftime('%b %d, %Y • %I:%M %p') if created_dt else 'Timestamp unavailable'
-            except Exception:
-                created_label = created_raw.replace('T', ' ').replace('Z', '')[:19] if created_raw else 'Timestamp unavailable'
+            created_label = format_report_timestamp(created_raw)
 
             recent_reports.append({
                 'id': item.get('id'),
@@ -696,43 +871,26 @@ def farmer_reports():
 
     try:
         reports_response = supabase.table("reports").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
-        for item in getattr(reports_response, "data", []) or []:
-            created_raw = item.get("created_at") or ""
-            try:
-                created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00")) if created_raw else None
-                created_label = created_dt.strftime("%b %d, %Y") if created_dt else "No date"
-                created_value = created_dt.strftime("%Y-%m-%d") if created_dt else ""
-            except Exception:
-                created_label = created_raw.split("T")[0] if created_raw else "No date"
-                created_value = created_label
+        report_rows = getattr(reports_response, "data", []) or []
+        logger.info(f"[FARMER_REPORTS] User {user_id}: Query returned {len(report_rows)} reports")
+        for idx, r in enumerate(report_rows[:3]):
+            logger.info(f"[FARMER_REPORTS]   [{idx}] ID={r.get('id')}, user_id={r.get('user_id')}, pest={r.get('pest_type')}")
+        supporting_map = _fetch_report_supporting_images([item.get("id") for item in report_rows])
 
-            # Get recommendations from database or use defaults
-            initial_recommendations = item.get("initial_recommendations") or []
-            if not isinstance(initial_recommendations, list):
-                initial_recommendations = []
-            
-            if not initial_recommendations:
-                # Fallback to default recommendations based on pest type
-                pest_type = item.get("pest_type") or "Unknown Pest"
-                severity = "Moderate"
-                from app.recommendations import recommend_actions
-                rec_data = recommend_actions(pest_type, severity)
-                initial_recommendations = rec_data.get("recommendation", [])
+        for item in report_rows:
+            payload = _build_report_modal_payload(
+                item,
+                supporting_images=supporting_map.get(str(item.get("id")), []),
+                weather=_fetch_weather_snapshot(item.get("latitude"), item.get("longitude")),
+                default_status="Pending",
+            )
 
             reports_data.append({
-                "id": item.get("id"),
-                "pest": item.get("pest_type") or "Unknown Pest",
-                "timestamp": created_label,
-                "date": created_value,
-                "status": normalize_report_status(item.get("status"), default="Pending"),
-                "confidence": item.get("confidence") or "90%",
-                "damage": "Moderate",
-                "notes": item.get("field_notes") or "No notes logged.",
-                "img": resolve_report_image_url(item.get("image_url") or ""),
-                "farmer": item.get("farmer_name") or "Farmer",
-                "full_location": ", ".join(filter(None, [item.get("barangay"), item.get("municipality"), item.get("province")])) or "No location logged",
-                "initial_recommendations": initial_recommendations,
-                "expert_recommendations": item.get("expert_recommendations") or []
+                **payload,
+                "img": payload["primary_image"],
+                "full_location": payload["location_text"],
+                "timestamp": payload["timestamp"],
+                "date": payload["date"],
             })
     except Exception as e:
         logger.warning(f"Unable to load reports data for reports page: {str(e)}")
@@ -828,6 +986,19 @@ def agriculturist_dashboard():
         logger.error(f"Agriculturist dashboard routing exception: {str(e)}")
         return redirect(url_for('logout'))
 
+@app.route('/debug/reports')
+def debug_reports():
+    """Debug endpoint to see all reports in database"""
+    try:
+        reports_response = supabase.table("reports").select("*").order("created_at", desc=True).limit(20).execute()
+        reports = reports_response.data or []
+        return jsonify({
+            "total": len(reports),
+            "reports": [{"id": r.get("id"), "pest_type": r.get("pest_type"), "status": r.get("status"), "created_at": r.get("created_at")} for r in reports]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/agriculturist/pending')
 def agriculturist_pending():
     """Fetches reports with 'Pending' status from Supabase and renders the queue."""
@@ -850,39 +1021,35 @@ def agriculturist_pending():
             .execute()
             
         raw_reports = reports_response.data or []
+        logger.info(f"[PENDING] Fetched {len(raw_reports)} total reports from database")
+        for r in raw_reports[:3]:  # Log first 3 reports
+            logger.info(f"[PENDING] Report: id={r.get('id')}, status={r.get('status')}, pest={r.get('pest_type')}")
+        
+        supporting_map = _fetch_report_supporting_images([item.get("id") for item in raw_reports])
         pending_reports_list = []
         
         for item in raw_reports:
-            if not is_pending_report_status(item.get("status")):
+            status = item.get("status")
+            is_pending = is_pending_report_status(status)
+            if not is_pending:
+                logger.debug(f"[PENDING] Skipping report {item.get('id')}: status={status} (not pending)")
                 continue
-            created_raw = item.get("created_at") or ""
-            try:
-                created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00")) if created_raw else None
-                created_label = created_dt.strftime("%b %d, %Y • %I:%M %p") if created_dt else "No date"
-                created_date_only = created_dt.strftime("%Y-%m-%d") if created_dt else ""
-            except Exception:
-                created_date_only = created_raw.split("T")[0] if created_raw else ""
-                created_label = created_date_only
+            payload = _build_report_modal_payload(
+                item,
+                supporting_images=supporting_map.get(str(item.get("id")), []),
+                weather=_fetch_weather_snapshot(item.get("latitude"), item.get("longitude")),
+                default_status="Pending",
+            )
 
-            # Process geographic tracking constraints
-            loc_summary = item.get("barangay") or "Unknown Location"
-            full_loc = ", ".join(filter(None, [item.get("barangay"), item.get("municipality"), item.get("province")]))
-            
             pending_reports_list.append({
-                "id": item.get("id"),
-                "date": created_date_only,
-                "timestamp": created_label,
-                "location": loc_summary,
-                "full_location": full_loc or "No location logged",
-                "farmer": item.get("farmer_name") or "Unknown Farmer",
-                "pest": item.get("pest_type") or "Unknown Pest",
-                "severity": "Moderate",
-                "status": normalize_report_status(item.get("status"), default="Pending"),
-                "confidence": f"{int(float(item.get('confidence', 0)))}%" if item.get('confidence') else "90%",
-                "farmer_notes": item.get("field_notes") or "No extra notes logged by the farmer.",
-                "img": resolve_report_image_url(item.get("image_url") or ""),
-                "initial_recommendations": item.get("initial_recommendations") or []
+                **payload,
+                "location": payload["location_text"],
+                "full_location": payload["location_text"],
+                "farmer_notes": payload["notes"],
+                "img": payload["primary_image"],
             })
+        
+        logger.info(f"[PENDING] Returning {len(pending_reports_list)} pending reports to template")
             
         return render_template(
             'agriculturist_pending_reports.html', 
@@ -917,43 +1084,26 @@ def agriculturist_reviewed():
             .execute()
             
         raw_reports = reports_response.data or []
+        supporting_map = _fetch_report_supporting_images([item.get("id") for item in raw_reports])
         reviewed_reports_list = []
         
         for item in raw_reports:
             if not is_reviewed_report_status(item.get("status")):
                 continue
-            created_raw = item.get("created_at") or ""
-            try:
-                created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00")) if created_raw else None
-                created_label = created_dt.strftime("%b %d, %Y • %I:%M %p") if created_dt else "No date"
-                created_date_only = created_dt.strftime("%Y-%m-%d") if created_dt else ""
-            except Exception:
-                created_date_only = created_raw.split("T")[0] if created_raw else ""
-                created_label = created_date_only
+            payload = _build_report_modal_payload(
+                item,
+                supporting_images=supporting_map.get(str(item.get("id")), []),
+                weather=_fetch_weather_snapshot(item.get("latitude"), item.get("longitude")),
+                default_status="Recommendation Issued",
+            )
 
-            # Process geographic tracking constraints
-            loc_summary = item.get("barangay") or "Unknown Location"
-            full_loc = ", ".join(filter(None, [item.get("barangay"), item.get("municipality"), item.get("province")]))
-            
-            # Extract the expert recommendation note (assuming single string inside array matrix or raw fallback)
-            expert_recs = item.get("expert_recommendations") or []
-            expert_note = expert_recs[0] if isinstance(expert_recs, list) and len(expert_recs) > 0 else "No technical recommendations filed."
-            
             reviewed_reports_list.append({
-                "id": item.get("id"),
-                "date": created_date_only,
-                "timestamp": created_label,
-                "location": loc_summary,
-                "full_location": full_loc or "No location logged",
-                "farmer": item.get("farmer_name") or "Unknown Farmer",
-                "pest": item.get("pest_type") or "Unknown Pest",
-                "severity": "Moderate",
-                "status": normalize_report_status(item.get("status"), default="Recommendation Issued"),
-                "confidence": f"{int(float(item.get('confidence', 0)))}%" if item.get('confidence') else "90%",
-                "farmer_notes": item.get("field_notes") or "No extra notes logged by the farmer.",
-                "img": resolve_report_image_url(item.get("image_url") or ""),
-                "initial_recommendations": item.get("initial_recommendations") or [],
-                "expert_recommendation": expert_note
+                **payload,
+                "location": payload["location_text"],
+                "full_location": payload["location_text"],
+                "farmer_notes": payload["notes"],
+                "img": payload["primary_image"],
+                "expert_recommendation": payload["expert_recommendations"] or ["No technical recommendations filed."],
             })
             
         return render_template(

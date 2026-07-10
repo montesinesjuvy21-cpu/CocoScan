@@ -997,12 +997,23 @@
     }
 
      function initCharts() {
-        const chartPayload = {{ chart_data | tojson | safe }};
+        const chartPayload = (function() {
+            const rawChartData = '{{ chart_data | tojson | safe }}';
+            if (!rawChartData || rawChartData === 'null') {
+                return {};
+            }
+            try {
+                return JSON.parse(rawChartData) || {};
+            } catch (err) {
+                console.error('Invalid chart_data JSON:', err);
+                return {};
+            }
+        })();
         const trendEl = document.getElementById('trendChart');
         if (trendEl) {
             const ctxTrend = trendEl.getContext('2d');
-            const trendLabels = Array.isArray(chartPayload?.trend_labels) && chartPayload.trend_labels.length ? chartPayload.trend_labels : ['No data'];
-            const trendDatasets = Array.isArray(chartPayload?.trend_datasets) && chartPayload.trend_datasets.length ? chartPayload.trend_datasets : [{
+            const trendLabels = chartPayload && Array.isArray(chartPayload.trend_labels) && chartPayload.trend_labels.length ? chartPayload.trend_labels : ['No data'];
+            const trendDatasets = chartPayload && Array.isArray(chartPayload.trend_datasets) && chartPayload.trend_datasets.length ? chartPayload.trend_datasets : [{
                 label: 'No reports yet',
                 data: [0],
                 borderColor: '#94a3b8',
@@ -1068,8 +1079,8 @@
         const distEl = document.getElementById('distributionChart');
         if (distEl) {
             const ctxDist = distEl.getContext('2d');
-            const distributionLabels = Array.isArray(chartPayload?.distribution_labels) && chartPayload.distribution_labels.length ? chartPayload.distribution_labels : ['No reports yet'];
-            const distributionData = Array.isArray(chartPayload?.distribution_data) && chartPayload.distribution_data.length ? chartPayload.distribution_data : [0];
+            const distributionLabels = chartPayload && Array.isArray(chartPayload.distribution_labels) && chartPayload.distribution_labels.length ? chartPayload.distribution_labels : ['No reports yet'];
+            const distributionData = chartPayload && Array.isArray(chartPayload.distribution_data) && chartPayload.distribution_data.length ? chartPayload.distribution_data : [0];
             const distributionColors = distributionLabels.map((_, index) => ['#164630', '#d97706', '#0f766e', '#3b82f6', '#f59e0b'][index % 5]);
             new Chart(ctxDist, {
                 type: 'doughnut',

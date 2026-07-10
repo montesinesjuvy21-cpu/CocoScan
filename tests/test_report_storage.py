@@ -2,6 +2,8 @@ import unittest
 
 from app.report_storage import (
     build_report_payload,
+    format_report_date,
+    format_report_timestamp,
     is_pending_report_status,
     is_reviewed_report_status,
     normalize_report_status,
@@ -54,6 +56,11 @@ class ReportStorageTests(unittest.TestCase):
         self.assertEqual(resolve_report_image_url("report_media/sample.jpg"), f"{base_url}report_media/sample.jpg")
         self.assertEqual(resolve_report_image_url(f"{base_url}report_media/sample.jpg"), f"{base_url}report_media/sample.jpg")
         self.assertEqual(resolve_report_image_url("https://example.com/image.jpg"), "https://example.com/image.jpg")
+
+    def test_format_report_timestamp_converts_utc_to_manila_time(self):
+        utc_value = "2026-07-08T00:30:00+00:00"
+        self.assertEqual(format_report_timestamp(utc_value), "Jul 08, 2026 • 08:30 AM")
+        self.assertEqual(format_report_date(utc_value), "2026-07-08")
 
 
 if __name__ == "__main__":

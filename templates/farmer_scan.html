@@ -973,80 +973,7 @@
             </div>
 
             <div id="step-results-view" class="workflow-step-view">
-                <header class="section-title-wrap">
-                    <div>
-                        <h1>Detected Pest</h1>
-                        <p style="font-size: 0.82rem; margin-top: 2px;">Status: <span id="res-status-label" style="color: var(--text-dark); font-weight: 500;">Processing</span></p>
-                    </div>
-                </header>
-
-                <div class="diagnostic-result-badge" id="result-badge-color">
-                    <div class="badge-main">
-                        <h3 id="res-pest-title">Rhinoceros Beetle</h3>
-                        <p>Confidence: <span id="res-confidence">87%</span></p>
-                    </div>
-                </div>
-
-                <div class="preview-media-frame">
-                    <img id="res-img-placeholder" src="" alt="Coconut Leaf Scan Target Frame">
-                </div>
-                
-                <div class="image-timestamp-footer">
-                    Farmer: <span style="font-weight: 600;">{{ user_name }}</span> 
-                    <br> <span id="res-location">Location from GPS</span> <br>
-                    <span id="res-timestamp">Awaiting scan time</span>
-                </div>
-
-        
-                <div class="premium-reco-card">
-                <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Initial Recommendation</h4>
-                <ul id="res-recommendations-list">
-                    <!-- Ang mga LI ay dadaan sa JavaScript na may kasamang icon wrapper -->
-                </ul>
-                
-                <!-- Modern Callout Notice Box Design -->
-                <div class="modern-disclaimer-box">
-                    <i class="fa-solid fa-circle-info"></i>
-                    <p class="disclaimer-text-note">
-                        <strong>Initial Suggestion Only:</strong> An agricultural expert will thoroughly review and confirm the final treatment metrics.
-                    </p>
-                </div>
-            </div>
-
-                <!-- Card Structured Form Field (Additional Notes) -->
-                <div class="premium-form-card">
-                    <h4><i class="fa-solid fa-pen-to-square"></i> Additional Notes</h4>
-                    <textarea class="notes-input-box" id="field-notes-capture" placeholder="Write your additional notes here..."></textarea>
-                </div>
-
-                <!-- Card Structured Form Field (Supporting Photos Drag/Upload Zone) -->
-                <div class="premium-form-card">
-                    <h4><i class="fa-solid fa-images"></i> Supporting Photos (optional)</h4>
-                    <div class="modern-micro-upload-zone" onclick="triggerSupportingPhotoUpload()">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                        <span>Add Extra Field Images</span>
-                        <p>Tap to open your phone gallery directory</p>
-                    </div>
-                    <input type="file" id="supporting-photos-input" accept="image/*" multiple onchange="handleSupportingImages(event)">
-                    <div class="supporting-preview-grid" id="supporting-preview-grid"></div>
-                </div>
-
-                
-                <!-- Balanced Control Setup Box Consoles -->
-                    <div class="control-action-bar">
-                        <div class="main-actions-row">
-                            <button class="btn-control draft-secondary" onclick="saveDraftToIndexedDB()">
-                                <i class="fa-solid fa-bookmark"></i> Save Draft
-                            </button>
-                            <button class="btn-control submit-primary" onclick="submitReportPayload()">
-                                <i class="fa-solid fa-paper-plane"></i> Submit Report
-                            </button>
-                        </div>
-                        <button class="btn-control cancel-secondary" onclick="abortReportWorkflow()">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
+                {% include 'components/report_modal.html' %}
             </div>
         </main>
     </div>
@@ -1075,6 +1002,21 @@
             "Rhinoceros Beetle": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", 
             "Brontispa": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
         };
+
+        function formatTimestampInManila(value) {
+            if (!value) return 'Timestamp unavailable';
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) return String(value);
+            return new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Manila',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).format(parsed);
+        }
 
         function toggleSidebarMenu() {
             const sidebar = document.getElementById('sidebar');
@@ -1234,44 +1176,30 @@
                 
                 const activeDate = new Date();
                 const captureTimestamp = globalPrimaryGPS?.timestamp ? new Date(globalPrimaryGPS.timestamp) : activeDate;
-                const formattedTimestamp = isNaN(captureTimestamp.getTime())
-                    ? activeDate.toISOString().replace('T', ' ').substring(0, 19)
-                    : captureTimestamp.toISOString().replace('T', ' ').substring(0, 19);
+                const formattedTimestamp = formatTimestampInManila(isNaN(captureTimestamp.getTime()) ? activeDate : captureTimestamp);
                 
-                document.getElementById('res-pest-title').textContent = data.pest;
-                document.getElementById('res-confidence').textContent = data.pest_confidence + '%';
-                document.getElementById('res-timestamp').textContent = formattedTimestamp;
-                if (globalPrimaryGPS) {
-                    document.getElementById('res-location').textContent = `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}`;
-                } else {
-                    document.getElementById('res-location').textContent = 'Location unavailable';
-                }
-                
-                const badgeElement = document.getElementById('result-badge-color');
-                if (data.pest === "Brontispa") {
-                    badgeElement.style.backgroundColor = "#528265"; 
-                } else if (data.pest === "Healthy Coconut Leaf") {
-                    badgeElement.style.backgroundColor = "#40916c";
-                } else {
-                    badgeElement.style.backgroundColor = "var(--badge-green-bg)";
-                }
-                
-                document.getElementById('res-img-placeholder').src = globalActiveImagePayload || defaultImages[data.pest];
-                
-                const listNode = document.getElementById('res-recommendations-list');
-                listNode.innerHTML = '';
-                if (data.recommendations && data.recommendations.length > 0) {
-                    data.recommendations.forEach(rec => {
-                        const li = document.createElement('li');
-                        li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${rec}</span>`;
-                        listNode.appendChild(li);
-                    });
-                } else {
-                    listNode.innerHTML = '<li>No specific recommendations at this time.</li>';
-                }
-                
-                window.currentPrediction = data;
-                
+                window.currentPrediction = {
+                    ...data,
+                    pest: data.pest,
+                    confidence: `${data.pest_confidence}%`,
+                    timestamp: formattedTimestamp,
+                    location_text: globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable',
+                    gps: globalPrimaryGPS ? {
+                        latitude: globalPrimaryGPS.latitude,
+                        longitude: globalPrimaryGPS.longitude,
+                        accuracy: globalPrimaryGPS.accuracy,
+                        source: 'camera_gps'
+                    } : {},
+                    notes: document.getElementById('field-notes-capture').value.trim(),
+                    primary_image: globalActiveImagePayload || defaultImages[data.pest],
+                    additional_images: supportingImages.map((file) => URL.createObjectURL(file)),
+                    initial_recommendations: Array.isArray(data.recommendations) ? data.recommendations : [],
+                    status: 'Ready to Submit'
+                };
+
+                renderSupportingPreviews();
+                openReportModal(window.currentPrediction, 'scan');
+
                 document.getElementById('step-loading-view').classList.remove('active-view');
                 document.getElementById('step-results-view').classList.add('active-view');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1295,10 +1223,8 @@
         }
 
         function commitReportPayload() {
-            const compiledPest = document.getElementById('res-pest-title').textContent;
-            const compiledConfidence = document.getElementById('res-confidence').textContent;
-            const damageElement = document.getElementById('res-damage');
-            const compiledDamage = (damageElement?.textContent || 'Moderate').trim();
+            const compiledPest = document.getElementById('report-pest-title')?.textContent || window.currentPrediction?.pest || 'Unknown Pest';
+            const compiledConfidence = document.getElementById('report-confidence')?.textContent || window.currentPrediction?.confidence || '0%';
             const additionalNotes = document.getElementById('field-notes-capture').value.trim();
             const predictionData = window.currentPrediction || {};
 
@@ -1319,11 +1245,7 @@
                 formData.append('image_url', globalActiveImagePayload);
             }
 
-            const recommendations = [];
-            const listNode = document.getElementById('res-recommendations-list');
-            listNode.querySelectorAll('li').forEach(li => {
-                recommendations.push(li.textContent);
-            });
+            const recommendations = Array.isArray(predictionData.recommendations) ? predictionData.recommendations : [];
             formData.append('recommendations', JSON.stringify(recommendations));
 
             supportingImages.forEach((file, index) => {
@@ -1363,8 +1285,8 @@
         }
 
         function saveDraftToIndexedDB(isOfflineSubmit = false) {
-            const compiledPest = document.getElementById('res-pest-title').textContent;
-            const compiledConfidence = document.getElementById('res-confidence').textContent;
+            const compiledPest = document.getElementById('report-pest-title')?.textContent || window.currentPrediction?.pest || 'Unknown Pest';
+            const compiledConfidence = document.getElementById('report-confidence')?.textContent || window.currentPrediction?.confidence || '0%';
             const additionalNotes = document.getElementById('field-notes-capture').value.trim();
 
             if (!globalActiveImagePayload || !compiledPest) {
@@ -1378,7 +1300,7 @@
                 pest: compiledPest,
                 confidence: compiledConfidence,
                 field_notes: additionalNotes,
-                recommendations: Array.from(document.querySelectorAll('#res-recommendations-list li')).map(li => li.textContent),
+                recommendations: Array.isArray(window.currentPrediction?.recommendations) ? window.currentPrediction.recommendations : [],
                 primary_image_name: globalActiveImageFile?.name || 'camera_capture.jpg',
                 primary_image_data: globalActiveImagePayload,
                 gps: globalPrimaryGPS,
@@ -1513,32 +1435,22 @@
                 return null;
             }).filter(Boolean);
 
-            document.getElementById('field-notes-capture').value = draft.field_notes || '';
-            document.getElementById('res-pest-title').textContent = draft.pest || 'Unknown Pest';
-            document.getElementById('res-confidence').textContent = draft.confidence || (draft.confidence_value ? `${draft.confidence_value}%` : '0%');
-            document.getElementById('res-img-placeholder').src = draft.primary_image_data || defaultImages[draft.pest] || defaultImages['Rhinoceros Beetle'];
-            document.getElementById('res-timestamp').textContent = draft.photo_taken_at ? new Date(draft.photo_taken_at).toISOString().replace('T', ' ').substring(0, 19) : new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-            const listNode = document.getElementById('res-recommendations-list');
-            listNode.innerHTML = '';
-            const recommendations = draft.recommendations || [];
-            if (recommendations.length > 0) {
-                recommendations.forEach(rec => {
-                    const li = document.createElement('li');
-                    li.textContent = rec;
-                    listNode.appendChild(li);
-                });
-            } else {
-                listNode.innerHTML = '<li>No specific recommendations at this time.</li>';
-            }
-
             window.currentPrediction = {
                 pest: draft.pest,
                 pest_confidence: draft.confidence_value || parseFloat((draft.confidence || '').replace('%', '')) || 0,
                 severity: 'Moderate',
-                recommendations: recommendations
+                recommendations: draft.recommendations || [],
+                confidence: draft.confidence || (draft.confidence_value ? `${draft.confidence_value}%` : '0%'),
+                timestamp: formatTimestampInManila(draft.photo_taken_at || new Date()),
+                notes: draft.field_notes || '',
+                primary_image: draft.primary_image_data || defaultImages[draft.pest] || defaultImages['Rhinoceros Beetle'],
+                gps: draft.gps || null,
+                additional_images: (draft.supporting_images || []).map((item) => item.dataUrl).filter(Boolean),
+                status: draft.status || 'Draft'
             };
 
+            document.getElementById('field-notes-capture').value = draft.field_notes || '';
+            openReportModal(window.currentPrediction, 'scan');
             renderSupportingPreviews();
             document.getElementById('step-upload-view').classList.remove('active-view');
             document.getElementById('step-results-view').classList.add('active-view');

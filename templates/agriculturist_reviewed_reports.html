@@ -624,55 +624,8 @@
         </main>
     </div>
 
-    <!-- Review System Detail Modal Component View -->
-    <div class="modal-screen-overlay" id="review-modal">
-        <div class="modal-sheet-sliding-card">
-            <div class="modal-header-inline">
-                <h2>Reviewed Report Archive</h2>
-            </div>
-            
-            <div class="status-row-bar" style="margin-bottom: 4px;">Status: <span id="modal-status-text" style="color: #164630;">Reviewed</span></div>
-
-            <div class="diagnostic-result-badge" id="modal-severity-banner">
-                <div class="badge-main">
-                    <h3 id="modal-pest-title">--</h3>
-                    <p>Confidence Match: <span id="modal-confidence">--</span></p>
-                </div>
-
-            </div>
-
-            <div class="preview-media-frame">
-                <img id="modal-target-img" src="" alt="Specimen reference view frame">
-            </div>
-
-            <div class="image-timestamp-footer">
-                Submitting Farmer: <strong id="modal-farmer-name">--</strong><br>
-                Location: <span id="modal-location-text">--</span><br>
-                Timestamp: <span id="modal-timestamp-text">--</span>
-            </div>
-
-            <div class="premium-form-card">
-                <h4><i class="fa-solid fa-message"></i> Farmer Notes</h4>
-                <p id="modal-farmer-notes" style="font-size: 0.88rem; line-height: 1.5; color: var(--text-dark);"></p>
-            </div>
-
-            <div class="premium-reco-card">
-                <h4><i class="fa-solid fa-wand-magic-sparkles"></i> AI Initial Suggestion</h4>
-                <ul id="modal-initial-list"></ul>
-            </div>
-
-            <div class="premium-form-card">
-                <h4><i class="fa-solid fa-comment-medical"></i> Issued Expert Recommendation</h4>
-                <div class="notes-display-box" id="expert-notes-display">--</div>
-            </div>
-
-            <div class="control-action-bar">
-                <button class="btn-control close-primary" onclick="closeReviewModal()">
-                    <i class="fa-solid fa-circle-xmark"></i> Close Details
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- Shared report summary modal reused across the app -->
+    {% include 'components/report_modal.html' %}
 
     <script>
         let reports = [];
@@ -817,10 +770,6 @@
             paginatedRecords.forEach(item => {
                 const card = document.createElement("div");
                 card.className = "report-row-node";
-                
-                let severityClass = "low";
-                if(item.severity === "High") severityClass = "high";
-                if(item.severity === "Moderate") severityClass = "moderate";
 
                 card.innerHTML = `
                     <div class="report-main-meta">
@@ -829,7 +778,6 @@
                         <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${item.location}</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <span class="severity-pill ${severityClass}" style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px;">${item.severity}</span>
                         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.85rem;"></i>
                     </div>`;
                 
@@ -879,42 +827,18 @@
 
         function openReviewModal(record) {
             selectedReportRecord = record;
-
-            document.getElementById('modal-pest-title').textContent = record.pest;
-            document.getElementById('modal-confidence').textContent = record.confidence || "90%";
-
-            document.getElementById('modal-farmer-name').textContent = record.farmer;
-            document.getElementById('modal-location-text').textContent = record.full_location;
-            document.getElementById('modal-timestamp-text').textContent = record.timestamp;
-            document.getElementById('modal-farmer-notes').textContent = record.farmer_notes || "No notes written.";
-            document.getElementById('expert-notes-display').textContent = record.expert_recommendation || "No technical recommendations filed.";
-            
-            document.getElementById('modal-target-img').src = resolveReportImageUrl(record.img || record.image_url) || "https://images.unsplash.com/photo-1590005354167-6da97870c913?auto=format&fit=crop&w=480&q=80";
-
-            const severityBanner = document.getElementById("modal-severity-banner");
-            if (severityBanner) {
-                severityBanner.style.backgroundColor = "var(--badge-green-bg)";
-            }
-
-            const initialList = document.getElementById('modal-initial-list');
-            if (initialList) {
-                initialList.innerHTML = "";
-                if (record.initial_recommendations && record.initial_recommendations.length > 0) {
-                    record.initial_recommendations.forEach(rec => {
-                        const li = document.createElement('li');
-                        li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${rec}</span>`;
-                        initialList.appendChild(li);
-                    });
-                } else {
-                    initialList.innerHTML = `<li><i class="fa-solid fa-circle-check"></i> <span>No initial parameters compiled by AI engine.</span></li>`;
-                }
-            }
-
-            document.getElementById('review-modal').classList.add('open-modal');
+            openReportModal({
+                ...record,
+                mode: 'agriculturist',
+                primary_image: record.primary_image || record.img || record.image_url,
+                additional_images: record.additional_images || record.supporting_images || [],
+                notes: record.farmer_notes || record.notes || '',
+                expert_recommendations: record.expert_recommendations || [record.expert_recommendation].filter(Boolean),
+            }, 'agriculturist');
         }
 
         function closeReviewModal() {
-            document.getElementById('review-modal').classList.remove('open-modal');
+            closeReportModal();
             selectedReportRecord = null;
         }
 
@@ -930,5 +854,6 @@
             }
         }
     </script>
+    <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
 </body>
 </html>
