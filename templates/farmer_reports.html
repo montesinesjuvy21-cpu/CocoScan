@@ -786,26 +786,7 @@
                     <p>Overall submitted reports</p>
                 </div>
                 
-                <div id="notification-container" style="position: relative;">
-                    <div id="bell-trigger" class="bell-notice-wrapper">
-                        <i class="fa-regular fa-bell"></i>
-                        <span id="bell-badge" style="display: none; position: absolute; top: 8px; right: 9px; width: 6px; height: 6px; background-color: #e63946; border-radius: 50%; border: 1.5px solid #ffffff;"></span>
-                    </div>
-
-                    <div id="notif-dropdown" style="display: none; position: absolute; top: 46px; right: 0; width: 320px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 1000; padding: 14px; box-sizing: border-box;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0b251a;">Notifications</h4>
-                            <button id="clear-all-btn" style="background: none; border: none; color: #ef4444; font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0;">Clear All</button>
-                        </div>
-
-                        <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.04); padding-bottom: 8px;">
-                            <button class="notif-filter active" data-filter="all" style="font-size: 0.7rem; border: none; background: #164630; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">All</button>
-                            <button class="notif-filter" data-filter="unread" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Unread</button>
-                        </div>
-
-                        <div id="notif-list-wrapper" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
-                    </div>
-                </div>
+                
             </header>
 
             <div class="search-controls-row">
@@ -900,8 +881,6 @@
             reports = [];
         }
 
-        let notifications = [];
-
         let activeSearchQuery = "";
         let activeStatusFilter = "all";
         let activeDateFilter = "";
@@ -917,111 +896,12 @@
             const fullUserName = rawName || "Farmer";
             document.getElementById("sidebar-user-display").textContent = fullUserName;
 
-            initNotificationsSystem();
             initSearchAndFilters();
             renderReportsGrid();
             openReportFromQueryParams();
         });
 
-        /* ================== NOTIFICATION OVERLAY ENGINE ================== */
-        function initNotificationsSystem() {
-            const trigger = document.getElementById("bell-trigger");
-            const dropdown = document.getElementById("notif-dropdown");
-            const badge = document.getElementById("bell-badge");
-            const wrapper = document.getElementById("notif-list-wrapper");
-            const clearBtn = document.getElementById("clear-all-btn");
-            let activeFilter = "all";
-
-            trigger.addEventListener("click", (e) => {
-                e.stopPropagation();
-                dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
-            });
-
-            document.addEventListener("click", (e) => {
-                if (!dropdown.contains(e.target) && e.target !== trigger) dropdown.style.display = "none";
-            });
-
-            function drawNotifications() {
-                wrapper.innerHTML = "";
-                const userRole = "{{ user_role }}".toLowerCase() || "farmer";
-                const displayItems = notifications
-                    .filter(item => !item.recipient_role || String(item.recipient_role || "").toLowerCase() === userRole)
-                    .map(item => ({
-                        ...item,
-                        text: item.text || item.message || item.title || "Report update",
-                        time: item.time || new Date(item.created_at || Date.now()).toLocaleString(),
-                    }));
-                const unread = displayItems.filter(n => n.type === "unread").length;
-                badge.style.display = unread > 0 ? "block" : "none";
-
-                let filtered = displayItems;
-                if (activeFilter === "unread") filtered = displayItems.filter(n => n.type === "unread");
-
-                if (filtered.length === 0) {
-                    wrapper.innerHTML = `
-                        <div style="text-align: center; padding: 30px 10px;">
-                            <i class="fa-regular fa-bell-slashed" style="font-size: 1.3rem; color: #cbd5e1; margin-bottom: 6px;"></i>
-                            <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">No notifications found.</p>
-                        </div>`;
-                    return;
-                }
-
-                filtered.forEach(item => {
-                    const node = document.createElement("div");
-                    node.className = `notif-item ${item.type === 'unread' ? 'is-unread' : ''}`;
-                    const icon = item.tag === 'alert' ? 'fa-triangle-exclamation' : 'fa-camera';
-                    const col = item.tag === 'alert' ? '#f59e0b' : '#164630';
-
-                    node.innerHTML = `
-                        <i class="fa-solid ${icon}" style="color:${col}; margin-top:2px; font-size:0.85rem;"></i>
-                        <div>
-                            <p>${item.text}</p>
-                            <span class="time">${item.time}</span>
-                        </div>`;
-                    
-                    node.addEventListener("click", () => {
-                        if (item.id) {
-                            notifications = window.cocoScanSharedNotifications?.markSharedNotificationsRead?.(item.id) || notifications.map(n => n.id === item.id ? { ...n, type: "read" } : n);
-                        } else {
-                            item.type = "read";
-                        }
-                        drawNotifications();
-                    });
-                    wrapper.appendChild(node);
-                });
-            }
-
-            document.querySelectorAll(".notif-filter").forEach(btn => {
-                btn.addEventListener("click", (e) => {
-                    document.querySelectorAll(".notif-filter").forEach(b => b.classList.remove("active"));
-                    e.target.classList.add("active");
-                    activeFilter = e.target.getAttribute("data-filter");
-                    drawNotifications();
-                });
-            });
-
-            clearBtn.addEventListener("click", () => {
-                if (notifications.length === 0) return;
-                if (confirm("Are you sure you want to delete all notifications? This action cannot be undone.")) {
-                    notifications = window.cocoScanSharedNotifications?.removeSharedNotificationsForRole?.("farmer") || [];
-                    drawNotifications();
-                }
-            });
-
-            const syncFromSharedStore = () => {
-                const storedNotifications = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
-                notifications = storedNotifications;
-                drawNotifications();
-            };
-
-            window.addEventListener("storage", (event) => {
-                if (event.key === "cocoscan_shared_notifications") {
-                    syncFromSharedStore();
-                }
-            });
-
-            syncFromSharedStore();
-        }
+        
 
         /* ================== SEARCH AND FILTERS ENGINE ================== */
         function initSearchAndFilters() {
@@ -1277,25 +1157,6 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    if (data.notification) {
-                        if (typeof window.cocoScanSharedNotifications?.addSharedNotification === 'function') {
-                            window.cocoScanSharedNotifications.addSharedNotification(data.notification);
-                        } else {
-                            const notificationList = JSON.parse(localStorage.getItem('cocoscan_shared_notifications') || '[]');
-                            notificationList.unshift({
-                                id: data.notification.id || `notify-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-                                title: data.notification.title || 'Report update',
-                                message: data.notification.message || data.notification.text || 'A report status changed.',
-                                type: data.notification.type || 'unread',
-                                tag: data.notification.tag || 'alert',
-                                created_at: data.notification.created_at || new Date().toISOString(),
-                                report_id: data.notification.report_id || null,
-                                recipient_role: data.notification.recipient_role || data.notification.role || null,
-                            });
-                            localStorage.setItem('cocoscan_shared_notifications', JSON.stringify(notificationList.slice(0, 20)));
-                            window.dispatchEvent(new Event('storage'));
-                        }
-                    }
                     alert(data.message || 'Follow-up submitted successfully.');
                     window.location.reload();
                     return;

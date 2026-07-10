@@ -82,139 +82,8 @@ supabase: Client = create_client(url, key)
 def normalize_role(value) -> str:
     return str(value or "").strip().lower()
 
-
-def normalize_notification_role(value) -> str | None:
-    normalized = normalize_role(value)
-    if normalized in {"agri_expert", "agri expert", "agriculturist", "agricultural expert", "agriculture expert"}:
-        return "agriculturist"
-    if normalized in {"farmer", "farmers", "grower", "growers"}:
-        return "farmer"
-    return normalized or None
-
-
-def format_notification_record(row=None) -> dict | None:
-    if not row:
-        return None
-
-    is_read = bool(row.get("is_read", False))
-    created_at = row.get("created_at") or datetime.now(UTC).isoformat()
-    return {
-        "id": row.get("id"),
-        "title": row.get("title") or "Report update",
-        "message": row.get("message") or row.get("title") or "A report status changed.",
-        "text": row.get("message") or row.get("title") or "A report status changed.",
-        "type": "read" if is_read else "unread",
-        "tag": row.get("tag") or "alert",
-        "created_at": created_at,
-        "time": created_at,
-        "report_id": row.get("report_id"),
-        "recipient_id": row.get("recipient_id"),
-        "recipient_role": normalize_notification_role(row.get("recipient_role")),
-        "sender_id": row.get("sender_id"),
-        "sender_role": normalize_notification_role(row.get("sender_role")),
-        "is_read": is_read,
-    }
-
-
-def create_notification_record(recipient_id, recipient_role, sender_id=None, sender_role=None, report_id=None, title="Report update", message="A report status changed.") -> dict | None:
-    if not recipient_id:
-        return None
-
-    payload = {
-        "recipient_id": recipient_id,
-        "recipient_role": normalize_notification_role(recipient_role) or "farmer",
-        "sender_id": sender_id,
-        "sender_role": normalize_notification_role(sender_role),
-        "report_id": report_id,
-        "title": title or "Report update",
-        "message": message or "A report status changed.",
-        "is_read": False,
-    }
-
-    try:
-        response = supabase.table("notifications").insert(payload).execute()
-        if getattr(response, "error", None):
-            logger.warning(f"Failed to create notification for recipient {recipient_id}: {response.error}")
-            return None
-
-        rows = getattr(response, "data", None) or []
-        if rows:
-            return format_notification_record(rows[0])
-    except Exception as error:
-        logger.warning(f"Unable to insert notification row: {str(error)}")
-
-    return None
-
-
-def create_notifications_for_recipients(recipient_ids, recipient_role, sender_id=None, sender_role=None, report_id=None, title="Report update", message="A report status changed.") -> list[dict]:
-    created = []
-    for recipient_id in recipient_ids or []:
-        row = create_notification_record(
-            recipient_id=recipient_id,
-            recipient_role=recipient_role,
-            sender_id=sender_id,
-            sender_role=sender_role,
-            report_id=report_id,
-            title=title,
-            message=message,
-        )
-        if row:
-            created.append(row)
-    return created
-
-
-def resolve_notification_recipients(recipient_role, report_id=None) -> list:
-    normalized_role = normalize_notification_role(recipient_role)
-    if not normalized_role:
-        return []
-
-    if normalized_role == "agriculturist":
-        try:
-            user_rows = supabase.table("users").select("id, role").execute()
-            rows = getattr(user_rows, "data", None) or []
-            recipient_ids = [
-                row.get("id") for row in rows
-                if normalize_notification_role(row.get("role")) == "agriculturist"
-            ]
-            return [recipient_id for recipient_id in recipient_ids if recipient_id]
-        except Exception as error:
-            logger.warning(f"Unable to resolve agriculturist recipients: {str(error)}")
-            return []
-
-    if normalized_role == "farmer" and report_id:
-        try:
-            report_rows = supabase.table("reports").select("user_id").eq("id", report_id).execute()
-            rows = getattr(report_rows, "data", None) or []
-            if rows and rows[0].get("user_id"):
-                return [rows[0].get("user_id")]
-        except Exception as error:
-            logger.warning(f"Unable to resolve farmer recipient for report {report_id}: {str(error)}")
-
-    return []
-
-
-def get_notifications_for_user(user_id=None, user_role=None) -> list[dict]:
-    active_user_id = user_id or session.get("user_id")
-    active_user_role = normalize_notification_role(user_role or session.get("user_role"))
-
-    if not active_user_id:
-        return []
-
-    try:
-        response = supabase.table("notifications").select("*").eq("recipient_id", active_user_id).order("created_at", desc=True).execute()
-        rows = getattr(response, "data", None) or []
-    except Exception as error:
-        logger.warning(f"Unable to fetch notifications for user {active_user_id}: {str(error)}")
-        return []
-
-    filtered_rows = []
-    for row in rows:
-        recipient_role = normalize_notification_role(row.get("recipient_role"))
-        if recipient_role and active_user_role and recipient_role != active_user_role:
-            continue
-        filtered_rows.append(format_notification_record(row))
-
-    return [row for row in filtered_rows if row]
+# Notifications removed: backend persistence and helper functions have been deleted.
+# If notification functionality is required again, reintroduce a lean API and helpers here.
 
 
 def normalize_submission_error(error_str: str) -> str:
@@ -552,73 +421,6 @@ def signup():
 def account_notice():
     return render_template('notice.html')
 
-
-@app.route('/notifications', methods=['GET'])
-def notifications_api_get():
-    if not session.get('user_id'):
-        return jsonify({'success': False, 'notifications': []}), 401
-
-    return jsonify({'success': True, 'notifications': get_notifications_for_user()})
-
-
-@app.route('/notifications/create', methods=['POST'])
-def notifications_api_create():
-    if not session.get('user_id'):
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 401
-
-    data = request.get_json(silent=True) or {}
-    recipient_role = normalize_notification_role(data.get('recipient_role') or data.get('role'))
-    recipient_ids = []
-    if data.get('recipient_id'):
-        recipient_ids = [data.get('recipient_id')]
-    elif recipient_role:
-        recipient_ids = resolve_notification_recipients(recipient_role, data.get('report_id'))
-
-    created = create_notifications_for_recipients(
-        recipient_ids=recipient_ids,
-        recipient_role=recipient_role,
-        sender_id=session.get('user_id'),
-        sender_role=session.get('user_role'),
-        report_id=data.get('report_id'),
-        title=data.get('title') or 'Report update',
-        message=data.get('message') or data.get('text') or 'A report status changed.',
-    )
-
-    if created:
-        return jsonify({'success': True, 'notification': created[0], 'notifications': created})
-
-    return jsonify({'success': False, 'message': 'Notification could not be created'}), 400
-
-
-@app.route('/notifications/mark-read', methods=['POST'])
-def notifications_api_mark_read():
-    if not session.get('user_id'):
-        return jsonify({'success': False, 'notifications': []}), 401
-
-    data = request.get_json(silent=True) or {}
-    notification_id = data.get('notification_id') or data.get('id')
-    if not notification_id:
-        return jsonify({'success': False, 'message': 'Missing notification reference'}), 400
-
-    try:
-        supabase.table('notifications').update({'is_read': True}).eq('id', notification_id).eq('recipient_id', session.get('user_id')).execute()
-    except Exception as error:
-        logger.warning(f"Unable to mark notification {notification_id} as read: {str(error)}")
-
-    return jsonify({'success': True, 'notifications': get_notifications_for_user()})
-
-
-@app.route('/notifications/clear', methods=['POST'])
-def notifications_api_clear():
-    if not session.get('user_id'):
-        return jsonify({'success': False, 'notifications': []}), 401
-
-    try:
-        supabase.table('notifications').delete().eq('recipient_id', session.get('user_id')).execute()
-    except Exception as error:
-        logger.warning(f"Unable to clear notifications for user {session.get('user_id')}: {str(error)}")
-
-    return jsonify({'success': True, 'notifications': []})
 
 
 @app.route('/dashboard')
@@ -1418,27 +1220,9 @@ def farmer_follow_up_report():
             return jsonify({'success': False, 'message': 'The report could not be reopened for review.'}), 500
 
         logger.info(f"Report ID #{report_id} reopened for follow-up review by farmer #{user_id}.")
-        created_notifications = create_notifications_for_recipients(
-            recipient_ids=resolve_notification_recipients('agriculturist', report_id),
-            recipient_role='agriculturist',
-            sender_id=user_id,
-            sender_role=user_role,
-            report_id=report_id,
-            title='Report status updated',
-            message=f"Farmer #{user_id} updated the status for report #{report_id}.",
-        )
-        notification_payload = created_notifications[0] if created_notifications else {
-            'title': 'Report status updated',
-            'message': f"Farmer #{user_id} updated the status for report #{report_id}.",
-            'tag': 'alert',
-            'type': 'unread',
-            'report_id': report_id,
-            'recipient_role': 'agriculturist',
-        }
         return jsonify({
             'success': True,
             'message': 'Your update has been submitted and the report has been sent back for review.',
-            'notification': notification_payload,
         })
 
     except Exception as e:
@@ -1479,27 +1263,9 @@ def agriculturist_approve_report():
             return jsonify({'success': False, 'message': 'Target record failed to save update rows'}), 500
             
         logger.info(f"Report ID #{report_id} successfully processed and signed off by expert #{user_id}.")
-        created_notifications = create_notifications_for_recipients(
-            recipient_ids=resolve_notification_recipients('farmer', report_id),
-            recipient_role='farmer',
-            sender_id=user_id,
-            sender_role=user_role,
-            report_id=report_id,
-            title='New Recommendation Issued',
-            message=f"The agriculturist issued a new treatment recommendation for report #{report_id}.",
-        )
-        notification_payload = created_notifications[0] if created_notifications else {
-            'title': 'New Recommendation Issued',
-            'message': f"The agriculturist issued a new treatment recommendation for report #{report_id}.",
-            'tag': 'alert',
-            'type': 'unread',
-            'report_id': report_id,
-            'recipient_role': 'farmer',
-        }
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': 'Expert diagnostic treatment recommendation logged successfully.',
-            'notification': notification_payload,
         }), 200
         
     except Exception as e:
@@ -1638,27 +1404,9 @@ def farmer_submit_report():
                 supabase.table('report_supporting_images').insert(supporting_rows).execute()
 
         logger.info(f"Pest report logged successfully for user {user_id}. Report ID: {report_id}")
-        created_notifications = create_notifications_for_recipients(
-            recipient_ids=resolve_notification_recipients('agriculturist', report_id),
-            recipient_role='agriculturist',
-            sender_id=user_id,
-            sender_role=user_role,
-            report_id=report_id,
-            title='New report submitted',
-            message=f"Farmer {farmer_name} submitted a new report for review.",
-        )
-        notification_payload = created_notifications[0] if created_notifications else {
-            'title': 'New report submitted',
-            'message': f"Farmer {farmer_name} submitted a new report for review.",
-            'tag': 'alert',
-            'type': 'unread',
-            'report_id': report_id,
-            'recipient_role': 'agriculturist',
-        }
         return jsonify({
             'success': True,
             'message': 'Report submitted and synchronized cleanly!',
-            'notification': notification_payload,
         })
 
     except Exception as e:

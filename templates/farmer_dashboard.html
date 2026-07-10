@@ -502,45 +502,6 @@
         font-weight: 700;
     }
 
-    .notif-item {
-        display: flex;
-        gap: 10px;
-        padding: 10px;
-        border-radius: 8px;
-        background: #f8fafc;
-        border: 1px solid rgba(0,0,0,0.02);
-        transition: background 0.15s ease;
-    }
-    
-    .notif-item.is-unread {
-        background: rgba(22, 70, 48, 0.04);
-        border-left: 3px solid #164630;
-    }
-    
-    .notif-item p {
-        margin: 0;
-        font-size: 0.78rem;
-        line-height: 1.3;
-        color: #334155;
-    }
-    
-    .notif-item span.time {
-        font-size: 0.65rem;
-        color: #94a3b8;
-        display: block;
-        margin-top: 4px;
-    }
-    
-    .notif-filter {
-        transition: all 0.2s ease;
-    }
-    
-    .notif-filter.active {
-        background: #164630 !important;
-        color: #ffffff !important;
-        border-color: #164630 !important;
-    }
-
     /* ==========================================================================
        10. RESPONSIVE MEDIA QUERIES
        ========================================================================== */
@@ -566,12 +527,6 @@
             top: 72px;
         }
 
-        /* Pinalaki ang Notification Icon wrapper at Dashboard text base sa request mo */
-        .notif-item {
-            padding: 14px;
-            gap: 14px;
-        }
-        
         /* Kung gumagamit ka ng klase o element para sa bell icon container */
         .notif-icon-wrapper, .mobile-header .notif-trigger-btn {
             font-size: 1.4rem; 
@@ -715,27 +670,7 @@
                     <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview of reported and detected pests</p>
                 </div>
 
-                <div id="notification-container" style="position: relative;">
-                    <div id="bell-trigger" class="bell-notice-wrapper" style="position: relative; margin-top: 6px; width: 38px; height: 38px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; color: #0b251a; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                        <i class="fa-regular fa-bell"></i>
-                        <span id="bell-badge" style="display: none; position: absolute; top: 8px; right: 9px; width: 6px; height: 6px; background-color: #e63946; border-radius: 50%; border: 1.5px solid #ffffff;"></span>
-                    </div>
-
-                    <div id="notif-dropdown" style="display: none; position: absolute; top: 46px; right: 0; width: 320px; background: #ffffff; border: 1px solid rgba(0,0,0,0.08); border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 1000; padding: 14px; box-sizing: border-box;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0b251a;">Notifications</h4>
-                            <button id="clear-all-btn" style="background: none; border: none; color: #ef4444; font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0;">Clear All</button>
-                        </div>
-
-                        <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.04); padding-bottom: 8px;">
-                            <button class="notif-filter active" data-filter="all" style="font-size: 0.7rem; border: none; background: #164630; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">All</button>
-                            <button class="notif-filter" data-filter="unread" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Unread</button>
-                        </div>
-
-                        <div id="notif-list-wrapper" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-                            </div>
-                    </div>
-                </div>
+                
             </header>
             
             <div>
@@ -859,9 +794,6 @@
 
 <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
     <script>
-    // Initialize global state arrays
-    let notifications = [];
-
     document.addEventListener("DOMContentLoaded", async () => {
         // 1. Setup greeting banner values
         const hour = new Date().getHours();
@@ -875,118 +807,11 @@
         else welcome = `Good Evening, ${firstName}!`;
         if (banner) banner.textContent = welcome;
 
-        // 2. Hydrate dashboard values from the shared notification store
-        await loadDynamicDashboardMetrics();
-
-        // 3. Initialize visual presentation graphs
+        // 2. Initialize visual presentation graphs
         initCharts();
-        
-        // 4. Setup operational navigation event bindings
-        initNotificationUiEngine();
     });
 
-    async function loadDynamicDashboardMetrics() {
-        try {
-            const storedNotifications = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
-            notifications = storedNotifications.filter((item) => !item.recipient_role || String(item.recipient_role).toLowerCase() === "farmer");
-        } catch (err) {
-            console.error("Dashboard initialization failed:", err.message);
-        }
-    }
-
-    function initNotificationUiEngine() {
-        const bellTrigger = document.getElementById("bell-trigger");
-        const dropdown = document.getElementById("notif-dropdown");
-        const badge = document.getElementById("bell-badge");
-        const listWrapper = document.getElementById("notif-list-wrapper");
-        const clearBtn = document.getElementById("clear-all-btn");
-        
-        let currentFilter = "all";
-
-        bellTrigger.addEventListener("click", (e) => {
-            e.stopPropagation();
-            dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
-        });
-
-        document.addEventListener("click", (e) => {
-            if (!dropdown.contains(e.target) && e.target !== bellTrigger) {
-                dropdown.style.display = "none";
-            }
-        });
-
-        function renderNotifications() {
-            if (!listWrapper) return;
-            listWrapper.innerHTML = "";
-            
-            const unreadCount = notifications.filter(n => n.type === "unread").length;
-            if(badge) badge.style.display = unreadCount > 0 ? "block" : "none";
-
-            let filtered = notifications;
-            if (currentFilter === "unread") filtered = notifications.filter(n => n.type === "unread");
-
-            if (filtered.length === 0) {
-                listWrapper.innerHTML = `
-                    <div style="text-align: center; padding: 30px 10px;">
-                        <i class="fa-regular fa-bell-slashed" style="font-size: 1.3rem; color: #cbd5e1; margin-bottom: 6px;"></i>
-                        <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">No notifications found.</p>
-                    </div>`;
-                return;
-            }
-
-            filtered.forEach(item => {
-                const div = document.createElement("div");
-                div.className = `notif-item ${item.type === 'unread' ? 'is-unread' : ''}`;
-                
-                const icon = item.tag === 'alert' ? 'fa-triangle-exclamation' : 'fa-camera';
-                const iconColor = item.tag === 'alert' ? '#f59e0b' : '#164630';
-
-                div.innerHTML = `
-                    <i class="fa-solid ${icon}" style="color:${iconColor}; margin-top:2px; font-size:0.85rem;"></i>
-                    <div>
-                        <p>${item.text}</p>
-                        <span class="time">${item.time}</span>
-                    </div>`;
-                
-                div.addEventListener("click", () => {
-                    item.type = "read";
-                    renderNotifications();
-                });
-
-                listWrapper.appendChild(div);
-            });
-        }
-
-        document.querySelectorAll(".notif-filter").forEach(btn => {
-            btn.addEventListener("click", (e) => {
-                document.querySelectorAll(".notif-filter").forEach(b => b.classList.remove("active"));
-                e.target.classList.add("active");
-                currentFilter = e.target.getAttribute("data-filter");
-                renderNotifications();
-            });
-        });
-
-        clearBtn.addEventListener("click", () => {
-            if (notifications.length === 0) return;
-            if (confirm("Are you sure you want to delete all notifications? This action cannot be undone.")) {
-                notifications = window.cocoScanSharedNotifications?.removeSharedNotificationsForRole?.("farmer") || [];
-                renderNotifications();
-            }
-        });
-
-        const syncFromSharedStore = () => {
-            const storedNotifications = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
-            notifications = storedNotifications.filter((item) => !item.recipient_role || String(item.recipient_role).toLowerCase() === "farmer");
-            renderNotifications();
-        };
-
-        window.addEventListener("storage", (event) => {
-            if (event.key === "cocoscan_shared_notifications") {
-                syncFromSharedStore();
-            }
-        });
-
-        syncFromSharedStore();
-    }
+    
 
     function toggleSidebarMenu() {
         const sidebar = document.getElementById('sidebar');
