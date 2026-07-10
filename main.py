@@ -38,6 +38,7 @@ from app.report_storage import (
 )
 from app.dashboard_data import build_dashboard_chart_payload
 from app.model_paths import resolve_model_path
+from app.map_utils import filter_map_reports, limit_recent_records
 
 # Configure logging
 logging.basicConfig(
@@ -1133,6 +1134,9 @@ def agriculturist_map():
         return redirect(url_for('login'))
         
     try:
+        search_query = request.args.get("search", "").strip()
+        pest_filter = (request.args.get("pest", "all") or "all").strip() or "all"
+
         # Load user profile for layout presentation layer
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
@@ -1165,11 +1169,17 @@ def agriculturist_map():
                 "status": normalize_report_status(item.get("status"), default="Pending"),
                 "cases_count": 1 # Serves as baseline cluster weight variable
             })
+
+        filtered_map_reports = filter_map_reports(map_reports_list, search_query=search_query, pest_filter=pest_filter)
+        recent_map_reports = limit_recent_records(filtered_map_reports, 5)
             
         return render_template(
             'map_view.html', 
             user_name=user_name, 
-            map_reports=map_reports_list
+            map_reports=filtered_map_reports,
+            recent_map_reports=recent_map_reports,
+            search_query=search_query,
+            pest_filter=pest_filter
         )
         
     except Exception as e:

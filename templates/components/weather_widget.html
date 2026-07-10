@@ -1,0 +1,54 @@
+<div class="weather-analytics-card">
+    <div class="weather-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+        <div>
+            <h4>Current Weather</h4>
+            <h3>{{ weather.location }}</h3>
+        </div>
+        {% if weather.is_down %}
+        <span class="weather-status-pill weather-status-pill--offline">
+            <i class="fa-solid fa-circle-exclamation" style="margin-right: 2px;"></i> Offline
+        </span>
+        {% endif %}
+    </div>
+
+    <div class="weather-stats-grid">
+        <div class="weather-stat-node">
+            <h6>Temperature</h6>
+            <p>{{ weather.temp }}{% if weather.temp != '--' %}<span>°C</span>{% endif %}</p>
+        </div>
+        <div class="weather-stat-node">
+            <h6>Humidity</h6>
+            <p>{{ weather.humidity }}{% if weather.humidity != '--' %}<span>%</span>{% endif %}</p>
+        </div>
+        <div class="weather-stat-node">
+            <h6>Rainfall</h6>
+            <p>{{ weather.rainfall }}{% if weather.rainfall != '--' %}<span>mm</span>{% endif %}</p>
+        </div>
+        <div class="weather-stat-node">
+            <h6>Wind</h6>
+            <p>{{ weather.wind }}{% if weather.wind != '--' %}<span>km/h</span>{% endif %}</p>
+        </div>
+    </div>
+
+    {% if weather.is_down %}
+    <div class="weather-alert-banner weather-alert-banner--offline">
+        <i class="fa-solid fa-triangle-exclamation" style="margin-top:1px; flex-shrink: 0; color: #ef4444;"></i>
+        <span>Unable to fetch real-time atmospheric updates. Please check your connection.</span>
+    </div>
+    {% else %}
+    <div class="weather-alert-banner dynamic-risk-card" style="--risk-bg: {{ risk.bg }}; --risk-border: {{ risk.border or 'rgba(0,0,0,0.04)' }}; --risk-color: {{ risk.color }};">
+        {% if risk.level == 'High Risk' %}
+            <i class="fa-solid fa-triangle-exclamation risk-icon"></i>
+        {% elif risk.level == 'Moderate Risk' %}
+            <i class="fa-solid fa-circle-exclamation risk-icon"></i>
+        {% elif risk.level == 'Low Risk' %}
+            <i class="fa-solid fa-circle-check risk-icon" style="color: #10b981;"></i>
+        {% else %}
+            <i class="fa-solid fa-circle-info risk-icon"></i>
+        {% endif %}
+        <span class="risk-text">
+             {{ risk.text | safe }}
+        </span>
+    </div>
+    {% endif %}
+</div>

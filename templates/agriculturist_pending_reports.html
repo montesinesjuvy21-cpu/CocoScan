@@ -296,6 +296,14 @@
         .page-btn.active-page { background-color: #1a4d32; color: #ffffff; border-color: #1a4d32; }
         .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+        .pagination-meta {
+            width: 100%;
+            text-align: center;
+            margin-top: 10px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
        /* --- PREMIUM MODAL SYSTEM CONSOLIDATION --- */
         .diagnostic-result-badge {
             background-color: var(--badge-green-bg);
@@ -314,18 +322,32 @@
         .badge-side-meta { font-size: 0.82rem; text-align: right; opacity: 0.95; }
 
         .preview-media-frame {
+            position: relative;
+            z-index: 5;
+            display: block;
             width: 100%;
+            min-height: 220px;
+            aspect-ratio: 16 / 9;
             border-radius: 16px;
             overflow: hidden;
             background-color: #eaeaea;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         .preview-media-frame img {
-            width: 100%;
+            position: relative;
+            z-index: 5;
             display: block;
+            width: 100%;
+            height: 100%;
+            min-height: 220px;
             object-fit: cover;
-            aspect-ratio: 16 / 9;
-            max-height: 280px;
+        }
+
+        .image-timestamp-footer,
+        .premium-form-card,
+        .premium-reco-card {
+            position: relative;
+            z-index: 1;
         }
 
         .image-timestamp-footer {
@@ -504,7 +526,21 @@
            ========================================================================== */
         @media (max-width: 500px) {
             .main-content-layout { padding: 88px 16px 24px; }
-            .date-filter-box { flex: 1; min-width: 100%; }
+            .search-controls-row {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+            .search-bar-box,
+            .date-filter-box {
+                width: 100%;
+                min-width: 100%;
+                max-width: 100%;
+            }
+            .date-filter-box input {
+                min-width: 0;
+                box-sizing: border-box;
+            }
             .btn-clear-filters { width: 100%; justify-content: center; }
         }
 
@@ -604,7 +640,7 @@
                 <div class="menu-label">Main Menu</div>
                 <ul class="sidebar-menu-list">
                     <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-                    <li><a href="/agriculturist/pending" class="menu-item-link active"><i class="fa-solid fa-list-check"></i> Pending Reports</a></li>
+                    <li><a href="/agriculturist/pending" class="menu-item-link active"><i class="fa-solid fa-list-ul"></i> Pending Reports</a></li>
                     <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Reviewed</a></li>
                     <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
                 </ul>
@@ -654,6 +690,7 @@
             <!-- Dynamic card framework area mirroring the structure of farmer reports -->
             <div class="reports-feed-stack" id="reports-list-container"></div>
 
+            <div class="pagination-meta" id="pagination-summary"></div>
             <div class="pagination-container" id="pagination-wrapper" style="display: none;"></div>
 
         </main>
@@ -688,6 +725,83 @@
             renderReportsGrid();
         });
 
+        function initSearchAndFilters() {
+            const searchInput = document.getElementById("report-search");
+            const dateInput = document.getElementById("report-date-filter");
+
+            if (searchInput) {
+                searchInput.addEventListener("input", (e) => {
+                    activeSearchQuery = e.target.value.toLowerCase().trim();
+                    currentPage = 1;
+                    evaluateClearFilterButtonState();
+                    renderReportsGrid();
+                });
+            }
+
+            if (dateInput) {
+                dateInput.addEventListener("change", (e) => {
+                    activeDateFilter = e.target.value;
+                    currentPage = 1;
+                    evaluateClearFilterButtonState();
+                    renderReportsGrid();
+                });
+            }
+
+            document.querySelectorAll(".chip-filter-btn").forEach(chip => {
+                chip.addEventListener("click", (e) => {
+                    document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
+                    e.target.classList.add("active-chip");
+                    activePestFilter = e.target.getAttribute("data-status");
+                    currentPage = 1;
+                    evaluateClearFilterButtonState();
+                    renderReportsGrid();
+                });
+            });
+        }
+
+        function evaluateClearFilterButtonState() {
+            const clearBtn = document.getElementById("clear-filters-btn");
+            if (clearBtn) {
+                if (activeSearchQuery !== "" || activeDateFilter !== "" || activePestFilter !== "all") {
+                    clearBtn.style.display = "inline-flex";
+                } else {
+                    clearBtn.style.display = "none";
+                }
+            }
+        }
+
+        function clearAllActiveFilters() {
+            const searchInput = document.getElementById("report-search");
+            const dateInput = document.getElementById("report-date-filter");
+
+            if (searchInput) searchInput.value = "";
+            if (dateInput) dateInput.value = "";
+
+            document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
+            const allChip = document.querySelector('.chip-filter-btn[data-status="all"]');
+            if (allChip) allChip.classList.add("active-chip");
+
+            activeSearchQuery = "";
+            activeDateFilter = "";
+            activePestFilter = "all";
+            currentPage = 1;
+
+            evaluateClearFilterButtonState();
+            renderReportsGrid();
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? "")
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function highlightSearchText(text, query) {
+            if (!query) return escapeHtml(text);
+            const escapedText = escapeHtml(text);
+            const regex = new RegExp(`(${query.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')})`, "ig");
+            return escapedText.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
         function renderReportsGrid() {
             const container = document.getElementById("reports-list-container");
             const countLabel = document.getElementById("chip-count-label");
@@ -697,11 +811,13 @@
             if (countLabel) countLabel.textContent = `All (${reports.length})`;
 
             let processedRecords = reports.filter(item => {
-                const matchesSearch = !activeSearchQuery || 
-                                      item.pest.toLowerCase().includes(activeSearchQuery) ||
-                                      item.farmer.toLowerCase().includes(activeSearchQuery);
-                const matchesDate = !activeDateFilter || item.date === activeDateFilter;
-                const matchesPest = (activePestFilter === "all" || item.pest === activePestFilter);
+                const pestText = String(item.pest || item.pest_type || "").toLowerCase();
+                const farmerText = String(item.farmer || item.farmer_name || "").toLowerCase();
+                const matchesSearch = !activeSearchQuery ||
+                                      pestText.includes(activeSearchQuery) ||
+                                      farmerText.includes(activeSearchQuery);
+                const matchesDate = !activeDateFilter || String(item.date || "") === activeDateFilter;
+                const matchesPest = (activePestFilter === "all" || String(item.pest || item.pest_type || "") === activePestFilter);
                 return matchesSearch && matchesDate && matchesPest;
             });
 
@@ -727,9 +843,9 @@
 
                 card.innerHTML = `
                     <div class="report-main-meta">
-                        <h4>${highlightSearchText(item.pest, activeSearchQuery)}</h4>
-                        <p>Farmer: <strong>${highlightSearchText(item.farmer, activeSearchQuery)}</strong></p>
-                        <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${item.location}</div>
+                        <h4>${highlightSearchText(String(item.pest || item.pest_type || ""), activeSearchQuery)}</h4>
+                        <p>Farmer: <strong>${highlightSearchText(String(item.farmer || item.farmer_name || ""), activeSearchQuery)}</strong></p>
+                        <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(String(item.location || item.full_location || ""))}</div>
                     </div>
                     <div class="report-row-action">
                         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.95rem"></i>
@@ -748,6 +864,14 @@
             paginationBlock.innerHTML = "";
 
             const totalPagesCalculated = Math.ceil(totalMatchedCount / recordsPerPage);
+            const paginationSummary = document.getElementById("pagination-summary");
+            if (paginationSummary) {
+                const startRecord = totalMatchedCount > 0 ? Math.min(totalMatchedCount, (currentPage - 1) * recordsPerPage + 1) : 0;
+                const endRecord = Math.min(totalMatchedCount, currentPage * recordsPerPage);
+                paginationSummary.textContent = totalMatchedCount > 0
+                    ? `Showing ${startRecord}–${endRecord} of ${totalMatchedCount}`
+                    : "No records to display.";
+            }
 
             if (totalPagesCalculated <= 1) {
                 paginationBlock.style.display = "none";
@@ -758,7 +882,7 @@
 
             const leftBtn = document.createElement("button");
             leftBtn.className = "page-btn";
-            leftBtn.innerHTML = `<i class="fa-solid fa-chevron-left"></i>`;
+            leftBtn.textContent = "← Previous";
             leftBtn.disabled = (currentPage === 1);
             leftBtn.onclick = () => { if(currentPage > 1) { currentPage--; renderReportsGrid(); }};
             paginationBlock.appendChild(leftBtn);
@@ -773,7 +897,7 @@
 
             const rightBtn = document.createElement("button");
             rightBtn.className = "page-btn";
-            rightBtn.innerHTML = `<i class="fa-solid fa-chevron-right"></i>`;
+            rightBtn.textContent = "Next →";
             rightBtn.disabled = (currentPage === totalPagesCalculated);
             rightBtn.onclick = () => { if(currentPage < totalPagesCalculated) { currentPage++; renderReportsGrid(); }};
             paginationBlock.appendChild(rightBtn);

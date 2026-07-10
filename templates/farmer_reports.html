@@ -173,12 +173,17 @@
             .search-controls-row {
                 flex-direction: column;
                 gap: 10px;
+                align-items: stretch;
             }
-            .search-bar-box {
-                min-width: 100%;
-            }
+            .search-bar-box,
             .date-filter-box {
+                width: 100%;
                 min-width: 100%;
+                max-width: 100%;
+            }
+            .date-filter-box input {
+                min-width: 0;
+                box-sizing: border-box;
             }
             .btn-clear-filters {
                 width: 100%;
@@ -317,6 +322,14 @@
             cursor: not-allowed;
         }
 
+        .pagination-meta {
+            width: 100%;
+            text-align: center;
+            margin-top: 10px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
        /* --- PREMIUM UNIFORM MODAL OVERLAYS & FORMS (EXACTLY MATCHED TO SCAN RESULTS) --- */
         .diagnostic-result-badge {
             background-color: var(--badge-green-bg);
@@ -335,24 +348,37 @@
         .badge-side-meta { font-size: 0.82rem; text-align: right; opacity: 0.95; }
 
         .preview-media-frame {
+            position: relative;
+            z-index: 5;
+            display: block;
             width: 100%;
+            min-height: 220px;
+            aspect-ratio: 16 / 9;
             border-radius: 16px;
             overflow: hidden;
             background-color: #eaeaea;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         .preview-media-frame img {
-            width: 100%;
+            position: relative;
+            z-index: 5;
             display: block;
+            width: 100%;
+            height: 100%;
+            min-height: 220px;
             object-fit: cover;
-            aspect-ratio: 16 / 9;
-            max-height: 280px;
+        }
+
+        .image-timestamp-footer,
+        .premium-form-card,
+        .premium-reco-card {
+            position: relative;
+            z-index: 1;
         }
 
         #summary-modal .modal-sheet-sliding-card {
             gap: 14px;
         }
-
         #summary-modal .preview-media-frame {
             margin-top: 2px;
             margin-bottom: 2px;
@@ -811,6 +837,7 @@
 
             <div class="reports-feed-stack" id="reports-list-container"></div>
 
+            <div class="pagination-meta" id="pagination-summary"></div>
             <div class="pagination-container" id="pagination-wrapper" style="display: none;"></div>
 
         </main>
@@ -1044,6 +1071,14 @@
             paginationBlock.innerHTML = "";
 
             const totalPagesCalculated = Math.ceil(totalMatchedCount / recordsPerPage);
+            const paginationSummary = document.getElementById("pagination-summary");
+            if (paginationSummary) {
+                const startRecord = totalMatchedCount > 0 ? Math.min(totalMatchedCount, (currentPage - 1) * recordsPerPage + 1) : 0;
+                const endRecord = Math.min(totalMatchedCount, currentPage * recordsPerPage);
+                paginationSummary.textContent = totalMatchedCount > 0
+                    ? `Showing ${startRecord}–${endRecord} of ${totalMatchedCount}`
+                    : "No records to display.";
+            }
 
             if (totalPagesCalculated <= 1) {
                 paginationBlock.style.display = "none";
@@ -1054,7 +1089,7 @@
 
             const leftBtn = document.createElement("button");
             leftBtn.className = "page-btn";
-            leftBtn.innerHTML = `<i class="fa-solid fa-chevron-left"></i>`;
+            leftBtn.textContent = "← Previous";
             leftBtn.disabled = (currentPage === 1);
             leftBtn.onclick = () => { if(currentPage > 1) { currentPage--; renderReportsGrid(); }};
             paginationBlock.appendChild(leftBtn);
@@ -1069,7 +1104,7 @@
 
             const rightBtn = document.createElement("button");
             rightBtn.className = "page-btn";
-            rightBtn.innerHTML = `<i class="fa-solid fa-chevron-right"></i>`;
+            rightBtn.textContent = "Next →";
             rightBtn.disabled = (currentPage === totalPagesCalculated);
             rightBtn.onclick = () => { if(currentPage < totalPagesCalculated) { currentPage++; renderReportsGrid(); }};
             paginationBlock.appendChild(rightBtn);

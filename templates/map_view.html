@@ -9,7 +9,10 @@
     
     <!-- Leaflet Map Engine Infrastructure -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
     <style>
         /* ==========================================================================
@@ -470,7 +473,7 @@
                 <div class="menu-label">Main Menu</div>
                 <ul class="sidebar-menu-list">
                     <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-                    <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-check"></i> Pending Reports</a></li>
+                    <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i> Pending Reports</a></li>
                     <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Reviewed</a></li>
                     <li><a href="/agriculturist/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
                 </ul>
@@ -600,16 +603,45 @@
                 maxZoom: 19
             }).addTo(mapInstance);
 
-            markersLayerGroup = L.layerGroup().addTo(mapInstance);
+            markersLayerGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                showCoverageOnHover: false,
+                maxClusterRadius: 50,
+                spiderfyOnMaxZoom: true,
+                disableClusteringAtZoom: 17
+            });
+            mapInstance.addLayer(markersLayerGroup);
         }
 
         function initFiltersAndSearch() {
             const searchBar = document.getElementById("map-search-input");
+            const urlSearchParams = new URLSearchParams(window.location.search);
+            const initialSearchQuery = (urlSearchParams.get("search") || "").trim();
+
             if (searchBar) {
+                searchBar.value = initialSearchQuery;
+                searchPhrase = initialSearchQuery.toLowerCase().trim();
+
                 searchBar.addEventListener("input", (e) => {
                     searchPhrase = e.target.value.toLowerCase().trim();
                     evaluateClearFilterButtonState();
                     renderMapDashboardComponents();
+                });
+
+                searchBar.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        const nextQuery = searchBar.value.trim();
+                        const nextParams = new URLSearchParams(window.location.search);
+                        if (nextQuery) {
+                            nextParams.set("search", nextQuery);
+                        } else {
+                            nextParams.delete("search");
+                        }
+
+                        const nextUrl = `${window.location.pathname}${nextParams.toString() ? `?${nextParams.toString()}` : ""}`;
+                        window.location.href = nextUrl;
+                    }
                 });
             }
 
@@ -661,10 +693,11 @@
             const listContainer = document.getElementById("location-list-container");
             if (listContainer) listContainer.innerHTML = "";
 
-            // Filter context validation
+            // Filter context validation - search by pest name AND location
             let filteredRecords = geoReportsDataset.filter(item => {
-                const fullString = `${item.barangay} ${item.municipality} ${item.province}`.toLowerCase();
-                const matchesSearch = fullString.includes(searchPhrase);
+                const locationString = `${item.barangay} ${item.municipality} ${item.province}`.toLowerCase();
+                const pestString = String(item.pest_type || "").toLowerCase();
+                const matchesSearch = !searchPhrase || locationString.includes(searchPhrase) || pestString.includes(searchPhrase);
                 const matchesPest = (activePestFilter === "all" || item.pest_type === activePestFilter);
                 return matchesSearch && matchesPest;
             });
@@ -682,6 +715,7 @@
                 return;
             }
 
+            // Render all filtered records on map
             filteredRecords.forEach(record => {
                 const markerColor = getPestHexColorCode(record.pest_type);
 
@@ -701,9 +735,13 @@
                 const mapMarker = L.marker([record.latitude, record.longitude], { icon: LeafletCustomIcon });
                 mapMarker.on('click', () => populateDetailsBoxElement(record));
                 markersLayerGroup.addLayer(mapMarker);
+            });
 
-                // Populate recent view left-hand element nodes panel automatically
-                if (listContainer) {
+            // Populate recent view left-hand panel - limit to 5 most recent records
+            const recentRecords = filteredRecords.slice(0, 5);
+            if (listContainer && recentRecords.length > 0) {
+                recentRecords.forEach(record => {
+                    const markerColor = getPestHexColorCode(record.pest_type);
                     const nodeRow = document.createElement("div");
                     nodeRow.className = "location-node-row";
                     nodeRow.innerHTML = `
@@ -719,8 +757,8 @@
                         populateDetailsBoxElement(record);
                     };
                     listContainer.appendChild(nodeRow);
-                }
-            });
+                });
+            }
         }
 
         function populateDetailsBoxElement(record) {
