@@ -930,7 +930,6 @@
                             <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.04); padding-bottom: 8px;">
                                 <button class="notif-filter active" data-filter="all" style="font-size: 0.7rem; border: none; background: #164630; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">All</button>
                                 <button class="notif-filter" data-filter="unread" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Unread</button>
-                                <button class="notif-filter" data-filter="alert" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Risks</button>
                             </div>
                             <div id="notif-list-wrapper" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
                         </div>
@@ -1492,19 +1491,105 @@
         document.addEventListener("DOMContentLoaded", () => {
             loadDraftFromSession();
             loadAndRenderRecentHistoryLogs();
-            
+            initScanNotificationsPanel();
+        });
+
+        function initScanNotificationsPanel() {
             const trigger = document.getElementById("bell-trigger");
             const dropdown = document.getElementById("notif-dropdown");
-            if(trigger && dropdown) {
-                trigger.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
-                });
-                document.addEventListener("click", (e) => {
-                    if (!dropdown.contains(e.target) && e.target !== trigger) dropdown.style.display = "none";
+            const badge = document.getElementById("bell-badge");
+            const wrapper = document.getElementById("notif-list-wrapper");
+            const clearBtn = document.getElementById("clear-all-btn");
+            let activeFilter = "all";
+            const userRole = "farmer";
+
+            if (!trigger || !dropdown || !wrapper || !clearBtn) return;
+
+            function renderNotifications() {
+                const items = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
+                const displayItems = items
+                    .filter(item => !item.recipient_role || String(item.recipient_role || "").toLowerCase() === userRole)
+                    .map(item => ({
+                        ...item,
+                        text: item.text || item.message || item.title || "Report update",
+                        time: item.time || new Date(item.created_at || Date.now()).toLocaleString(),
+                    }));
+                const unreadCount = displayItems.filter(item => item.type === "unread").length;
+                if (badge) badge.style.display = unreadCount > 0 ? "block" : "none";
+
+                let filtered = displayItems;
+                if (activeFilter === "unread") filtered = displayItems.filter(item => item.type === "unread");
+
+                wrapper.innerHTML = "";
+                if (filtered.length === 0) {
+                    wrapper.innerHTML = `
+                        <div style="text-align:center; padding:28px 10px;">
+                            <i class="fa-regular fa-bell-slashed" style="color:#cbd5e1; font-size:1.2rem; margin-bottom:6px;"></i>
+                            <p style="margin:0; font-size:0.78rem; color:#64748b;">No notifications yet.</p>
+                        </div>`;
+                    return;
+                }
+
+                filtered.forEach(item => {
+                    const node = document.createElement("div");
+                    node.className = `notif-item ${item.type === 'unread' ? 'is-unread' : ''}`;
+                    const icon = item.tag === 'alert' ? 'fa-triangle-exclamation' : 'fa-camera';
+                    const color = item.tag === 'alert' ? '#f59e0b' : '#164630';
+                    node.innerHTML = `
+                        <i class="fa-solid ${icon}" style="color:${color}; margin-top:2px; font-size:0.85rem;"></i>
+                        <div>
+                            <p>${item.text}</p>
+                            <span class="time">${item.time}</span>
+                        </div>`;
+                    node.addEventListener("click", () => {
+                        if (item.id) {
+                            window.cocoScanSharedNotifications?.markSharedNotificationsRead?.(item.id);
+                        }
+                        renderNotifications();
+                    });
+                    wrapper.appendChild(node);
                 });
             }
-        });
+
+            trigger.addEventListener("click", (e) => {
+                e.stopPropagation();
+                dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+                if (dropdown.style.display === "block") renderNotifications();
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!dropdown.contains(e.target) && e.target !== trigger) {
+                    dropdown.style.display = "none";
+                }
+            });
+
+            document.querySelectorAll(".notif-filter").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    document.querySelectorAll(".notif-filter").forEach(b => b.classList.remove("active"));
+                    e.target.classList.add("active");
+                    activeFilter = e.target.getAttribute("data-filter");
+                    renderNotifications();
+                });
+            });
+
+            clearBtn.addEventListener("click", () => {
+                const stored = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
+                const roleItems = stored.filter(item => !item.recipient_role || String(item.recipient_role || "").toLowerCase() === userRole);
+                if (roleItems.length === 0) return;
+                if (confirm("Are you sure you want to delete all notifications? This action cannot be undone.")) {
+                    window.cocoScanSharedNotifications?.removeSharedNotificationsForRole?.(userRole);
+                    renderNotifications();
+                }
+            });
+
+            window.addEventListener("storage", (event) => {
+                if (event.key === "cocoscan_shared_notifications") {
+                    renderNotifications();
+                }
+            });
+
+            renderNotifications();
+        }
     </script>
     <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
 </body>

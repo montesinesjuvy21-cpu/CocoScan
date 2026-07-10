@@ -134,8 +134,8 @@
 
         <div class="modal-header-inline" style="display: flex; justify-content: space-between; align-items: center;">
             <h2 style="margin: 0;">Report Summary</h2>
-            <button class="btn-control cancel-secondary" id="report-close-btn-header" type="button" onclick="closeReportModal()" style="background: none; color: #ef4444; border: none; padding: 4px 8px; border-radius: 8px; font-size: 1rem; cursor: pointer; display: none; min-width: auto;">
-                <i class="fa-solid fa-times"></i>
+            <button class="btn-control cancel-secondary" id="report-close-btn-header" type="button" onclick="closeReportModal()" style="background: #f8faf9; color: #164630; border: 1px solid rgba(22,70,48,0.15); padding: 6px 12px; border-radius: 12px; font-size: 0.9rem; cursor: pointer; display: none; min-width: auto;">
+                Close
             </button>
         </div>
 
@@ -203,6 +203,9 @@
             </button>
             <button class="btn-control submit-primary" id="report-agri-submit-btn" type="button" onclick="submitExpertValidation()">
                 <i class="fa-solid fa-check-double"></i> Submit Recommendation
+            </button>
+            <button class="btn-control cancel-secondary" id="report-modal-cancel-btn" type="button" onclick="closeReportModal()">
+                Cancel
             </button>
         </div>
     </div>

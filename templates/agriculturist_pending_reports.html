@@ -634,7 +634,17 @@
                         <i class="fa-regular fa-bell"></i>
                         <span id="shared-notification-badge" style="display:none; position:absolute; top:6px; right:7px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
                     </div>
-                    <div id="shared-notification-dropdown" style="display:none; position:absolute; top:46px; right:0; width:320px; background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:14px; box-shadow:0 10px 25px rgba(0,0,0,0.1); z-index:1000; padding:14px; box-sizing:border-box;"></div>
+                    <div id="shared-notification-dropdown" style="display:none; position:absolute; top:46px; right:0; width:340px; background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:14px; box-shadow:0 10px 25px rgba(0,0,0,0.1); z-index:1000; padding:14px; box-sizing:border-box;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#0b251a;">Notifications</h4>
+                            <button id="shared-clear-all-btn" style="background:none; border:none; color:#ef4444; font-size:0.75rem; font-weight:600; cursor:pointer; padding:0;">Clear All</button>
+                        </div>
+                        <div style="display:flex; gap:6px; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.04); padding-bottom:8px;">
+                            <button class="shared-notif-filter active" data-filter="all" style="font-size:0.7rem; border:none; background:#164630; color:#ffffff; padding:4px 8px; border-radius:6px; font-weight:600; cursor:pointer;">All</button>
+                            <button class="shared-notif-filter" data-filter="unread" style="font-size:0.7rem; border:1px solid rgba(0,0,0,0.08); background:#ffffff; color:#64748b; padding:4px 8px; border-radius:6px; font-weight:600; cursor:pointer;">Unread</button>
+                        </div>
+                        <div id="shared-notification-list-wrapper" style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
+                    </div>
                 </div>
             </header>
 
@@ -904,25 +914,49 @@
             const trigger = document.getElementById('shared-notification-trigger');
             const dropdown = document.getElementById('shared-notification-dropdown');
             const badge = document.getElementById('shared-notification-badge');
+            const wrapper = document.getElementById('shared-notification-list-wrapper');
+            const clearBtn = document.getElementById('shared-clear-all-btn');
+            let activeFilter = 'all';
+            const userRole = 'agriculturist';
 
-            if (!trigger || !dropdown) return;
+            if (!trigger || !dropdown || !wrapper || !clearBtn) return;
 
             function renderSharedNotifications() {
                 const items = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
-                const userRole = "agriculturist";
-                const filteredItems = items.filter(item => !item.recipient_role || item.recipient_role === userRole);
+                const filteredItems = items.filter(item => !item.recipient_role || String(item.recipient_role || "").toLowerCase() === userRole);
                 const unreadCount = filteredItems.filter(item => item.type === 'unread').length;
                 if (badge) badge.style.display = unreadCount > 0 ? 'block' : 'none';
-                if (filteredItems.length === 0) {
-                    dropdown.innerHTML = '<p style="margin:0; font-size:0.8rem; color:#64748b;">No notifications yet.</p>';
+
+                wrapper.innerHTML = '';
+                let visibleItems = filteredItems;
+                if (activeFilter === 'unread') {
+                    visibleItems = filteredItems.filter(item => item.type === 'unread');
+                }
+
+                if (visibleItems.length === 0) {
+                    wrapper.innerHTML = '<div style="text-align:center; padding:28px 10px;"><i class="fa-regular fa-bell-slashed" style="color:#cbd5e1; font-size:1.2rem; margin-bottom:6px;"></i><p style="margin:0; font-size:0.78rem; color:#64748b;">No notifications yet.</p></div>';
                     return;
                 }
-                dropdown.innerHTML = filteredItems.slice(0, 8).map(item => `
-                    <div style="padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
-                        <strong style="display:block; font-size:0.84rem; color:#0f172a;">${item.title}</strong>
-                        <span style="display:block; font-size:0.74rem; color:#64748b; margin-top:2px;">${item.message}</span>
-                    </div>
-                `).join('');
+
+                visibleItems.slice(0, 10).forEach(item => {
+                    const node = document.createElement('div');
+                    node.className = `notif-item ${item.type === 'unread' ? 'is-unread' : ''}`;
+                    const icon = item.tag === 'alert' ? 'fa-triangle-exclamation' : 'fa-camera';
+                    const color = item.tag === 'alert' ? '#f59e0b' : '#164630';
+                    node.innerHTML = `
+                        <i class="fa-solid ${icon}" style="color:${color}; margin-top:2px; font-size:0.85rem;"></i>
+                        <div>
+                            <p>${item.title || item.message || 'Report update'}</p>
+                            <span class="time">${new Date(item.created_at || Date.now()).toLocaleString()}</span>
+                        </div>`;
+                    node.addEventListener('click', () => {
+                        if (item.id) {
+                            window.cocoScanSharedNotifications?.markSharedNotificationsRead?.(item.id);
+                        }
+                        renderSharedNotifications();
+                    });
+                    wrapper.appendChild(node);
+                });
             }
 
             trigger.addEventListener('click', (event) => {
@@ -935,6 +969,23 @@
             document.addEventListener('click', (event) => {
                 if (!dropdown.contains(event.target) && event.target !== trigger) {
                     dropdown.style.display = 'none';
+                }
+            });
+
+            document.querySelectorAll('.shared-notif-filter').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    document.querySelectorAll('.shared-notif-filter').forEach(b => b.classList.remove('active'));
+                    event.target.classList.add('active');
+                    activeFilter = event.target.getAttribute('data-filter');
+                    renderSharedNotifications();
+                });
+            });
+
+            clearBtn.addEventListener('click', () => {
+                if (window.cocoScanSharedNotifications?.readSharedNotifications?.()?.filter(item => !item.recipient_role || String(item.recipient_role || "").toLowerCase() === userRole).length === 0) return;
+                if (confirm('Are you sure you want to delete all notifications? This action cannot be undone.')) {
+                    window.cocoScanSharedNotifications?.removeSharedNotificationsForRole?.(userRole);
+                    renderSharedNotifications();
                 }
             });
 

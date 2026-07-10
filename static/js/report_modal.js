@@ -253,6 +253,7 @@
         const scanButton = document.getElementById("report-scan-submit-btn");
         const farmerButton = document.getElementById("summary-followup-button");
         const agriButton = document.getElementById("report-agri-submit-btn");
+        const cancelButton = document.getElementById("report-modal-cancel-btn");
         const notesInput = document.getElementById("field-notes-capture");
         const notesDisplay = document.getElementById("report-notes-display");
         const expertInput = document.getElementById("expert-notes-input");
@@ -264,6 +265,7 @@
         setDisplay(scanButton, mode === "scan", "flex");
         setDisplay(farmerButton, mode === "farmer", "flex");
         setDisplay(agriButton, mode === "agriculturist" && !isReviewed, "flex");
+        setDisplay(cancelButton, !(mode === "agriculturist" && isReviewed), "inline-flex");
 
         scanOnlyNodes.forEach((node) => setDisplay(node, mode === "scan", "block"));
         readonlyOnlyNodes.forEach((node) => setDisplay(node, mode !== "scan", "block"));
@@ -468,6 +470,13 @@
         }
     }
 
+    function removeSharedNotificationsForRole(role) {
+        if (!role) return readSharedNotifications();
+        const items = readSharedNotifications().filter((item) => String(item.recipient_role || "").toLowerCase() !== String(role || "").toLowerCase());
+        saveSharedNotifications(items);
+        return items;
+    }
+
     function addSharedNotification(payload = {}) {
         const list = readSharedNotifications();
         const nextItem = {
@@ -499,6 +508,7 @@
         readSharedNotifications,
         addSharedNotification,
         markSharedNotificationsRead,
+        removeSharedNotificationsForRole,
     };
     window.__cocoScanReportModal = {
         get currentReport() {

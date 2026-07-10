@@ -801,7 +801,6 @@
                         <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.04); padding-bottom: 8px;">
                             <button class="notif-filter active" data-filter="all" style="font-size: 0.7rem; border: none; background: #164630; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">All</button>
                             <button class="notif-filter" data-filter="unread" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Unread</button>
-                            <button class="notif-filter" data-filter="alert" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; color: #64748b; padding: 4px 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">Risks</button>
                         </div>
 
                         <div id="notif-list-wrapper" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
@@ -946,7 +945,7 @@
                 wrapper.innerHTML = "";
                 const userRole = "{{ user_role }}".toLowerCase() || "farmer";
                 const displayItems = notifications
-                    .filter(item => !item.recipient_role || item.recipient_role === userRole)
+                    .filter(item => !item.recipient_role || String(item.recipient_role || "").toLowerCase() === userRole)
                     .map(item => ({
                         ...item,
                         text: item.text || item.message || item.title || "Report update",
@@ -957,7 +956,6 @@
 
                 let filtered = displayItems;
                 if (activeFilter === "unread") filtered = displayItems.filter(n => n.type === "unread");
-                if (activeFilter === "alert") filtered = displayItems.filter(n => n.tag === "alert");
 
                 if (filtered.length === 0) {
                     wrapper.innerHTML = `
@@ -1005,7 +1003,7 @@
             clearBtn.addEventListener("click", () => {
                 if (notifications.length === 0) return;
                 if (confirm("Are you sure you want to delete all notifications? This action cannot be undone.")) {
-                    notifications = [];
+                    notifications = window.cocoScanSharedNotifications?.removeSharedNotificationsForRole?.("farmer") || [];
                     drawNotifications();
                 }
             });
