@@ -1266,7 +1266,23 @@
             .then(data => {
                 if (data.success) {
                     if (data.notification) {
-                        window.cocoScanSharedNotifications?.addSharedNotification?.(data.notification);
+                        if (typeof window.cocoScanSharedNotifications?.addSharedNotification === 'function') {
+                            window.cocoScanSharedNotifications.addSharedNotification(data.notification);
+                        } else {
+                            const notificationList = JSON.parse(localStorage.getItem('cocoscan_shared_notifications') || '[]');
+                            notificationList.unshift({
+                                id: data.notification.id || `notify-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                                title: data.notification.title || 'Report update',
+                                message: data.notification.message || data.notification.text || 'A report status changed.',
+                                type: data.notification.type || 'unread',
+                                tag: data.notification.tag || 'alert',
+                                created_at: data.notification.created_at || new Date().toISOString(),
+                                report_id: data.notification.report_id || null,
+                                recipient_role: data.notification.recipient_role || data.notification.role || null,
+                            });
+                            localStorage.setItem('cocoscan_shared_notifications', JSON.stringify(notificationList.slice(0, 20)));
+                            window.dispatchEvent(new Event('storage'));
+                        }
                     }
                     alert(`SUCCESS: Report for ${compiledPest} has been submitted successfully.`);
                     window.location.reload();

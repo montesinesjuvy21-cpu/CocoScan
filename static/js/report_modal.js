@@ -453,6 +453,18 @@
         modalRoot.setAttribute("aria-hidden", "false");
     }
 
+    function normalizeNotificationRole(role) {
+        const normalized = String(role || "").trim().toLowerCase();
+        if (!normalized) return null;
+        if (["agri_expert", "agri expert", "agriculturist", "agricultural expert", "agriculture expert"].includes(normalized)) {
+            return "agriculturist";
+        }
+        if (["farmer", "farmers", "grower", "growers"].includes(normalized)) {
+            return "farmer";
+        }
+        return normalized;
+    }
+
     function readSharedNotifications() {
         try {
             const raw = localStorage.getItem("cocoscan_shared_notifications");
@@ -464,7 +476,9 @@
 
     function saveSharedNotifications(items) {
         try {
-            localStorage.setItem("cocoscan_shared_notifications", JSON.stringify(items.slice(0, 20)));
+            const normalizedItems = Array.isArray(items) ? items.slice(0, 20) : [];
+            localStorage.setItem("cocoscan_shared_notifications", JSON.stringify(normalizedItems));
+            window.dispatchEvent(new Event("storage"));
         } catch (error) {
             console.warn("Unable to persist shared notifications", error);
         }
@@ -482,12 +496,12 @@
         const nextItem = {
             id: payload.id || `notify-${Date.now()}-${Math.random().toString(16).slice(2)}`,
             title: payload.title || "Report update",
-            message: payload.message || "A report status changed.",
+            message: payload.message || payload.text || "A report status changed.",
             type: payload.type || "unread",
             tag: payload.tag || "alert",
             created_at: payload.created_at || new Date().toISOString(),
             report_id: payload.report_id || null,
-            recipient_role: payload.recipient_role || null,
+            recipient_role: normalizeNotificationRole(payload.recipient_role || payload.role),
         };
         list.unshift(nextItem);
         saveSharedNotifications(list);
@@ -509,6 +523,7 @@
         addSharedNotification,
         markSharedNotificationsRead,
         removeSharedNotificationsForRole,
+        normalizeNotificationRole,
     };
     window.__cocoScanReportModal = {
         get currentReport() {
