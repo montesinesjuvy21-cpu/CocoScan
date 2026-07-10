@@ -1270,7 +1270,7 @@ def agriculturist_approve_report():
             'success': True, 
             'message': 'Expert diagnostic treatment recommendation logged successfully.',
             'notification': {
-                'title': 'Recommendation Updated',
+                'title': 'New Recommendation Issued',
                 'message': f"The agriculturist issued a new treatment recommendation for report #{report_id}.",
                 'tag': 'alert',
                 'type': 'unread',

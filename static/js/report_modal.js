@@ -366,6 +366,18 @@
 
         const report = currentReportModalRecord;
 
+        // Mark "Recommendation Updated" notifications as read for this report
+        if (mode === "farmer" && report.id) {
+            const sharedNotifications = readSharedNotifications();
+            const unreadRecommendationUpdate = sharedNotifications.find((notification) => {
+                const sameReport = String(notification.report_id || "") === String(report.id || "");
+                return sameReport && notification.type === "unread" && /recommendation/i.test(notification.title || "");
+            });
+            if (unreadRecommendationUpdate) {
+                window.cocoScanSharedNotifications?.markSharedNotificationsRead?.(unreadRecommendationUpdate.id);
+            }
+        }
+
         const pestTitle = document.getElementById("report-pest-title");
         const confidenceNode = document.getElementById("report-confidence");
         const primaryImage = document.getElementById("report-primary-image");

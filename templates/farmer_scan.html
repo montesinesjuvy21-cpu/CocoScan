@@ -1266,6 +1266,9 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    if (data.notification) {
+                        window.cocoScanSharedNotifications?.addSharedNotification?.(data.notification);
+                    }
                     alert(`SUCCESS: Report for ${compiledPest} has been submitted successfully.`);
                     window.location.reload();
                     return;

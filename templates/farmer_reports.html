@@ -1138,13 +1138,8 @@
 
             paginatedRecords.forEach(item => {
                 const row = document.createElement("div");
-                const sharedNotifications = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
-                const unreadRecommendationUpdate = sharedNotifications.find((notification) => {
-                    const sameReport = String(notification.report_id || "") === String(item.id || "");
-                    return sameReport && notification.type === "unread" && /recommendation/i.test(notification.title || "");
-                });
-                const badgeText = unreadRecommendationUpdate ? "Recommendation Updated" : item.status;
-                const isUnread = !!unreadRecommendationUpdate || item.status === 'Recommendation Issued';
+                const badgeText = item.status;
+                const isUnread = item.status === 'Recommendation Issued';
                 row.className = `report-row-node${isUnread ? ' is-unread' : ''}`;
                 row.innerHTML = `
                     <div class="report-main-meta">
@@ -1152,17 +1147,11 @@
                         <p>${item.timestamp}</p>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px; background:${badgeText === 'Recommendation Updated' || item.status === 'Recommendation Issued' ? 'rgba(5,150,105,0.1)' : 'rgba(217,119,6,0.1)'}; color:${badgeText === 'Recommendation Updated' || item.status === 'Recommendation Issued' ? '#059669' : '#d97706'}">${badgeText}</span>
+                        <span style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px; background:${item.status === 'Recommendation Issued' ? '#ecfdf5' : 'rgba(217,119,6,0.1)'}; color:${item.status === 'Recommendation Issued' ? '#065f46' : '#d97706'}">${badgeText}</span>
                         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.85rem;"></i>
                     </div>`;
                 
                 row.onclick = () => {
-                    if (unreadRecommendationUpdate) {
-                        window.cocoScanSharedNotifications?.markSharedNotificationsRead?.(unreadRecommendationUpdate.id);
-                        notifications = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
-                        drawNotifications?.();
-                        renderReportsGrid();
-                    }
                     openReportSummary(item);
                 };
                 container.appendChild(row);
