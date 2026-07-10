@@ -465,35 +465,128 @@
         return normalized;
     }
 
+    function normalizeNotificationItem(item = {}) {
+        const createdAt = item.created_at || item.time || new Date().toISOString();
+        return {
+            id: item.id || item.notification_id || null,
+            title: item.title || item.message || "Report update",
+            message: item.message || item.text || item.title || "A report status changed.",
+            text: item.text || item.message || item.title || "A report status changed.",
+            type: item.type || (item.is_read ? "read" : "unread"),
+            tag: item.tag || "alert",
+            created_at: createdAt,
+            time: item.time || createdAt,
+            report_id: item.report_id || null,
+            recipient_role: normalizeNotificationRole(item.recipient_role || item.role),
+            recipient_id: item.recipient_id || null,
+            sender_id: item.sender_id || null,
+            sender_role: normalizeNotificationRole(item.sender_role),
+            is_read: Boolean(item.is_read),
+        };
+    }
+
+    let sharedNotificationsCache = [];
+    let sharedNotificationsLoaded = false;
+
     function readSharedNotifications() {
-        try {
-            const raw = localStorage.getItem("cocoscan_shared_notifications");
-            return raw ? JSON.parse(raw) : [];
-        } catch (error) {
-            return [];
-        }
+        return sharedNotificationsCache;
     }
 
     function saveSharedNotifications(items) {
+        const normalizedItems = Array.isArray(items) ? items.map(normalizeNotificationItem).slice(0, 20) : [];
+        sharedNotificationsCache = normalizedItems;
         try {
-            const normalizedItems = Array.isArray(items) ? items.slice(0, 20) : [];
             localStorage.setItem("cocoscan_shared_notifications", JSON.stringify(normalizedItems));
-            window.dispatchEvent(new Event("storage"));
         } catch (error) {
             console.warn("Unable to persist shared notifications", error);
         }
+        window.dispatchEvent(new Event("storage"));
     }
 
-    function removeSharedNotificationsForRole(role) {
+    async function refreshSharedNotifications(force = false) {
+        if (!force && sharedNotificationsLoaded) {
+            return sharedNotificationsCache;
+        }
+
+        try {
+            const response = await fetch("/notifications", {
+                method: "GET",
+                credentials: "same-origin",
+            });
+            if (!response.ok) {
+                throw new Error(`Notification request failed with ${response.status}`);
+            }
+
+            const payload = await response.json();
+            const items = Array.isArray(payload.notifications) ? payload.notifications : [];
+            sharedNotificationsCache = items.map(normalizeNotificationItem);
+            sharedNotificationsLoaded = true;
+            saveSharedNotifications(sharedNotificationsCache);
+            return sharedNotificationsCache;
+        } catch (error) {
+            console.warn("Unable to refresh shared notifications from the backend", error);
+            if (!sharedNotificationsLoaded) {
+                sharedNotificationsCache = [];
+                saveSharedNotifications([]);
+            }
+            return sharedNotificationsCache;
+        }
+    }
+
+    async function removeSharedNotificationsForRole(role) {
         if (!role) return readSharedNotifications();
+
+        try {
+            const response = await fetch("/notifications/clear", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ role }),
+            });
+            if (response.ok) {
+                const payload = await response.json();
+                const items = Array.isArray(payload.notifications) ? payload.notifications : [];
+                saveSharedNotifications(items);
+                return readSharedNotifications();
+            }
+        } catch (error) {
+            console.warn("Unable to clear notifications from the backend", error);
+        }
+
         const items = readSharedNotifications().filter((item) => String(item.recipient_role || "").toLowerCase() !== String(role || "").toLowerCase());
         saveSharedNotifications(items);
         return items;
     }
 
-    function addSharedNotification(payload = {}) {
+    async function addSharedNotification(payload = {}) {
+        try {
+            const response = await fetch("/notifications/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({
+                    title: payload.title || "Report update",
+                    message: payload.message || payload.text || "A report status changed.",
+                    text: payload.text || payload.message || "A report status changed.",
+                    recipient_role: payload.recipient_role || payload.role,
+                    report_id: payload.report_id || null,
+                }),
+            });
+            if (response.ok) {
+                const responsePayload = await response.json();
+                if (responsePayload.notification) {
+                    const createdItem = normalizeNotificationItem(responsePayload.notification);
+                    const nextItems = [createdItem, ...readSharedNotifications().filter((item) => String(item.id || "") !== String(createdItem.id || ""))];
+                    saveSharedNotifications(nextItems);
+                    return createdItem;
+                }
+            }
+        } catch (error) {
+            console.warn("Unable to create notification via backend", error);
+        }
+
         const list = readSharedNotifications();
-        const nextItem = {
+        const nextItem = normalizeNotificationItem({
             id: payload.id || `notify-${Date.now()}-${Math.random().toString(16).slice(2)}`,
             title: payload.title || "Report update",
             message: payload.message || payload.text || "A report status changed.",
@@ -502,14 +595,32 @@
             created_at: payload.created_at || new Date().toISOString(),
             report_id: payload.report_id || null,
             recipient_role: normalizeNotificationRole(payload.recipient_role || payload.role),
-        };
+        });
         list.unshift(nextItem);
         saveSharedNotifications(list);
         return nextItem;
     }
 
-    function markSharedNotificationsRead(id) {
+    async function markSharedNotificationsRead(id) {
         if (!id) return readSharedNotifications();
+
+        try {
+            const response = await fetch("/notifications/mark-read", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ notification_id: id }),
+            });
+            if (response.ok) {
+                const payload = await response.json();
+                const items = Array.isArray(payload.notifications) ? payload.notifications : [];
+                saveSharedNotifications(items);
+                return readSharedNotifications();
+            }
+        } catch (error) {
+            console.warn("Unable to mark notification as read via backend", error);
+        }
+
         const items = readSharedNotifications().map((item) => item.id === id ? { ...item, type: "read" } : item);
         saveSharedNotifications(items);
         return items;
@@ -524,7 +635,16 @@
         markSharedNotificationsRead,
         removeSharedNotificationsForRole,
         normalizeNotificationRole,
+        refreshSharedNotifications,
     };
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => {
+            refreshSharedNotifications();
+        });
+    } else {
+        refreshSharedNotifications();
+    }
     window.__cocoScanReportModal = {
         get currentReport() {
             return currentReportModalRecord;
