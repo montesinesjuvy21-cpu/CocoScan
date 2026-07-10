@@ -119,6 +119,11 @@
         element.style.display = visible ? displayValue : "none";
     }
 
+    function isRecommendationIssuedStatus(status) {
+        const normalized = String(status ?? "").trim().toLowerCase();
+        return ["recommendation issued", "reviewed", "reviewed & issued", "recommendation-issued", "recommendation_issued", "resolved", "completed"].includes(normalized);
+    }
+
     function clearNode(node) {
         if (!node) return;
         node.innerHTML = "";
@@ -244,22 +249,34 @@
         }
     }
 
-    function applyModeState(mode) {
+    function applyModeState(mode, report = currentReportModalRecord) {
         const scanButton = document.getElementById("report-scan-submit-btn");
         const farmerButton = document.getElementById("summary-followup-button");
         const agriButton = document.getElementById("report-agri-submit-btn");
         const notesInput = document.getElementById("field-notes-capture");
         const notesDisplay = document.getElementById("report-notes-display");
         const expertInput = document.getElementById("expert-notes-input");
+        const expertHelp = document.getElementById("expert-notes-help");
         const scanOnlyNodes = document.querySelectorAll("[data-scan-only]");
         const readonlyOnlyNodes = document.querySelectorAll("[data-readonly-only]");
+        const isReviewed = isRecommendationIssuedStatus(report?.status || "");
 
         setDisplay(scanButton, mode === "scan", "flex");
         setDisplay(farmerButton, mode === "farmer", "flex");
-        setDisplay(agriButton, mode === "agriculturist", "flex");
+        setDisplay(agriButton, mode === "agriculturist" && !isReviewed, "flex");
 
         scanOnlyNodes.forEach((node) => setDisplay(node, mode === "scan", "block"));
         readonlyOnlyNodes.forEach((node) => setDisplay(node, mode !== "scan", "block"));
+
+        if (farmerButton) {
+            const canFollowUp = mode === "farmer" && isReviewed;
+            farmerButton.disabled = !canFollowUp;
+            farmerButton.classList.toggle("is-disabled", !canFollowUp);
+            farmerButton.setAttribute("aria-disabled", String(!canFollowUp));
+            farmerButton.innerHTML = canFollowUp
+                ? '<i class="fa-solid fa-rotate"></i> Update Status'
+                : '<i class="fa-solid fa-lock"></i> Awaiting Recommendation';
+        }
 
         if (notesInput && notesDisplay) {
             if (mode === "scan") {
@@ -272,9 +289,22 @@
         }
 
         if (expertInput) {
-            setDisplay(expertInput, mode === "agriculturist", "block");
-            if (mode !== "agriculturist") {
+            const shouldShowInput = mode === "agriculturist" && !isReviewed;
+            setDisplay(expertInput, shouldShowInput, "block");
+            if (!shouldShowInput) {
                 expertInput.value = "";
+            }
+        }
+
+        if (expertHelp) {
+            const shouldShowHelp = mode === "agriculturist";
+            setDisplay(expertHelp, shouldShowHelp, "block");
+            if (shouldShowHelp) {
+                expertHelp.innerHTML = isReviewed
+                    ? '<em>Recommendation already issued and locked for this report.</em>'
+                    : '<em>Add treatment guidance for the farmer and submit.</em>';
+            } else {
+                expertHelp.innerHTML = "";
             }
         }
     }
@@ -393,7 +423,7 @@
         renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.");
 
         applyStatusStyle(report);
-        applyModeState(currentReportModalMode);
+        applyModeState(currentReportModalMode, report);
 
         if (expertCard) {
             setDisplay(expertCard, true, "flex");
@@ -403,9 +433,54 @@
         modalRoot.setAttribute("aria-hidden", "false");
     }
 
+    function readSharedNotifications() {
+        try {
+            const raw = localStorage.getItem("cocoscan_shared_notifications");
+            return raw ? JSON.parse(raw) : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function saveSharedNotifications(items) {
+        try {
+            localStorage.setItem("cocoscan_shared_notifications", JSON.stringify(items.slice(0, 20)));
+        } catch (error) {
+            console.warn("Unable to persist shared notifications", error);
+        }
+    }
+
+    function addSharedNotification(payload = {}) {
+        const list = readSharedNotifications();
+        const nextItem = {
+            id: payload.id || `notify-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            title: payload.title || "Report update",
+            message: payload.message || "A report status changed.",
+            type: payload.type || "unread",
+            tag: payload.tag || "alert",
+            created_at: payload.created_at || new Date().toISOString(),
+            report_id: payload.report_id || null,
+        };
+        list.unshift(nextItem);
+        saveSharedNotifications(list);
+        return nextItem;
+    }
+
+    function markSharedNotificationsRead(id) {
+        if (!id) return readSharedNotifications();
+        const items = readSharedNotifications().map((item) => item.id === id ? { ...item, type: "read" } : item);
+        saveSharedNotifications(items);
+        return items;
+    }
+
     window.openReportModal = openReportModal;
     window.closeReportModal = closeReportModal;
     window.resolveReportImageUrl = resolveReportImageUrl;
+    window.cocoScanSharedNotifications = {
+        readSharedNotifications,
+        addSharedNotification,
+        markSharedNotificationsRead,
+    };
     window.__cocoScanReportModal = {
         get currentReport() {
             return currentReportModalRecord;

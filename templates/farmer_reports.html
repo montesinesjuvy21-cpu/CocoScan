@@ -244,6 +244,13 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
         .report-row-node:active { transform: scale(0.99); }
+        .report-row-node.is-unread {
+            border-color: rgba(245, 158, 11, 0.35);
+            background: linear-gradient(90deg, #fff8ed 0%, #ffffff 100%);
+        }
+        .report-row-node.is-unread .report-main-meta h4 {
+            color: #92400e;
+        }
         
         .report-main-meta h4 { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
         .report-main-meta p { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
@@ -937,12 +944,17 @@
 
             function drawNotifications() {
                 wrapper.innerHTML = "";
-                const unread = notifications.filter(n => n.type === "unread").length;
+                const displayItems = notifications.map(item => ({
+                    ...item,
+                    text: item.text || item.message || item.title || "Report update",
+                    time: item.time || new Date(item.created_at || Date.now()).toLocaleString(),
+                }));
+                const unread = displayItems.filter(n => n.type === "unread").length;
                 badge.style.display = unread > 0 ? "block" : "none";
 
-                let filtered = notifications;
-                if (activeFilter === "unread") filtered = notifications.filter(n => n.type === "unread");
-                if (activeFilter === "alert") filtered = notifications.filter(n => n.tag === "alert");
+                let filtered = displayItems;
+                if (activeFilter === "unread") filtered = displayItems.filter(n => n.type === "unread");
+                if (activeFilter === "alert") filtered = displayItems.filter(n => n.tag === "alert");
 
                 if (filtered.length === 0) {
                     wrapper.innerHTML = `
@@ -967,7 +979,11 @@
                         </div>`;
                     
                     node.addEventListener("click", () => {
-                        item.type = "read";
+                        if (item.id) {
+                            notifications = window.cocoScanSharedNotifications?.markSharedNotificationsRead?.(item.id) || notifications.map(n => n.id === item.id ? { ...n, type: "read" } : n);
+                        } else {
+                            item.type = "read";
+                        }
                         drawNotifications();
                     });
                     wrapper.appendChild(node);
@@ -991,7 +1007,19 @@
                 }
             });
 
-            drawNotifications();
+            const syncFromSharedStore = () => {
+                const storedNotifications = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
+                notifications = storedNotifications;
+                drawNotifications();
+            };
+
+            window.addEventListener("storage", (event) => {
+                if (event.key === "cocoscan_shared_notifications") {
+                    syncFromSharedStore();
+                }
+            });
+
+            syncFromSharedStore();
         }
 
         /* ================== SEARCH AND FILTERS ENGINE ================== */
@@ -1107,14 +1135,21 @@
 
             paginatedRecords.forEach(item => {
                 const row = document.createElement("div");
-                row.className = "report-row-node";
+                const sharedNotifications = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
+                const unreadRecommendationUpdate = sharedNotifications.find((notification) => {
+                    const sameReport = String(notification.report_id || "") === String(item.id || "");
+                    return sameReport && notification.type === "unread" && /recommendation/i.test(notification.title || "");
+                });
+                const badgeText = unreadRecommendationUpdate ? "Recommendation Updated" : item.status;
+                const isUnread = !!unreadRecommendationUpdate || item.status === 'Recommendation Issued';
+                row.className = `report-row-node${isUnread ? ' is-unread' : ''}`;
                 row.innerHTML = `
                     <div class="report-main-meta">
                         <h4>${highlightSearchText(item.pest, activeSearchQuery)}</h4>
                         <p>${item.timestamp}</p>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px; background:${item.status === 'Recommendation Issued' ? 'rgba(5,150,105,0.1)' : 'rgba(217,119,6,0.1)'}; color:${item.status === 'Recommendation Issued' ? '#059669' : '#d97706'}">${item.status}</span>
+                        <span style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px; background:${badgeText === 'Recommendation Updated' || item.status === 'Recommendation Issued' ? 'rgba(5,150,105,0.1)' : 'rgba(217,119,6,0.1)'}; color:${badgeText === 'Recommendation Updated' || item.status === 'Recommendation Issued' ? '#059669' : '#d97706'}">${badgeText}</span>
                         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.85rem;"></i>
                     </div>`;
                 
@@ -1244,6 +1279,9 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    if (data.notification) {
+                        window.cocoScanSharedNotifications?.addSharedNotification?.(data.notification);
+                    }
                     alert(data.message || 'Follow-up submitted successfully.');
                     window.location.reload();
                     return;

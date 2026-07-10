@@ -1215,7 +1215,17 @@ def farmer_follow_up_report():
             return jsonify({'success': False, 'message': 'The report could not be reopened for review.'}), 500
 
         logger.info(f"Report ID #{report_id} reopened for follow-up review by farmer #{user_id}.")
-        return jsonify({'success': True, 'message': 'Your update has been submitted and the report has been sent back for review.'})
+        return jsonify({
+            'success': True,
+            'message': 'Your update has been submitted and the report has been sent back for review.',
+            'notification': {
+                'title': 'Report reopened',
+                'message': f"Farmer #{user_id} submitted a follow-up for report #{report_id}.",
+                'tag': 'alert',
+                'type': 'unread',
+                'report_id': report_id,
+            },
+        })
 
     except Exception as e:
         logger.error(f"Error reopening report for follow-up: {str(e)}")
@@ -1257,7 +1267,14 @@ def agriculturist_approve_report():
         logger.info(f"Report ID #{report_id} successfully processed and signed off by expert #{user_id}.")
         return jsonify({
             'success': True, 
-            'message': 'Expert diagnostic treatment recommendation logged successfully.'
+            'message': 'Expert diagnostic treatment recommendation logged successfully.',
+            'notification': {
+                'title': 'Recommendation Updated',
+                'message': f"The agriculturist updated the treatment recommendation for report #{report_id}.",
+                'tag': 'alert',
+                'type': 'unread',
+                'report_id': report_id,
+            },
         }), 200
         
     except Exception as e:

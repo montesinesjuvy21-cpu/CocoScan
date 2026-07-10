@@ -629,6 +629,13 @@
                     <h1>Pending Reports</h1>
                     <p>Overall reports waiting for recommendation response</p>
                 </div>
+                <div id="shared-notification-container" style="position: relative;">
+                    <div id="shared-notification-trigger" class="bell-notice-wrapper" style="width: 40px; height: 40px; border-radius: 50%; background: #ffffff; color: var(--brand-dark); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                        <i class="fa-regular fa-bell"></i>
+                        <span id="shared-notification-badge" style="display:none; position:absolute; top:6px; right:7px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
+                    </div>
+                    <div id="shared-notification-dropdown" style="display:none; position:absolute; top:46px; right:0; width:320px; background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:14px; box-shadow:0 10px 25px rgba(0,0,0,0.1); z-index:1000; padding:14px; box-sizing:border-box;"></div>
+                </div>
             </header>
 
             <div class="search-controls-row">
@@ -686,6 +693,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             initSearchAndFilters();
             renderReportsGrid();
+            initSharedNotificationsPanel();
         });
 
         function initSearchAndFilters() {
@@ -892,6 +900,51 @@
             selectedReportRecord = null;
         }
 
+        function initSharedNotificationsPanel() {
+            const trigger = document.getElementById('shared-notification-trigger');
+            const dropdown = document.getElementById('shared-notification-dropdown');
+            const badge = document.getElementById('shared-notification-badge');
+
+            if (!trigger || !dropdown) return;
+
+            function renderSharedNotifications() {
+                const items = window.cocoScanSharedNotifications?.readSharedNotifications?.() || [];
+                const unreadCount = items.filter(item => item.type === 'unread').length;
+                if (badge) badge.style.display = unreadCount > 0 ? 'block' : 'none';
+                if (items.length === 0) {
+                    dropdown.innerHTML = '<p style="margin:0; font-size:0.8rem; color:#64748b;">No shared notifications yet.</p>';
+                    return;
+                }
+                dropdown.innerHTML = items.slice(0, 8).map(item => `
+                    <div style="padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04);">
+                        <strong style="display:block; font-size:0.84rem; color:#0f172a;">${item.title}</strong>
+                        <span style="display:block; font-size:0.74rem; color:#64748b; margin-top:2px;">${item.message}</span>
+                    </div>
+                `).join('');
+            }
+
+            trigger.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const isOpen = dropdown.style.display === 'block';
+                dropdown.style.display = isOpen ? 'none' : 'block';
+                if (!isOpen) renderSharedNotifications();
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!dropdown.contains(event.target) && event.target !== trigger) {
+                    dropdown.style.display = 'none';
+                }
+            });
+
+            window.addEventListener('storage', (event) => {
+                if (event.key === 'cocoscan_shared_notifications') {
+                    renderSharedNotifications();
+                }
+            });
+
+            renderSharedNotifications();
+        }
+
         function submitExpertValidation() {
             const advice = document.getElementById("expert-notes-input").value.trim();
             if(!advice) {
@@ -910,6 +963,9 @@
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
+                    if (data.notification) {
+                        window.cocoScanSharedNotifications?.addSharedNotification?.(data.notification);
+                    }
                     alert(data.message);
                     closeReviewModal();
                     location.reload(); 

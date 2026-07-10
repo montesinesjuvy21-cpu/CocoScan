@@ -110,6 +110,18 @@
                 justify-content: flex-end;
                 margin-top: 20px;
             }
+            .btn-control.is-disabled,
+            .btn-control:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+            .expert-notes-help-text {
+                font-style: italic;
+                color: #64748b;
+                margin-top: 10px;
+            }
             .modal-card-head {
                 display: flex;
                 align-items: center;
@@ -170,7 +182,7 @@
             </div>
             <ul id="report-expert-list" class="expert-reco-clean-list"></ul>
             <textarea id="expert-notes-input" class="notes-input-box" placeholder="Write expert recommendations here..." style="display:none; margin-top: 12px;"></textarea>
-            <p id="expert-notes-help" style="font-size:0.88rem; color:#64748b; margin-top:10px;">Add treatment guidance for the farmer and submit.</p>
+            <p id="expert-notes-help" class="expert-notes-help-text" style="font-size:0.88rem; display:none;">Add treatment guidance for the farmer and submit.</p>
         </div>
 
         <div class="premium-form-card" id="report-notes-card">
