@@ -193,7 +193,7 @@
         node.innerHTML = "";
 
         if (!images || images.length === 0) {
-            node.innerHTML = '<p style="font-size: 0.82rem; color: var(--text-muted); margin: 0;">No additional images uploaded.</p>';
+            node.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; min-height:84px; width:100%;"><p style="font-size: 0.82rem; color: var(--text-muted); margin: 0; text-align:center;">No additional images uploaded.</p></div>';
             return;
         }
 
@@ -316,6 +316,9 @@
             farmerButton.disabled = !canFollowUp;
             farmerButton.classList.toggle("is-disabled", !canFollowUp);
             farmerButton.style.pointerEvents = canFollowUp ? "auto" : "none";
+            farmerButton.style.backgroundColor = canFollowUp ? "" : "#cbd5e1";
+            farmerButton.style.color = canFollowUp ? "" : "#475569";
+            farmerButton.style.borderColor = canFollowUp ? "" : "#94a3b8";
             farmerButton.setAttribute("aria-disabled", String(!canFollowUp));
             farmerButton.title = canFollowUp ? "Proceed to follow up" : "Awaiting expert recommendation";
             farmerButton.innerHTML = canFollowUp

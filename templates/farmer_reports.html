@@ -112,16 +112,17 @@
 
         /* --- SEARCH AND RESPONSIVE CALENDAR FILTER ROW --- */
         .search-controls-row {
-            display: flex; 
+            display: flex;
             flex-wrap: wrap;
-            gap: 12px; 
+            gap: 12px;
             align-items: center;
             width: 100%;
         }
         .search-bar-box {
-            position: relative; 
-            flex: 1;
-            min-width: 240px;
+            position: relative;
+            flex: 1 1 0;
+            min-width: 160px;
+            order: 1;
         }
         .search-input {
             width: 100%; 
@@ -148,17 +149,19 @@
             font-size: 1rem;
         }
         .date-filter-box {
-            position: relative; 
-            min-width: 160px;
+            position: relative;
+            flex: 0 0 160px;
+            min-width: 120px;
+            order: 2;
         }
         .date-filter-box input {
-            width: 100%; 
-            padding: 13px 18px; 
+            width: 100%;
+            padding: 13px 18px;
             border-radius: 32px;
-            border: 1px solid rgba(0,0,0,0.05); 
+            border: 1px solid rgba(0,0,0,0.05);
             background-color: var(--bg-card);
-            font-size: 0.9rem; 
-            outline: none; 
+            font-size: 0.9rem;
+            outline: none;
             color: var(--text-dark);
             cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.01);
@@ -311,6 +314,8 @@
             background-color: var(--bg-card); color: var(--text-dark); font-size: 0.85rem;
             font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer;
             transition: all 0.2s ease;
+            padding: 8px 12px;
+            text-align: center;
         }
         .page-btn:hover:not(:disabled) {
             background-color: #eef5f2;
@@ -1089,7 +1094,7 @@
 
             const leftBtn = document.createElement("button");
             leftBtn.className = "page-btn";
-            leftBtn.textContent = "← Previous";
+            leftBtn.textContent = "Previous";
             leftBtn.disabled = (currentPage === 1);
             leftBtn.onclick = () => { if(currentPage > 1) { currentPage--; renderReportsGrid(); }};
             paginationBlock.appendChild(leftBtn);
@@ -1104,7 +1109,7 @@
 
             const rightBtn = document.createElement("button");
             rightBtn.className = "page-btn";
-            rightBtn.textContent = "Next →";
+            rightBtn.textContent = "Next";
             rightBtn.disabled = (currentPage === totalPagesCalculated);
             rightBtn.onclick = () => { if(currentPage < totalPagesCalculated) { currentPage++; renderReportsGrid(); }};
             paginationBlock.appendChild(rightBtn);

@@ -389,7 +389,7 @@
             background-color: #ffffff;
             color: var(--brand-dark);
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
         }
 
         .btn-action-trigger:hover,
@@ -399,7 +399,12 @@
         }
 
         .btn-action-trigger.camera { background-color: var(--brand-dark); color: #ffffff; }
-        .btn-action-trigger.camera:hover { background-color: #1f382f; }
+        .btn-action-trigger.camera:hover,
+        .btn-action-trigger.camera:active,
+        .btn-action-trigger.camera:focus-visible {
+            background-color: #1f382f;
+            color: #e8f8ef;
+        }
 
         .gps-status-banner {
             display: none;
@@ -1373,7 +1378,14 @@
         function handleSupportingImages(event) {
             const files = Array.from(event.target.files || []);
             if (!files.length) return;
-            supportingImages = supportingImages.concat(files);
+            const remainingSlots = 5 - supportingImages.length;
+            if (remainingSlots <= 0) {
+                alert('You can add up to 5 supporting photos only.');
+                event.target.value = '';
+                return;
+            }
+            const limitedFiles = files.slice(0, remainingSlots);
+            supportingImages = supportingImages.concat(limitedFiles);
             renderSupportingPreviews();
             event.target.value = '';
         }
