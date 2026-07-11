@@ -193,7 +193,7 @@
         node.innerHTML = "";
 
         if (!images || images.length === 0) {
-            node.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; min-height:84px; width:100%;"><p style="font-size: 0.82rem; color: var(--text-muted); margin: 0; text-align:center;">No additional images uploaded.</p></div>';
+            node.innerHTML = '<div style="width:100%;"><p style="font-size: 0.82rem; color: var(--text-muted); margin: 0; text-align: left;">No additional images uploaded.</p></div>';
             return;
         }
 

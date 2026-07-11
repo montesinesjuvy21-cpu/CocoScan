@@ -603,7 +603,7 @@ def _fetch_weather_snapshot(latitude, longitude):
             f"?latitude={lat_value}&longitude={lng_value}"
             "&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m"
         )
-        response = requests.get(weather_url, timeout=4)
+        response = requests.get(weather_url, timeout=10)
         if response.status_code != 200:
             raise RuntimeError(f"Weather service returned {response.status_code}")
 
