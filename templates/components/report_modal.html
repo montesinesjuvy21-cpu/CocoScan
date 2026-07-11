@@ -1,6 +1,20 @@
 <div class="modal-screen-overlay" id="report-summary-modal" data-report-modal aria-hidden="true">
     <div class="modal-sheet-sliding-card" data-report-sheet>
         <style>
+            .modal-screen-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(11, 37, 26, 0.45);
+                backdrop-filter: blur(6px);
+                z-index: 2000;
+                align-items: flex-end;
+                justify-content: center;
+                padding: 16px;
+            }
+            .modal-screen-overlay.open-modal {
+                display: flex;
+            }
             .modal-sheet-sliding-card {
                 position: relative;
                 z-index: 10;
@@ -9,6 +23,9 @@
                 background: #ffffff;
                 box-shadow: 0 28px 80px rgba(15, 23, 42, 0.16);
                 max-width: 760px;
+                width: 100%;
+                max-height: min(92vh, 960px);
+                overflow-y: auto;
                 margin: 0 auto;
             }
             .status-row-bar {
@@ -120,6 +137,16 @@
                 justify-content: flex-end;
                 margin-top: 20px;
             }
+            .btn-control {
+                position: relative;
+                overflow: hidden;
+                transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            }
+            .btn-control:hover,
+            .btn-control:focus-visible {
+                transform: translateY(-1px);
+                box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+            }
             .btn-control.is-disabled,
             .btn-control:disabled {
                 opacity: 0.6;
@@ -157,6 +184,29 @@
                 background: #991b1b;
                 transform: translateY(-1px);
             }
+            .submit-progress-banner {
+                display: none;
+                align-items: center;
+                gap: 8px;
+                margin-top: 14px;
+                padding: 10px 12px;
+                border-radius: 999px;
+                background: #ecfdf5;
+                color: #166534;
+                font-size: 0.9rem;
+                font-weight: 600;
+            }
+            .submit-progress-spinner {
+                width: 14px;
+                height: 14px;
+                border: 2px solid rgba(22, 101, 52, 0.25);
+                border-top-color: #166534;
+                border-radius: 50%;
+                animation: reportSubmitSpin 0.8s linear infinite;
+            }
+            @keyframes reportSubmitSpin {
+                to { transform: rotate(360deg); }
+            }
         </style>
 
         <div class="modal-header-inline" style="display: flex; justify-content: space-between; align-items: center;">
@@ -190,17 +240,6 @@
             <div id="report-additional-images-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px;"></div>
         </div>
 
-        <div class="premium-form-card" data-scan-only>
-            <h4><i class="fa-solid fa-images"></i> Supporting Photos (optional)</h4>
-            <div class="modern-micro-upload-zone" onclick="triggerSupportingPhotoUpload()">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-                <span>Add Extra Field Images</span>
-                <p>Tap to open your phone gallery directory</p>
-            </div>
-            <input type="file" id="supporting-photos-input" accept="image/*" multiple onchange="handleSupportingImages(event)">
-            <div class="supporting-preview-grid" id="supporting-preview-grid"></div>
-        </div>
-
         <div class="premium-reco-card">
             <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Initial Recommendation</h4>
             <ul id="report-initial-list"></ul>
@@ -215,10 +254,26 @@
             <p id="expert-notes-help" class="expert-notes-help-text" style="font-size:0.88rem; display:none;">Add treatment guidance for the farmer and submit.</p>
         </div>
 
+        <div class="premium-form-card" data-scan-only>
+            <h4><i class="fa-solid fa-images"></i> Supporting Photos (optional)</h4>
+            <div class="modern-micro-upload-zone" onclick="triggerSupportingPhotoUpload()">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span>Add Extra Field Images</span>
+                <p>Tap to open your phone gallery directory</p>
+            </div>
+            <input type="file" id="supporting-photos-input" accept="image/*" multiple onchange="handleSupportingImages(event)">
+            <div class="supporting-preview-grid" id="supporting-preview-grid"></div>
+        </div>
+
         <div class="premium-form-card" id="report-notes-card">
             <h4><i class="fa-solid fa-pen-to-square"></i> Additional Notes</h4>
             <textarea class="notes-input-box" id="field-notes-capture" placeholder="Write your additional notes here..."></textarea>
             <p id="report-notes-display" style="font-size: 0.88rem; color: var(--text-dark); line-height: 1.5; padding: 2px 0; display: none;">--</p>
+        </div>
+
+        <div class="submit-progress-banner" id="submit-progress-banner" role="status" aria-live="polite">
+            <span class="submit-progress-spinner"></span>
+            <span id="submit-progress-text">Submitting your report…</span>
         </div>
 
         <div class="control-action-bar">

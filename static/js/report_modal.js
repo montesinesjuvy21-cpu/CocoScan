@@ -4,6 +4,7 @@
 
     let currentReportModalRecord = null;
     let currentReportModalMode = "farmer";
+    let activeReportModalSubmissionController = null;
 
     function getModalRoot() {
         return document.querySelector("[data-report-modal]");
@@ -127,6 +128,55 @@
     function clearNode(node) {
         if (!node) return;
         node.innerHTML = "";
+    }
+
+    function setReportModalSubmissionState(isSubmitting, pendingLabel = "Submitting your report…") {
+        const progressBanner = document.getElementById("submit-progress-banner");
+        const progressText = document.getElementById("submit-progress-text");
+        const followUpButton = document.getElementById("summary-followup-button");
+        const scanSubmitButton = document.getElementById("report-scan-submit-btn");
+        const agriSubmitButton = document.getElementById("report-agri-submit-btn");
+        const cancelButton = document.getElementById("report-modal-cancel-btn");
+        const actionButtons = [followUpButton, scanSubmitButton, agriSubmitButton].filter(Boolean);
+
+        if (progressBanner) {
+            progressBanner.style.display = isSubmitting ? "flex" : "none";
+        }
+        if (progressText) {
+            progressText.textContent = pendingLabel;
+        }
+
+        actionButtons.forEach((button) => {
+            if (!button) return;
+            const shouldDisable = isSubmitting && button.id !== "summary-followup-button";
+            button.disabled = shouldDisable;
+            button.classList.toggle("is-disabled", shouldDisable);
+            button.setAttribute("aria-busy", isSubmitting ? "true" : "false");
+
+            if (isSubmitting) {
+                if (!button.dataset.defaultHtml) {
+                    button.dataset.defaultHtml = button.innerHTML;
+                }
+                const icon = button.id === "summary-followup-button" ? "fa-solid fa-rotate" : "fa-solid fa-spinner fa-spin";
+                button.innerHTML = `<i class="${icon}"></i> ${pendingLabel}`;
+            } else if (button.dataset.defaultHtml) {
+                button.innerHTML = button.dataset.defaultHtml;
+            }
+        });
+
+        if (cancelButton) {
+            cancelButton.disabled = false;
+            cancelButton.classList.remove("is-disabled");
+            cancelButton.setAttribute("aria-busy", "false");
+        }
+    }
+
+    function abortActiveReportModalSubmission() {
+        if (activeReportModalSubmissionController) {
+            activeReportModalSubmissionController.abort();
+            activeReportModalSubmissionController = null;
+        }
+        setReportModalSubmissionState(false);
     }
 
     function renderList(node, items, emptyText) {
@@ -312,6 +362,8 @@
     }
 
     function closeReportModal() {
+        abortActiveReportModalSubmission();
+
         const modalRoot = getModalRoot();
         if (modalRoot) {
             modalRoot.classList.remove("open-modal");
@@ -324,6 +376,10 @@
         const followUpModal = document.getElementById("followup-modal");
         if (followUpModal && followUpModal.classList.contains("open-modal")) {
             followUpModal.classList.remove("open-modal");
+        }
+
+        if (typeof window.resetWorkflowStateToHome === "function") {
+            window.resetWorkflowStateToHome();
         }
     }
 
@@ -437,6 +493,7 @@
             setDisplay(expertCard, true, "flex");
         }
 
+        setReportModalSubmissionState(false);
         modalRoot.classList.add("open-modal");
         modalRoot.setAttribute("aria-hidden", "false");
     }
@@ -444,6 +501,8 @@
     window.openReportModal = openReportModal;
     window.closeReportModal = closeReportModal;
     window.resolveReportImageUrl = resolveReportImageUrl;
+    window.setReportModalSubmissionState = setReportModalSubmissionState;
+    window.abortReportSubmission = abortActiveReportModalSubmission;
 
     window.__cocoScanReportModal = {
         get currentReport() {

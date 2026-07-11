@@ -967,6 +967,7 @@
         let globalActiveImageFile = null;
         let globalPrimaryGPS = null;
         let supportingImages = [];
+        let activeReportSubmissionController = null;
         let recentReports = (function(){
             try {
                 const node = document.getElementById('recent-reports-data');
@@ -1200,6 +1201,18 @@
             });
         }
 
+        function abortReportSubmission() {
+            if (activeReportSubmissionController) {
+                activeReportSubmissionController.abort();
+                activeReportSubmissionController = null;
+            }
+            if (typeof window.setReportModalSubmissionState === 'function') {
+                window.setReportModalSubmissionState(false);
+            }
+        }
+
+        window.abortReportSubmission = abortReportSubmission;
+
         function submitReportPayload() {
             if (!navigator.onLine) {
                 if (confirm('No network connection detected. Save this scan as a draft instead?')) {
@@ -1240,9 +1253,15 @@
                 formData.append('supporting_images', file, file.name || `supporting_${index}.jpg`);
             });
 
+            if (typeof window.setReportModalSubmissionState === 'function') {
+                window.setReportModalSubmissionState(true, 'Submitting report…');
+            }
+            activeReportSubmissionController = new AbortController();
+
             fetch('/farmer/submit-report', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: activeReportSubmissionController.signal
             })
             .then(response => response.json())
             .then(data => {
@@ -1261,6 +1280,9 @@
                 resetWorkflowStateToHome();
             })
             .catch(error => {
+                if (error && error.name === 'AbortError') {
+                    return;
+                }
                 console.error('Error submitting report:', error);
                 const shouldSaveDraft = confirm('The report could not be synced right now. Save this scan as a draft instead?');
                 if (shouldSaveDraft) {
@@ -1269,6 +1291,14 @@
                     alert(`Report could not be synced: ${error.message}`);
                 }
                 resetWorkflowStateToHome();
+            })
+            .finally(() => {
+                if (activeReportSubmissionController) {
+                    activeReportSubmissionController = null;
+                }
+                if (typeof window.setReportModalSubmissionState === 'function') {
+                    window.setReportModalSubmissionState(false);
+                }
             });
         }
 
