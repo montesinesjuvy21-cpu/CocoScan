@@ -34,6 +34,35 @@
             overflow-x: hidden;
         }
 
+        /* Prevent horizontal overflow on small devices and make inputs shrinkable */
+        html, body, .mobile-viewport-container {
+            max-width: 100%;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+        }
+
+        .search-controls-row > * {
+            min-width: 0; /* allow flex children to shrink */
+        }
+
+        .search-input, .date-filter-box input, .search-bar-box, .date-filter-box {
+            box-sizing: border-box;
+            max-width: 100%;
+            min-width: 0;
+        }
+
+        .filter-chips-scrollrow {
+            padding-right: 12px;
+            box-sizing: border-box;
+        }
+
+        .reports-feed-stack, .main-content-layout, .modal-sheet-sliding-card {
+            box-sizing: border-box;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         /* --- GLOBAL LAYOUT CONTAINER --- */
         .mobile-viewport-container {
             width: 100%;
@@ -221,6 +250,22 @@
             border-radius: 4px;
             font-weight: 700;
         }
+            /* Dropdown item styles for new filter controls */
+            .filter-dropdown .dropdown-item {
+                display: block;
+                width: 100%;
+                padding: 8px 10px;
+                text-align: left;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                font-size: 0.92rem;
+                color: var(--text-dark);
+                border-radius: 6px;
+            }
+            .filter-dropdown .dropdown-item:hover {
+                background: rgba(82,130,101,0.06);
+            }
 
         /* --- FILTERS ENHANCEMENTS --- */
         .filter-chips-scrollrow {
@@ -821,24 +866,30 @@
             </header>
 
             <div class="search-controls-row">
-                <div class="search-bar-box">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="report-search" class="search-input" placeholder="Search by pest name...">
+                <div class="filter-buttons-row" style="display:flex; gap:8px; align-items:center; width:100%; position:relative; z-index:70;">
+                    <div style="display:flex; gap:8px; flex:1; min-width:0;">
+                        <button id="filter-all-btn" class="chip-filter-btn">All</button>
+                        <button id="filter-status-btn" class="chip-filter-btn">Status ▾</button>
+                        <button id="filter-pest-btn" class="chip-filter-btn">Pest ▾</button>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button id="filter-calendar-btn" class="chip-filter-btn" title="Filter by date"><i class="fa-solid fa-calendar-days"></i></button>
+                        <input type="date" id="report-date-filter" aria-label="Filter by date" style="display:none;">
+                        <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
+                            <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+                        </button>
+                    </div>
                 </div>
-                <div class="date-filter-box">
-                    <input type="date" id="report-date-filter" aria-label="Filter by date">
+                <!-- Dropdown containers for status and pest filters -->
+                <div id="status-dropdown" class="filter-dropdown" style="position:relative; margin-top:8px;">
+                    <div class="filter-dropdown-panel" style="display:none; position:fixed; z-index:80; background:var(--bg-card); border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:8px; padding:8px; min-width:180px;"></div>
                 </div>
-                <!-- Clear Filters Button Element -->
-                <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
-                    <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
-                </button>
+                <div id="pest-dropdown" class="filter-dropdown" style="position:relative; margin-top:8px;">
+                    <div class="filter-dropdown-panel" style="display:none; position:fixed; z-index:80; background:var(--bg-card); border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:8px; padding:8px; min-width:180px; max-height:240px; overflow:auto;"></div>
+                </div>
             </div>
 
-            <div class="filter-chips-scrollrow">
-                <button class="chip-filter-btn active-chip" data-status="all" id="chip-count-label">All (0)</button>
-                <button class="chip-filter-btn" data-status="Recommendation Issued">Recommendation Issued</button>
-                <button class="chip-filter-btn" data-status="Under Review">Under Review</button>
-            </div>
+            <!-- old chips removed — status and pest selections are in dropdowns above -->
 
             <div class="reports-feed-stack" id="reports-list-container"></div>
 
@@ -937,32 +988,131 @@
 
         /* ================== SEARCH AND FILTERS ENGINE ================== */
         function initSearchAndFilters() {
-            const searchInput = document.getElementById("report-search");
             const dateInput = document.getElementById("report-date-filter");
+            const allBtn = document.getElementById('filter-all-btn');
+            const statusBtn = document.getElementById('filter-status-btn');
+            const pestBtn = document.getElementById('filter-pest-btn');
+            const calendarBtn = document.getElementById('filter-calendar-btn');
+            const statusDropdownPanel = document.querySelector('#status-dropdown .filter-dropdown-panel');
+            const pestDropdownPanel = document.querySelector('#pest-dropdown .filter-dropdown-panel');
 
-            searchInput.addEventListener("input", (e) => {
-                activeSearchQuery = e.target.value.toLowerCase().trim();
-                currentPage = 1; 
-                evaluateClearFilterButtonState();
-                renderReportsGrid();
-            });
-
-            dateInput.addEventListener("change", (e) => {
-                activeDateFilter = e.target.value;
-                currentPage = 1;
-                evaluateClearFilterButtonState();
-                renderReportsGrid();
-            });
-
-            document.querySelectorAll(".chip-filter-btn").forEach(chip => {
-                chip.addEventListener("click", (e) => {
-                    document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
-                    e.target.classList.add("active-chip");
-                    activeStatusFilter = e.target.getAttribute("data-status");
+            // Populate All count
+            if (allBtn) {
+                allBtn.textContent = `All (${reports.length})`;
+                allBtn.classList.add('active-chip');
+                allBtn.addEventListener('click', () => {
+                    activeStatusFilter = 'all';
+                    activeSearchQuery = '';
                     currentPage = 1;
+                    document.querySelectorAll('.chip-filter-btn').forEach(c => c.classList.remove('active-chip'));
+                    allBtn.classList.add('active-chip');
                     evaluateClearFilterButtonState();
                     renderReportsGrid();
                 });
+            }
+
+            // Build unique status list and pest list from data
+            const statuses = Array.from(new Set(reports.map(r => r.status).filter(Boolean)));
+            const pests = Array.from(new Set(reports.map(r => (r.pest || '').trim()).filter(Boolean))).sort();
+
+            // Populate status dropdown (only statuses; 'All' is the separate button)
+            if (statusDropdownPanel) {
+                statusDropdownPanel.innerHTML = '';
+                statuses.forEach(s => {
+                    const btn = document.createElement('button');
+                    btn.className = 'dropdown-item';
+                    btn.textContent = s;
+                    btn.onclick = () => { activeStatusFilter = s; currentPage = 1; closeAllDropdowns(); renderReportsGrid(); evaluateClearFilterButtonState(); };
+                    statusDropdownPanel.appendChild(btn);
+                });
+            }
+
+            // Populate pest dropdown (no clear option here — use global Clear Filters button)
+            if (pestDropdownPanel) {
+                pestDropdownPanel.innerHTML = '';
+                pests.forEach(p => {
+                    const btn = document.createElement('button');
+                    btn.className = 'dropdown-item';
+                    btn.textContent = p;
+                    btn.onclick = () => { activeSearchQuery = p.toLowerCase(); currentPage = 1; closeAllDropdowns(); renderReportsGrid(); evaluateClearFilterButtonState(); };
+                    pestDropdownPanel.appendChild(btn);
+                });
+            }
+
+            // Toggle dropdowns (operate on panels)
+            function closeAllDropdowns() {
+                const sdPanel = document.querySelector('#status-dropdown .filter-dropdown-panel');
+                const pdPanel = document.querySelector('#pest-dropdown .filter-dropdown-panel');
+                if (sdPanel) sdPanel.style.display = 'none';
+                if (pdPanel) pdPanel.style.display = 'none';
+            }
+
+            if (statusBtn) {
+                statusBtn.addEventListener('click', (e) => {
+                    const sdPanel = document.querySelector('#status-dropdown .filter-dropdown-panel');
+                    if (!sdPanel) return;
+                    const rect = statusBtn.getBoundingClientRect();
+                    sdPanel.style.left = rect.left + 'px';
+                    sdPanel.style.top = (rect.bottom + 8) + 'px';
+                    sdPanel.style.display = sdPanel.style.display === 'block' ? 'none' : 'block';
+                    // ensure pest dropdown is closed
+                    const pdPanel = document.querySelector('#pest-dropdown .filter-dropdown-panel');
+                    if (pdPanel) pdPanel.style.display = 'none';
+                });
+            }
+
+            if (pestBtn) {
+                pestBtn.addEventListener('click', () => {
+                    const pdPanel = document.querySelector('#pest-dropdown .filter-dropdown-panel');
+                    if (!pdPanel) return;
+                    const rect = pestBtn.getBoundingClientRect();
+                    pdPanel.style.left = rect.left + 'px';
+                    pdPanel.style.top = (rect.bottom + 8) + 'px';
+                    pdPanel.style.display = pdPanel.style.display === 'block' ? 'none' : 'block';
+                    // ensure status dropdown is closed
+                    const sdPanel = document.querySelector('#status-dropdown .filter-dropdown-panel');
+                    if (sdPanel) sdPanel.style.display = 'none';
+                });
+            }
+
+            // Calendar toggle: open/hide and close after selection
+            if (calendarBtn) {
+                calendarBtn.addEventListener('click', () => {
+                    const dateEl = document.getElementById('report-date-filter');
+                    if (!dateEl) return;
+                    if (dateEl.style.display === 'none' || !dateEl.style.display) {
+                        dateEl.style.display = '';
+                        dateEl.focus();
+                        dateEl.click();
+                    } else {
+                        // hide if visible
+                        dateEl.style.display = 'none';
+                    }
+                });
+            }
+
+            if (dateInput) {
+                dateInput.addEventListener('change', (e) => {
+                    activeDateFilter = e.target.value;
+                    currentPage = 1;
+                    // hide date picker after selection
+                    e.target.style.display = 'none';
+                    evaluateClearFilterButtonState();
+                    renderReportsGrid();
+                });
+                // hide on blur if no value selected
+                dateInput.addEventListener('blur', (e) => {
+                    setTimeout(() => { if (!e.target.value) e.target.style.display = 'none'; }, 150);
+                });
+            }
+
+            // Close dropdowns when clicking outside (operate on panels)
+            document.addEventListener('click', (ev) => {
+                const sdPanel = document.querySelector('#status-dropdown .filter-dropdown-panel');
+                const pdPanel = document.querySelector('#pest-dropdown .filter-dropdown-panel');
+                const target = ev.target;
+                if (sdPanel && !sdPanel.contains(target) && target !== statusBtn) sdPanel.style.display = 'none';
+                if (pdPanel && !pdPanel.contains(target) && target !== pestBtn) pdPanel.style.display = 'none';
             });
         }
 
@@ -980,12 +1130,14 @@
 
         /* Pag-reset ng lahat ng filter values pabalik sa default state */
         function clearAllActiveFilters() {
-            document.getElementById("report-search").value = "";
-            document.getElementById("report-date-filter").value = "";
+                const searchEl = document.getElementById("report-search");
+                if (searchEl) searchEl.value = "";
+                const dateEl = document.getElementById("report-date-filter");
+                if (dateEl) dateEl.value = "";
             
             document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
-            const allChip = document.querySelector('.chip-filter-btn[data-status="all"]');
-            if (allChip) allChip.classList.add("active-chip");
+            const allBtn = document.getElementById('filter-all-btn');
+            if (allBtn) allBtn.classList.add('active-chip');
 
             activeSearchQuery = "";
             activeDateFilter = "";
@@ -1016,10 +1168,10 @@
         /* ================== DYNAMIC INTERACTIVE REPORTS ENGINE ================== */
         function renderReportsGrid() {
             const container = document.getElementById("reports-list-container");
-            const countLabel = document.getElementById("chip-count-label");
+            const allBtn = document.getElementById('filter-all-btn');
             container.innerHTML = "";
 
-            countLabel.textContent = `All (${reports.length})`;
+            if (allBtn) allBtn.textContent = `All (${reports.length})`;
 
             let processedRecords = reports.filter(item => {
                 const matchesSearch = !activeSearchQuery || item.pest.toLowerCase().includes(activeSearchQuery);
