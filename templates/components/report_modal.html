@@ -94,6 +94,12 @@
                 border: 1px solid rgba(148, 163, 184, 0.14);
                 margin-top: 16px;
             }
+            #report-additional-images-grid p {
+                text-align: center;
+                margin: 0;
+                color: #64748b;
+                font-size: 0.92rem;
+            }
             .premium-form-card h4,
             .premium-reco-card h4 {
                 font-size: 1rem;
@@ -140,6 +146,8 @@
             .btn-control {
                 position: relative;
                 overflow: hidden;
+                min-height: 52px;
+                padding: 14px 18px;
                 transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
             }
             .btn-control:hover,
@@ -183,29 +191,6 @@
             #report-close-btn-header:hover {
                 background: #991b1b;
                 transform: translateY(-1px);
-            }
-            .submit-progress-banner {
-                display: none;
-                align-items: center;
-                gap: 8px;
-                margin-top: 14px;
-                padding: 10px 12px;
-                border-radius: 999px;
-                background: #ecfdf5;
-                color: #166534;
-                font-size: 0.9rem;
-                font-weight: 600;
-            }
-            .submit-progress-spinner {
-                width: 14px;
-                height: 14px;
-                border: 2px solid rgba(22, 101, 52, 0.25);
-                border-top-color: #166534;
-                border-radius: 50%;
-                animation: reportSubmitSpin 0.8s linear infinite;
-            }
-            @keyframes reportSubmitSpin {
-                to { transform: rotate(360deg); }
             }
         </style>
 
@@ -254,6 +239,12 @@
             <p id="expert-notes-help" class="expert-notes-help-text" style="font-size:0.88rem; display:none;">Add treatment guidance for the farmer and submit.</p>
         </div>
 
+        <div class="premium-form-card" id="report-notes-card">
+            <h4><i class="fa-solid fa-pen-to-square"></i> Additional Notes</h4>
+            <textarea class="notes-input-box" id="field-notes-capture" placeholder="Write your additional notes here..."></textarea>
+            <p id="report-notes-display" style="font-size: 0.88rem; color: var(--text-dark); line-height: 1.5; padding: 2px 0; display: none;">--</p>
+        </div>
+
         <div class="premium-form-card" data-scan-only>
             <h4><i class="fa-solid fa-images"></i> Supporting Photos (optional)</h4>
             <div class="modern-micro-upload-zone" onclick="triggerSupportingPhotoUpload()">
@@ -263,17 +254,6 @@
             </div>
             <input type="file" id="supporting-photos-input" accept="image/*" multiple onchange="handleSupportingImages(event)">
             <div class="supporting-preview-grid" id="supporting-preview-grid"></div>
-        </div>
-
-        <div class="premium-form-card" id="report-notes-card">
-            <h4><i class="fa-solid fa-pen-to-square"></i> Additional Notes</h4>
-            <textarea class="notes-input-box" id="field-notes-capture" placeholder="Write your additional notes here..."></textarea>
-            <p id="report-notes-display" style="font-size: 0.88rem; color: var(--text-dark); line-height: 1.5; padding: 2px 0; display: none;">--</p>
-        </div>
-
-        <div class="submit-progress-banner" id="submit-progress-banner" role="status" aria-live="polite">
-            <span class="submit-progress-spinner"></span>
-            <span id="submit-progress-text">Submitting your report…</span>
         </div>
 
         <div class="control-action-bar">

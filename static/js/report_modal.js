@@ -131,20 +131,11 @@
     }
 
     function setReportModalSubmissionState(isSubmitting, pendingLabel = "Submitting your report…") {
-        const progressBanner = document.getElementById("submit-progress-banner");
-        const progressText = document.getElementById("submit-progress-text");
         const followUpButton = document.getElementById("summary-followup-button");
         const scanSubmitButton = document.getElementById("report-scan-submit-btn");
         const agriSubmitButton = document.getElementById("report-agri-submit-btn");
         const cancelButton = document.getElementById("report-modal-cancel-btn");
         const actionButtons = [followUpButton, scanSubmitButton, agriSubmitButton].filter(Boolean);
-
-        if (progressBanner) {
-            progressBanner.style.display = isSubmitting ? "flex" : "none";
-        }
-        if (progressText) {
-            progressText.textContent = pendingLabel;
-        }
 
         actionButtons.forEach((button) => {
             if (!button) return;
@@ -324,7 +315,9 @@
             const canFollowUp = mode === "farmer" && isReviewed;
             farmerButton.disabled = !canFollowUp;
             farmerButton.classList.toggle("is-disabled", !canFollowUp);
+            farmerButton.style.pointerEvents = canFollowUp ? "auto" : "none";
             farmerButton.setAttribute("aria-disabled", String(!canFollowUp));
+            farmerButton.title = canFollowUp ? "Proceed to follow up" : "Awaiting expert recommendation";
             farmerButton.innerHTML = canFollowUp
                 ? '<i class="fa-solid fa-rotate"></i> Update Status'
                 : '<i class="fa-solid fa-lock"></i> Awaiting Recommendation';

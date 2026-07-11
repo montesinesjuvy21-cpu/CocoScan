@@ -375,21 +375,31 @@
 
         .btn-action-trigger {
             flex: 1;
-            padding: 11px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            border-radius: 10px;
+            min-height: 52px;
+            padding: 14px 16px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border-radius: 14px;
             border: none;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            transition: all 0.2s ease;
+            gap: 8px;
+            background-color: #ffffff;
+            color: var(--brand-dark);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+
+        .btn-action-trigger:hover,
+        .btn-action-trigger:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
         }
 
         .btn-action-trigger.camera { background-color: var(--brand-dark); color: #ffffff; }
-        .btn-action-trigger.camera:hover { background-color: #1f382f; transform: translateY(-1px); }
+        .btn-action-trigger.camera:hover { background-color: #1f382f; }
 
         .gps-status-banner {
             display: none;
@@ -1015,8 +1025,9 @@
             logTargetContainer.innerHTML = '';
 
             const historyDataset = Array.isArray(recentReports) ? recentReports : [];
+        const recentHistory = historyDataset.slice(0, 5);
 
-            if (!historyDataset || historyDataset.length === 0) {
+            if (!recentHistory || recentHistory.length === 0) {
                 logTargetContainer.innerHTML = `
                     <div class="history-empty-state-card">
                         <div class="history-empty-icon-circle">
@@ -1028,7 +1039,7 @@
                 return;
             }
 
-            historyDataset.forEach(log => {
+            recentHistory.forEach(log => {
                 const nodeRow = document.createElement('div');
                 nodeRow.className = "history-item-node";
                 nodeRow.setAttribute('onclick', `openHistoricalReport('${log.id}')`);
