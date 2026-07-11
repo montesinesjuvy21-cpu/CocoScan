@@ -13,12 +13,12 @@ class ValidationError(Exception):
 
 def validate_email_format(email: str) -> str:
     """
-    Validate email format using email-validator
+    Validate email format using email-validator without enforcing deliverability.
     Returns: normalized email
     Raises: ValidationError if invalid
     """
     try:
-        valid = validate_email(email.strip())
+        valid = validate_email(email.strip(), check_deliverability=False)
         return valid.email
     except EmailNotValidError as e:
         raise ValidationError(f"Invalid email format: {str(e)}")
@@ -59,7 +59,7 @@ def validate_name(name: str, field_name: str) -> str:
     Validate name fields (first, last, middle)
     - Strip whitespace
     - Check minimum length (2 characters)
-    - Allow letters, hyphens, and spaces only
+    - Allow letters, accents, hyphens, and spaces only
     
     Returns: cleaned name
     Raises: ValidationError if invalid
@@ -69,7 +69,7 @@ def validate_name(name: str, field_name: str) -> str:
     if not cleaned or len(cleaned) < 2:
         raise ValidationError(f"{field_name} must be at least 2 characters long")
     
-    if not re.match(r"^[a-zA-Z\s\-']+$", cleaned):
+    if not re.match(r"^[A-Za-zÀ-ÖØ-öø-ÿ\s\-']+$", cleaned):
         raise ValidationError(f"{field_name} can only contain letters, spaces, hyphens, and apostrophes")
     
     return cleaned
@@ -78,7 +78,7 @@ def validate_name(name: str, field_name: str) -> str:
 def validate_age(age_str: str) -> int:
     """
     Validate and convert age to integer
-    - Must be between 18 and 120
+    - Must be between 18 and 99
     
     Returns: age as integer
     Raises: ValidationError if invalid
@@ -88,25 +88,25 @@ def validate_age(age_str: str) -> int:
     except (ValueError, TypeError):
         raise ValidationError("Age must be a valid number")
     
-    if age < 18 or age > 120:
-        raise ValidationError("Age must be between 18 and 120")
+    if age < 18 or age > 99:
+        raise ValidationError("Age must be between 18 and 99")
     
     return age
 
 
-def validate_address(address: str) -> str:
+def validate_barangay(barangay: str) -> str:
     """
-    Validate address field
+    Validate barangay field
     - Check minimum length
     - Strip whitespace
     
-    Returns: cleaned address
+    Returns: cleaned barangay
     Raises: ValidationError if invalid
     """
-    cleaned = address.strip() if address else ""
+    cleaned = barangay.strip() if barangay else ""
     
-    if not cleaned or len(cleaned) < 5:
-        raise ValidationError("Address must be at least 5 characters long")
+    if not cleaned or len(cleaned) < 2:
+        raise ValidationError("Barangay must be at least 2 characters long")
     
     return cleaned
 
@@ -140,7 +140,9 @@ def validate_signup_data(form_data: dict, role: str) -> dict:
         last_name = validate_name(form_data.get('last_name', ''), "Last Name")
         email = validate_email_format(form_data.get('email', ''))
         age = validate_age(form_data.get('age', ''))
-        address = validate_address(form_data.get('address', ''))
+        barangay = validate_barangay(form_data.get('barangay', ''))
+        municipality = "San Pablo City"
+        province = "Laguna"
         
         # Optional fields
         middle_name = form_data.get('middle_name', '').strip() or None
@@ -160,10 +162,7 @@ def validate_signup_data(form_data: dict, role: str) -> dict:
         
         # Role-specific validation
         if role == 'farmer':
-            farmer_barangay = validate_required_field(
-                form_data.get('farmer_barangay', ''), 
-                "Barangay"
-            )
+            farmer_barangay = (form_data.get('farmer_barangay', '') or '').strip() or barangay
             farm_size = form_data.get('farm_size', '').strip() or None
             farm_type = form_data.get('farm_type', '').strip() or None
             
@@ -173,11 +172,13 @@ def validate_signup_data(form_data: dict, role: str) -> dict:
                 'last_name': last_name,
                 'extension_name': extension_name,
                 'age': age,
-                'address': address,
+                'barangay': barangay,
+                'municipality': municipality,
+                'province': province,
                 'email': email,
                 'password': password,
                 'role': role,
-                'farmer_barangay': farmer_barangay,
+                'farmer_barangay': farmer_barangay or barangay,
                 'farm_size': farm_size,
                 'farm_type': farm_type,
             }
@@ -191,10 +192,7 @@ def validate_signup_data(form_data: dict, role: str) -> dict:
                 form_data.get('lgu_position', ''),
                 "Position"
             )
-            lgu_employee_id = validate_required_field(
-                form_data.get('lgu_employee_id', ''),
-                "Employee ID"
-            )
+            lgu_employee_id = form_data.get('lgu_employee_id', '').strip() or None
             lgu_jurisdiction = validate_required_field(
                 form_data.get('lgu_jurisdiction', ''),
                 "Jurisdiction"
@@ -209,7 +207,9 @@ def validate_signup_data(form_data: dict, role: str) -> dict:
                 'last_name': last_name,
                 'extension_name': extension_name,
                 'age': age,
-                'address': address,
+                'barangay': barangay,
+                'municipality': municipality,
+                'province': province,
                 'email': email,
                 'password': password,
                 'role': role,
@@ -229,10 +229,7 @@ def validate_signup_data(form_data: dict, role: str) -> dict:
                 form_data.get('agri_position', ''),
                 "Position"
             )
-            agri_employee_id = validate_required_field(
-                form_data.get('agri_employee_id', ''),
-                "Employee ID"
-            )
+            agri_employee_id = form_data.get('agri_employee_id', '').strip() or None
             agri_jurisdiction = validate_required_field(
                 form_data.get('agri_jurisdiction', ''),
                 "Jurisdiction"
@@ -247,7 +244,9 @@ def validate_signup_data(form_data: dict, role: str) -> dict:
                 'last_name': last_name,
                 'extension_name': extension_name,
                 'age': age,
-                'address': address,
+                'barangay': barangay,
+                'municipality': municipality,
+                'province': province,
                 'email': email,
                 'password': password,
                 'role': role,

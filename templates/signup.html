@@ -94,6 +94,12 @@
         transition: transform 0.3s ease;
     }
 
+    .readonly-field {
+        background-color: #f3f4f6;
+        color: #6b7280;
+        cursor: not-allowed;
+    }
+
     /* Active / Checked State */
     .req-badge.requirement-checked {
         background-color: #f0fdf4;
@@ -141,42 +147,132 @@
         
         <div class="form-grid-row grid-2-col">
             <div>
-                <label for="first_name">First Name</label>
-                <input type="text" id="first_name" name="first_name" placeholder="Maria" required>
+                <label for="first_name">First Name <span style="color:red;">*</span></label>
+                <input type="text" id="first_name" name="first_name" placeholder="Maria" pattern="[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+" title="Letters, spaces, hyphens, and apostrophes only" required>
             </div>
             <div>
                 <label for="middle_name">Middle Name <span style="font-weight: normal; opacity: 0.65;">(Optional)</span></label>
-                <input type="text" id="middle_name" name="middle_name" placeholder="Reyes">
+                <input type="text" id="middle_name" name="middle_name" placeholder="Reyes" pattern="[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+" title="Letters, spaces, hyphens, and apostrophes only">
             </div>
         </div>
 
         <div class="form-grid-row grid-3-col">
             <div>
-                <label for="last_name">Last Name</label>
-                <input type="text" id="last_name" name="last_name" placeholder="Garcia" required>
+                <label for="last_name">Last Name <span style="color:red;">*</span></label>
+                <input type="text" id="last_name" name="last_name" placeholder="Garcia" pattern="[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+" title="Letters, spaces, hyphens, and apostrophes only" required>
             </div>
             <div>
                 <label for="extension_name">Ext. <span style="font-weight: normal; opacity: 0.65;">(Opt.)</span></label>
-                <input type="text" id="extension_name" name="extension_name" placeholder="Jr., III">
+                <input type="text" id="extension_name" name="extension_name" placeholder="Jr., III" pattern="[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+" title="Letters, spaces, hyphens, and apostrophes only">
             </div>
             <div>
-                <label for="age">Age</label>
-                <input type="number" id="age" name="age" placeholder="28" min="15" max="100" required>
+                <label for="age">Age <span style="color:red;">*</span></label>
+                <input type="number" id="age" name="age" placeholder="28" min="18" max="99" step="1" required>
             </div>
         </div>
 
         <div class="form-group">
-            <label for="address">Complete Address</label>
-            <input type="text" id="address" name="address" placeholder="Street, City, Province" required>
+            <label for="barangay">Barangay <span style="color:red;">*</span></label>
+            <select id="barangay" name="barangay" required>
+                    <option value="" disabled selected>-- Select barangay --</option>
+                    <option value="Bagong Bayan II-A">Bagong Bayan II-A</option>
+                    <option value="Bagong Pook VI-C">Bagong Pook VI-C</option>
+                    <option value="Barangay I-A">Barangay I-A</option>
+                    <option value="Barangay I-B">Barangay I-B</option>
+                    <option value="Barangay II-A">Barangay II-A</option>
+                    <option value="Barangay II-B">Barangay II-B</option>
+                    <option value="Barangay II-C">Barangay II-C</option>
+                    <option value="Barangay II-D">Barangay II-D</option>
+                    <option value="Barangay II-E">Barangay II-E</option>
+                    <option value="Barangay II-F">Barangay II-F</option>
+                    <option value="Barangay III-A">Barangay III-A</option>
+                    <option value="Barangay III-B">Barangay III-B</option>
+                    <option value="Barangay III-C">Barangay III-C</option>
+                    <option value="Barangay III-D">Barangay III-D</option>
+                    <option value="Barangay III-E">Barangay III-E</option>
+                    <option value="Barangay III-F">Barangay III-F</option>
+                    <option value="Barangay IV-A">Barangay IV-A</option>
+                    <option value="Barangay IV-B">Barangay IV-B</option>
+                    <option value="Barangay IV-C">Barangay IV-C</option>
+                    <option value="Barangay V-A">Barangay V-A</option>
+                    <option value="Barangay V-B">Barangay V-B</option>
+                    <option value="Barangay V-C">Barangay V-C</option>
+                    <option value="Barangay V-D">Barangay V-D</option>
+                    <option value="Barangay VI-A">Barangay VI-A</option>
+                    <option value="Barangay VI-B">Barangay VI-B</option>
+                    <option value="Bautista">Bautista</option>
+                    <option value="Concepcion">Concepcion</option>
+                    <option value="Del Remedio">Del Remedio</option>
+                    <option value="Dolores">Dolores</option>
+                    <option value="San Antonio 1">San Antonio 1</option>
+                    <option value="San Antonio 2">San Antonio 2</option>
+                    <option value="San Bartolome">San Bartolome</option>
+                    <option value="San Buenaventura">San Buenaventura</option>
+                    <option value="San Crispin">San Crispin</option>
+                    <option value="San Cristobal">San Cristobal</option>
+                    <option value="San Diego">San Diego</option>
+                    <option value="San Francisco">San Francisco</option>
+                    <option value="San Gabriel">San Gabriel</option>
+                    <option value="San Gregorio">San Gregorio</option>
+                    <option value="San Ignacio">San Ignacio</option>
+                    <option value="San Isidro">San Isidro</option>
+                    <option value="San Joaquin">San Joaquin</option>
+                    <option value="San Jose">San Jose</option>
+                    <option value="San Juan">San Juan</option>
+                    <option value="San Lorenzo">San Lorenzo</option>
+                    <option value="San Lucas 1">San Lucas 1</option>
+                    <option value="San Lucas 2">San Lucas 2</option>
+                    <option value="San Marcos">San Marcos</option>
+                    <option value="San Mateo">San Mateo</option>
+                    <option value="San Miguel">San Miguel</option>
+                    <option value="San Nicolas">San Nicolas</option>
+                    <option value="San Pedro">San Pedro</option>
+                    <option value="San Rafael">San Rafael</option>
+                    <option value="San Roque">San Roque</option>
+                    <option value="San Vicente">San Vicente</option>
+                    <option value="Santa Ana">Santa Ana</option>
+                    <option value="Santa Catalina">Santa Catalina</option>
+                    <option value="Santa Cruz">Santa Cruz</option>
+                    <option value="Santa Elena">Santa Elena</option>
+                    <option value="Santa Filomena">Santa Filomena</option>
+                    <option value="Santa Isabel">Santa Isabel</option>
+                    <option value="Santa Maria">Santa Maria</option>
+                    <option value="Santa Maria Magdalena">Santa Maria Magdalena</option>
+                    <option value="Santa Monica">Santa Monica</option>
+                    <option value="Santa Veronica">Santa Veronica</option>
+                    <option value="Santiago I">Santiago I</option>
+                    <option value="Santiago II">Santiago II</option>
+                    <option value="Santisimo Rosario">Santisimo Rosario</option>
+                    <option value="Santo Angel">Santo Angel</option>
+                    <option value="Santo Cristo">Santo Cristo</option>
+                    <option value="Santo Niño">Santo Niño</option>
+                    <option value="Soledad">Soledad</option>
+                    <option value="Atisan">Atisan</option>
+                    <option value="Balagtas">Balagtas</option>
+                    <option value="Dapdap">Dapdap</option>
+                    <option value="Sta. Catalina">Sta. Catalina</option>
+                    <option value="Sta. Cruz">Sta. Cruz</option>
+                    <option value="Sta. Elena">Sta. Elena</option>
+                </select>
         </div>
 
         <div class="form-group">
-            <label for="email">Email Address</label>
+            <label for="municipality">Municipality/City <span style="color:red;">*</span></label>
+            <input type="text" id="municipality" name="municipality" value="San Pablo City" class="readonly-field" readonly required tabindex="-1">
+        </div>
+
+        <div class="form-group">
+            <label for="province">Province <span style="color:red;">*</span></label>
+            <input type="text" id="province" name="province" value="Laguna" class="readonly-field" readonly required tabindex="-1">
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email Address <span style="color:red;">*</span></label>
             <input type="email" id="email" name="email" placeholder="maria@example.com" required>
         </div>
 
         <div class="form-group">
-            <label for="role" style="color: var(--primary-green); font-weight: 700;">Select Account Role</label>
+            <label for="role" style="color: var(--primary-green); font-weight: 700;">Select Account Role <span style="color:red;">*</span></label>
             <select id="role" name="role" onchange="handleRoleChange(this.value)" required style="border-color: var(--primary-green); font-weight: 500;">
                 <option value="" disabled selected>-- Choose your profile type --</option>
                 <option value="farmer">Farmer</option>
@@ -189,7 +285,87 @@
             <h4><i class="fa-solid fa-tractor document-icon"></i> Farmer Profile Details</h4>
             <div class="form-group">
                 <label for="farmer_barangay">Barangay <span style="color:red;">*</span></label>
-                <input type="text" id="farmer_barangay" name="farmer_barangay" placeholder="For geo-validation tracking">
+                <select id="farmer_barangay" name="farmer_barangay" required>
+                    <option value="" disabled selected>-- Select barangay --</option>
+                    <option value="Bagong Bayan II-A">Bagong Bayan II-A</option>
+                    <option value="Bagong Pook VI-C">Bagong Pook VI-C</option>
+                    <option value="Barangay I-A">Barangay I-A</option>
+                    <option value="Barangay I-B">Barangay I-B</option>
+                    <option value="Barangay II-A">Barangay II-A</option>
+                    <option value="Barangay II-B">Barangay II-B</option>
+                    <option value="Barangay II-C">Barangay II-C</option>
+                    <option value="Barangay II-D">Barangay II-D</option>
+                    <option value="Barangay II-E">Barangay II-E</option>
+                    <option value="Barangay II-F">Barangay II-F</option>
+                    <option value="Barangay III-A">Barangay III-A</option>
+                    <option value="Barangay III-B">Barangay III-B</option>
+                    <option value="Barangay III-C">Barangay III-C</option>
+                    <option value="Barangay III-D">Barangay III-D</option>
+                    <option value="Barangay III-E">Barangay III-E</option>
+                    <option value="Barangay III-F">Barangay III-F</option>
+                    <option value="Barangay IV-A">Barangay IV-A</option>
+                    <option value="Barangay IV-B">Barangay IV-B</option>
+                    <option value="Barangay IV-C">Barangay IV-C</option>
+                    <option value="Barangay V-A">Barangay V-A</option>
+                    <option value="Barangay V-B">Barangay V-B</option>
+                    <option value="Barangay V-C">Barangay V-C</option>
+                    <option value="Barangay V-D">Barangay V-D</option>
+                    <option value="Barangay VI-A">Barangay VI-A</option>
+                    <option value="Barangay VI-B">Barangay VI-B</option>
+                    <option value="Bautista">Bautista</option>
+                    <option value="Concepcion">Concepcion</option>
+                    <option value="Del Remedio">Del Remedio</option>
+                    <option value="Dolores">Dolores</option>
+                    <option value="San Antonio 1">San Antonio 1</option>
+                    <option value="San Antonio 2">San Antonio 2</option>
+                    <option value="San Bartolome">San Bartolome</option>
+                    <option value="San Buenaventura">San Buenaventura</option>
+                    <option value="San Crispin">San Crispin</option>
+                    <option value="San Cristobal">San Cristobal</option>
+                    <option value="San Diego">San Diego</option>
+                    <option value="San Francisco">San Francisco</option>
+                    <option value="San Gabriel">San Gabriel</option>
+                    <option value="San Gregorio">San Gregorio</option>
+                    <option value="San Ignacio">San Ignacio</option>
+                    <option value="San Isidro">San Isidro</option>
+                    <option value="San Joaquin">San Joaquin</option>
+                    <option value="San Jose">San Jose</option>
+                    <option value="San Juan">San Juan</option>
+                    <option value="San Lorenzo">San Lorenzo</option>
+                    <option value="San Lucas 1">San Lucas 1</option>
+                    <option value="San Lucas 2">San Lucas 2</option>
+                    <option value="San Marcos">San Marcos</option>
+                    <option value="San Mateo">San Mateo</option>
+                    <option value="San Miguel">San Miguel</option>
+                    <option value="San Nicolas">San Nicolas</option>
+                    <option value="San Pedro">San Pedro</option>
+                    <option value="San Rafael">San Rafael</option>
+                    <option value="San Roque">San Roque</option>
+                    <option value="San Vicente">San Vicente</option>
+                    <option value="Santa Ana">Santa Ana</option>
+                    <option value="Santa Catalina">Santa Catalina</option>
+                    <option value="Santa Cruz">Santa Cruz</option>
+                    <option value="Santa Elena">Santa Elena</option>
+                    <option value="Santa Filomena">Santa Filomena</option>
+                    <option value="Santa Isabel">Santa Isabel</option>
+                    <option value="Santa Maria">Santa Maria</option>
+                    <option value="Santa Maria Magdalena">Santa Maria Magdalena</option>
+                    <option value="Santa Monica">Santa Monica</option>
+                    <option value="Santa Veronica">Santa Veronica</option>
+                    <option value="Santiago I">Santiago I</option>
+                    <option value="Santiago II">Santiago II</option>
+                    <option value="Santisimo Rosario">Santisimo Rosario</option>
+                    <option value="Santo Angel">Santo Angel</option>
+                    <option value="Santo Cristo">Santo Cristo</option>
+                    <option value="Santo Niño">Santo Niño</option>
+                    <option value="Soledad">Soledad</option>
+                    <option value="Atisan">Atisan</option>
+                    <option value="Balagtas">Balagtas</option>
+                    <option value="Dapdap">Dapdap</option>
+                    <option value="Sta. Catalina">Sta. Catalina</option>
+                    <option value="Sta. Cruz">Sta. Cruz</option>
+                    <option value="Sta. Elena">Sta. Elena</option>
+                </select>
             </div>
             <div class="form-group">
                 <label for="farm_size">Farm Size <span style="font-weight:normal; opacity:0.7;">(Optional)</span></label>
@@ -200,16 +376,16 @@
         <div id="section-lgu" class="dynamic-section">
             <h4><i class="fa-solid fa-building-shield"></i> LGU Verification Fields</h4>
             <div class="form-group">
-                <label class="req">Agency / Office</label>
+                <label class="req">Agency / Office <span style="color:red;">*</span></label>
                 <input type="text" id="lgu_agency" name="lgu_agency" placeholder="e.g., DA, Municipal Agriculture Office">
             </div>
             <div class="form-grid-row grid-2-col">
                 <div>
-                    <label class="req">Position</label>
+                    <label class="req">Position <span style="color:red;">*</span></label>
                     <input type="text" id="lgu_position" name="lgu_position" placeholder="Officer I">
                 </div>
                 <div>
-                    <label class="req">Employee ID</label>
+                    <label>Employee ID <span style="font-weight:normal; opacity:0.7;">(Optional)</span></label>
                     <input type="text" id="lgu_employee_id" name="lgu_employee_id" placeholder="ID Number">
                 </div>
             </div>
@@ -218,7 +394,7 @@
                 <input type="email" id="lgu_office_email" name="lgu_office_email" placeholder="office@gov.ph">
             </div>
             <div class="form-group">
-                <label class="req">Jurisdiction</label>
+                <label class="req">Jurisdiction <span style="color:red;">*</span></label>
                 <input type="text" id="lgu_jurisdiction" name="lgu_jurisdiction" placeholder="City or Municipality scope">
             </div>
         </div>
@@ -226,17 +402,17 @@
         <div id="section-agri_expert" class="dynamic-section">
             <h4><i class="fa-solid fa-graduation-cap"></i> Expert Verification Fields</h4>
             <div class="form-group">
-                <label class="req">LGU Office Name</label>
+                <label class="req">LGU Office Name <span style="color:red;">*</span></label>
                 <input type="text" id="agri_office_name" name="agri_office_name" placeholder="Department/Office Assignment">
             </div>
             <div class="form-grid-row grid-2-col">
                 <div>
-                    <label class="req">Position / Title</label>
+                    <label class="req">Position / Title <span style="color:red;">*</span></label>
                     <input type="text" id="agri_position" name="agri_position" placeholder="Agronomist / Specialist">
                 </div>
                 <div>
-                    <label class="req">Employee ID / Badge</label>
-                    <input type="text" id="agri_employee_id" name="agri_employee_id" placeholder="Badge Number">
+                    <label>Employee ID <span style="font-weight:normal; opacity:0.7;">(Optional)</span></label>
+                    <input type="text" id="agri_employee_id" name="agri_employee_id" placeholder="ID Number">
                 </div>
             </div>
             <div class="form-group">
@@ -244,7 +420,7 @@
                 <input type="email" id="agri_office_email" name="agri_office_email" placeholder="expert@gov.ph">
             </div>
             <div class="form-group">
-                <label class="req">Assigned Municipality/Province</label>
+                <label class="req">Assigned Municipality/Province <span style="color:red;">*</span></label>
                 <input type="text" id="agri_jurisdiction" name="agri_jurisdiction" placeholder="Assigned Area">
             </div>
         </div>
@@ -424,16 +600,14 @@
                 targetSection.querySelectorAll('input').forEach(input => input.disabled = false);
                 
                 if(selectedRole === 'farmer') {
-                    document.getElementById('farmer_barangay').setAttribute('required', 'true');
+                    document.getElementById('farmer_barangay').removeAttribute('required');
                 } else if(selectedRole === 'lgu') {
                     document.getElementById('lgu_agency').setAttribute('required', 'true');
                     document.getElementById('lgu_position').setAttribute('required', 'true');
-                    document.getElementById('lgu_employee_id').setAttribute('required', 'true');
                     document.getElementById('lgu_jurisdiction').setAttribute('required', 'true');
                 } else if(selectedRole === 'agri_expert') {
                     document.getElementById('agri_office_name').setAttribute('required', 'true');
                     document.getElementById('agri_position').setAttribute('required', 'true');
-                    document.getElementById('agri_employee_id').setAttribute('required', 'true');
                     document.getElementById('agri_jurisdiction').setAttribute('required', 'true');
                 }
             }

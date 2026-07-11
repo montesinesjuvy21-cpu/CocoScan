@@ -369,7 +369,9 @@ def signup():
                 "last_name": validated_data['last_name'],
                 "extension_name": validated_data.get('extension_name'),
                 "age": validated_data['age'],
-                "address": validated_data['address'],
+                "barangay": validated_data['barangay'],
+                "municipality": validated_data['municipality'],
+                "province": validated_data['province'],
                 "email": email,
                 "role": role,
                 "password_hash": password_hash,
@@ -1467,7 +1469,11 @@ def admin_user_management():
                 sq = search_query.lower()
                 full_compiled = f"{first} {last}".lower()
                 
-                if sq in full_compiled or sq in email.lower() or sq in (u.get('address') or '').lower():
+                location_text = " ".join(
+                    filter(None, [u.get('barangay'), u.get('municipality'), u.get('province')])
+                ).lower()
+
+                if sq in full_compiled or sq in email.lower() or sq in location_text:
                     pattern = re.compile(re.escape(search_query), re.IGNORECASE)
                     u['highlighted_first'] = pattern.sub(lambda m: f'<mark class="ux-highlight">{m.group(0)}</mark>', first)
                     u['highlighted_last'] = pattern.sub(lambda m: f'<mark class="ux-highlight">{m.group(0)}</mark>', last)

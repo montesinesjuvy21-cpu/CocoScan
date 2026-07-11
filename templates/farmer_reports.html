@@ -146,6 +146,7 @@
             gap: 12px;
             align-items: flex-start;
             width: 100%;
+            margin-bottom: -4px;
         }
         .search-bar-box {
             position: relative;
@@ -286,8 +287,8 @@
             background-color: var(--bg-card); border: 1px solid var(--border-light);
             padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
             color: var(--text-muted); cursor: pointer; white-space: nowrap;
-            display: inline-flex; align-items: center; gap: 6px;
-            transition: all 0.2s ease;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            transition: all 0.2s ease; min-height: 36px; min-width: 44px;
         }
         .chip-filter-btn.active-chip {
             background-color: #1a4d32; color: #ffffff; border-color: #1a4d32;
@@ -898,21 +899,17 @@
             </header>
 
             <div class="search-controls-row">
-                <div class="filter-feedback-row">
-                    <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
-                        <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
-                    </button>
-                </div>
-                <div class="filter-buttons-row" style="display:flex; gap:8px; align-items:flex-start; width:100%; position:relative; z-index:70; flex-wrap:wrap;">
+                <div class="filter-buttons-row" style="display:flex; gap:8px; align-items:center; width:100%; position:relative; z-index:70; flex-wrap:wrap; justify-content:space-between;">
                     <div class="filter-button-group" style="display:flex; gap:8px; flex:1 1 220px; min-width:0; flex-wrap:wrap;">
                         <button id="filter-all-btn" class="chip-filter-btn">All</button>
                         <button id="filter-status-btn" class="chip-filter-btn">Status ▾</button>
                         <button id="filter-pest-btn" class="chip-filter-btn">Pest ▾</button>
-                    </div>
-                    <div class="filter-action-group" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto;">
                         <button id="filter-calendar-btn" class="chip-filter-btn" title="Filter by date"><i class="fa-solid fa-calendar-days"></i></button>
                         <input type="date" id="report-date-filter" aria-label="Filter by date" style="display:none;">
                     </div>
+                    <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
+                        <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+                    </button>
                 </div>
                 <!-- Dropdown containers for status and pest filters -->
                 <div id="status-dropdown" class="filter-dropdown" style="position:relative; margin-top:8px;">
@@ -1131,6 +1128,7 @@
                     currentPage = 1;
                     // hide date picker after selection
                     e.target.style.display = 'none';
+                    updateFilterButtonStates();
                     evaluateClearFilterButtonState();
                     renderReportsGrid();
                 });
@@ -1148,6 +1146,9 @@
                 if (sdPanel && !sdPanel.contains(target) && target !== statusBtn) sdPanel.style.display = 'none';
                 if (pdPanel && !pdPanel.contains(target) && target !== pestBtn) pdPanel.style.display = 'none';
             });
+
+            // Initialize button states
+            updateFilterButtonStates();
         }
 
         /* Pag-evaluate kung dapat bang itago o ipakita ang Clear Filters button */
@@ -1165,6 +1166,15 @@
         function capitalizeFilterValue(value) {
             if (!value) return "";
             return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function formatDateForButton(dateString) {
+            if (!dateString) return null;
+            // dateString is in format YYYY-MM-DD
+            const date = new Date(dateString + 'T00:00:00');
+            const month = date.toLocaleDateString('en-US', { month: 'short' });
+            const day = date.getDate();
+            return `${month} ${day}`;
         }
 
         function updateFilterButtonStates() {
@@ -1198,6 +1208,14 @@
             allBtn.textContent = `All (${reports.length})`;
             statusBtn.textContent = statusActive ? `${activeStatusFilter} ▾` : 'Status ▾';
             pestBtn.textContent = pestActive ? `${capitalizeFilterValue(activeSearchQuery)} ▾` : 'Pest ▾';
+            
+            // Update calendar button to show date or icon
+            const formattedDate = formatDateForButton(activeDateFilter);
+            if (formattedDate) {
+                calendarBtn.innerHTML = formattedDate;
+            } else {
+                calendarBtn.innerHTML = '<i class="fa-solid fa-calendar-days"></i>';
+            }
         }
 
         /* Pag-reset ng lahat ng filter values pabalik sa default state */
