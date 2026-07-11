@@ -26,6 +26,12 @@ _cached_model_path: Optional[Path] = None
 
 def _import_tflite_interpreter():
     try:
+        from tflite_runtime.interpreter import Interpreter # type: ignore
+        return Interpreter
+    except ImportError:
+        pass
+
+    try:
         from tensorflow.lite import Interpreter
         return Interpreter
     except ImportError:
@@ -38,7 +44,7 @@ def _import_tflite_interpreter():
         pass
 
     raise RuntimeError(
-        "Neither TensorFlow Lite nor tflite-runtime is installed."
+        "Neither tflite-runtime nor TensorFlow Lite is installed."
     )
 
 
@@ -123,7 +129,8 @@ def _prepare_input(image: Image.Image, input_details):
     if channels not in (1, 3):
         raise ValueError(f"Unsupported input channel count: {channels}")
 
-    image = image.resize((width, height), Image.BILINEAR)
+    # Use modern Pillow syntax for image resizing to prevent future warnings
+    image = image.resize((width, height), Image.Resampling.BILINEAR)
     array = np.asarray(image).astype(np.float32)
 
     if array.ndim == 2 and channels == 3:
@@ -200,4 +207,3 @@ def predict_pest_from_base64(image_data: str, model_path: Optional[str] = None):
         "confidence_score": confidence,
         "probabilities": {labels[idx]: float(probabilities[idx]) for idx in range(len(probabilities))},
     }
-
