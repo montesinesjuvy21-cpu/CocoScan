@@ -25,16 +25,20 @@ _cached_model_path: Optional[Path] = None
 
 
 def _import_tflite_interpreter():
-    for module_name in ("tensorflow.lite.python.interpreter", "tflite_runtime.interpreter"):
-        try:
-            module = importlib.import_module(module_name)
-            return getattr(module, "Interpreter")
-        except Exception:
-            continue
+    try:
+        from tensorflow.lite import Interpreter
+        return Interpreter
+    except ImportError:
+        pass
+
+    try:
+        import tensorflow as tf
+        return tf.lite.Interpreter
+    except ImportError:
+        pass
 
     raise RuntimeError(
-        "TensorFlow Lite interpreter is not installed. "
-        "Install tensorflow or tflite-runtime to run the model."
+        "Neither TensorFlow Lite nor tflite-runtime is installed."
     )
 
 
