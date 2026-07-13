@@ -997,6 +997,7 @@
 
         let activeSearchQuery = "";
         let activeStatusFilter = "all";
+        let activePestFilter = "";
         let activeDateFilter = "";
         let currentPage = 1;
         const recordsPerPage = 6; 
@@ -1033,6 +1034,7 @@
                 allBtn.classList.add('active-chip');
                 allBtn.addEventListener('click', () => {
                     activeStatusFilter = 'all';
+                    activePestFilter = '';
                     activeSearchQuery = '';
                     activeDateFilter = '';
                     currentPage = 1;
@@ -1065,7 +1067,7 @@
                     const btn = document.createElement('button');
                     btn.className = 'dropdown-item';
                     btn.textContent = p;
-                    btn.onclick = () => { activeSearchQuery = p.toLowerCase(); currentPage = 1; closeAllDropdowns(); updateFilterButtonStates(); evaluateClearFilterButtonState(); renderReportsGrid(); };
+                    btn.onclick = () => { activePestFilter = p; currentPage = 1; closeAllDropdowns(); updateFilterButtonStates(); evaluateClearFilterButtonState(); renderReportsGrid(); };
                     pestDropdownPanel.appendChild(btn);
                 });
             }
@@ -1155,7 +1157,7 @@
         function evaluateClearFilterButtonState() {
             const clearBtn = document.getElementById("clear-filters-btn");
             if (clearBtn) {
-                if (activeSearchQuery !== "" || activeDateFilter !== "" || activeStatusFilter !== "all") {
+                if (activeSearchQuery !== "" || activePestFilter !== "" || activeDateFilter !== "" || activeStatusFilter !== "all") {
                     clearBtn.style.display = "inline-flex";
                 } else {
                     clearBtn.style.display = "none";
@@ -1188,9 +1190,10 @@
             document.querySelectorAll('.chip-filter-btn').forEach(c => c.classList.remove('active-chip'));
 
             const statusActive = activeStatusFilter !== 'all';
-            const pestActive = activeSearchQuery !== '';
+            const pestActive = activePestFilter !== '';
+            const searchActive = activeSearchQuery !== '';
             const dateActive = activeDateFilter !== '';
-            const anyActive = statusActive || pestActive || dateActive;
+            const anyActive = statusActive || pestActive || searchActive || dateActive;
 
             if (!anyActive) {
                 allBtn.classList.add('active-chip');
@@ -1207,7 +1210,7 @@
 
             allBtn.textContent = `All (${reports.length})`;
             statusBtn.textContent = statusActive ? `${activeStatusFilter} ▾` : 'Status ▾';
-            pestBtn.textContent = pestActive ? `${capitalizeFilterValue(activeSearchQuery)} ▾` : 'Pest ▾';
+            pestBtn.textContent = pestActive ? `${capitalizeFilterValue(activePestFilter)} ▾` : 'Pest ▾';
             
             // Update calendar button to show date or icon
             const formattedDate = formatDateForButton(activeDateFilter);
@@ -1230,6 +1233,7 @@
             if (allBtn) allBtn.classList.add('active-chip');
 
             activeSearchQuery = "";
+            activePestFilter = "";
             activeDateFilter = "";
             activeStatusFilter = "all";
             currentPage = 1;
@@ -1266,9 +1270,10 @@
 
             let processedRecords = reports.filter(item => {
                 const matchesSearch = !activeSearchQuery || item.pest.toLowerCase().includes(activeSearchQuery);
+                const matchesPest = !activePestFilter || item.pest.toLowerCase() === activePestFilter.toLowerCase();
                 const matchesDate = !activeDateFilter || item.date === activeDateFilter;
                 const matchesStatus = (activeStatusFilter === "all" || item.status === activeStatusFilter);
-                return matchesSearch && matchesDate && matchesStatus;
+                return matchesSearch && matchesPest && matchesDate && matchesStatus;
             });
 
             if (processedRecords.length === 0) {
