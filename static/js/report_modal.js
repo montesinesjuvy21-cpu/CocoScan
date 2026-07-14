@@ -5,6 +5,7 @@
     let currentReportModalRecord = null;
     let currentReportModalMode = "farmer";
     let activeReportModalSubmissionController = null;
+    let currentWorkflowDefaultSubmitAction = null;
 
     function getModalRoot() {
         return document.querySelector("[data-report-modal]");
@@ -120,9 +121,35 @@
         element.style.display = visible ? displayValue : "none";
     }
 
+    function getWorkflowStatusDisplayLabel(status) {
+        const normalized = String(status ?? "").trim();
+        const labels = {
+            "under_review": "Under Review",
+            "assessment_issued": "Assessment Issued",
+            "visit_requested": "Visit Requested",
+            "waiting_agriculturist_confirmation": "Waiting for Agriculturist Confirmation",
+            "visit_scheduled": "Visit Scheduled",
+            "visit_completed": "Visit Completed",
+            "final_remarks_issued": "Final Remarks Issued",
+            "closed": "Closed",
+            "resolved": "Resolved",
+        };
+        return labels[normalized] || normalized || "Pending";
+    }
+
     function isRecommendationIssuedStatus(status) {
         const normalized = String(status ?? "").trim().toLowerCase();
-        return ["recommendation issued", "reviewed", "reviewed & issued", "recommendation-issued", "recommendation_issued", "resolved", "completed"].includes(normalized);
+        return [
+            "recommendation issued",
+            "reviewed",
+            "reviewed & issued",
+            "recommendation-issued",
+            "recommendation_issued",
+            "final_remarks_issued",
+            "resolved",
+            "closed",
+            "completed",
+        ].includes(normalized);
     }
 
     function clearNode(node) {
@@ -275,8 +302,8 @@
         const bannerStyle = pestStyles[pestKey] || null;
 
         if (statusNode) {
-            statusNode.textContent = report.status || "--";
-            statusNode.style.color = report.status === "Recommendation Issued" ? "#059669" : "#d97706";
+            statusNode.textContent = getWorkflowStatusDisplayLabel(report.status || "--");
+            statusNode.style.color = ["assessment_issued", "final_remarks_issued", "resolved", "closed"].includes(String(report.status || "").trim().toLowerCase()) ? "#059669" : "#d97706";
         }
 
         if (severityBanner) {
@@ -362,67 +389,135 @@
         const workflowHelp = document.getElementById("workflow-actions-help");
         const workflowButtons = document.getElementById("workflow-actions-buttons");
         const workflowInput = document.getElementById("workflow-detail-input");
+        const workflowFormFields = document.getElementById("workflow-form-fields");
         if (!workflowCard || !workflowButtons) {
             return;
         }
 
         const normalizedStatus = String(report?.status || "").trim();
         workflowButtons.innerHTML = "";
+        currentWorkflowDefaultSubmitAction = null;
+        if (workflowFormFields) {
+            workflowFormFields.innerHTML = "";
+        }
         if (workflowInput) {
             workflowInput.value = "";
+            workflowInput.style.display = "block";
             workflowInput.placeholder = "Add notes, a reason, availability, or the selected schedule...";
         }
 
         const actions = [];
         if (mode === "agriculturist") {
-            if (["Pending Assessment", "Recommendation Issued", "Waiting for Farmer Feedback"].includes(normalizedStatus)) {
+            if (normalizedStatus === "under_review") {
                 actions.push({
-                    label: "Request On-site Visit",
-                    icon: "fa-solid fa-map-location-dot",
-                    action: "request-visit",
-                    help: "Capture the need for a field visit and the justification for the farmer.",
+                    label: "Submit Assessment",
+                    icon: "fa-solid fa-file-signature",
+                    action: "submit-assessment",
+                    help: "Share the expert assessment notes with the farmer.",
                 });
-            }
-            if (normalizedStatus === "Waiting for Schedule") {
+                if (workflowInput) {
+                    workflowInput.placeholder = "Enter the assessment notes the farmer should receive...";
+                }
+            } else if (normalizedStatus === "visit_requested") {
                 actions.push({
-                    label: "Select Visit Schedule",
+                    label: "Accept Request",
                     icon: "fa-solid fa-calendar-check",
-                    action: "select-visit-schedule",
-                    help: "Choose one farmer-supplied schedule option for the visit.",
+                    action: "accept-visit-request",
+                    help: "Accept the visit request and confirm the visit schedule.",
                 });
-            }
-            if (normalizedStatus === "Visit Scheduled") {
                 actions.push({
-                    label: "Confirm Visit Completed",
+                    label: "Reject Request",
+                    icon: "fa-solid fa-ban",
+                    action: "reject-visit-request",
+                    help: "Reject the visit request and explain why.",
+                });
+                if (workflowFormFields) {
+                    workflowFormFields.innerHTML = `
+                        <div style="display:grid; gap:10px;">
+                            <label style="font-size:0.9rem; font-weight:600; color:#334155;">Decision</label>
+                            <select id="visit-review-decision" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                                <option value="accept">Accept request</option>
+                                <option value="reject">Reject request</option>
+                            </select>
+                            <div style="display:grid; gap:8px;">
+                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label>
+                                <input id="visit-review-date" type="date" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label>
+                                <input id="visit-review-time" type="time" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                            </div>
+                        </div>`;
+                }
+            } else if (normalizedStatus === "visit_scheduled") {
+                actions.push({
+                    label: "Complete Visit",
                     icon: "fa-solid fa-circle-check",
                     action: "complete-visit",
-                    help: "Record the visit outcome and any proof or inspection details.",
+                    help: "Record the visit summary and upload one or more visit images.",
                 });
-            }
-            if (normalizedStatus === "Inspection Completed") {
+                if (workflowInput) {
+                    workflowInput.placeholder = "Enter the visit summary and findings...";
+                }
+                if (workflowFormFields) {
+                    workflowFormFields.innerHTML = `
+                        <div style="display:grid; gap:10px;">
+                            <label style="font-size:0.9rem; font-weight:600; color:#334155;">Visit images</label>
+                            <input id="workflow-visit-images" type="file" accept="image/*" multiple class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                        </div>`;
+                }
+            } else if (normalizedStatus === "visit_completed") {
+                actions.push({
+                    label: "Submit Final Remarks",
+                    icon: "fa-solid fa-comment-dots",
+                    action: "submit-final-remarks",
+                    help: "Submit the final remarks and optional notes for closure.",
+                });
+                if (workflowInput) {
+                    workflowInput.placeholder = "Enter the final remarks for the report...";
+                }
+                if (workflowFormFields) {
+                    workflowFormFields.innerHTML = `
+                        <div style="display:grid; gap:10px;">
+                            <label style="font-size:0.9rem; font-weight:600; color:#334155;">Additional notes</label>
+                            <textarea id="workflow-additional-notes" class="notes-input-box" placeholder="Add any optional follow-up notes..." style="min-height:90px;"></textarea>
+                        </div>`;
+                }
+            } else if (normalizedStatus === "final_remarks_issued") {
                 actions.push({
                     label: "Mark as Resolved",
                     icon: "fa-solid fa-check-double",
                     action: "mark-resolved",
-                    help: "Close the case after the inspection and final follow-up.",
+                    help: "Close the case after the final remarks are issued.",
                 });
+                if (workflowInput) {
+                    workflowInput.placeholder = "Optional closing note for the case...";
+                }
             }
         } else if (mode === "farmer") {
-            if (normalizedStatus === "On-site Visit Requested") {
+            if (normalizedStatus === "assessment_issued") {
                 actions.push({
-                    label: "Share Availability",
-                    icon: "fa-solid fa-calendar-days",
-                    action: "provide-availability",
-                    help: "Send your available dates and time slots to the agriculturist.",
+                    label: "Submit Feedback",
+                    icon: "fa-solid fa-comments",
+                    action: "farmer-feedback",
+                    help: "Let the agriculturist know whether the assessment resolved your issue.",
                 });
-            }
-            if (["Recommendation Issued", "Waiting for Farmer Feedback", "Inspection Completed"].includes(normalizedStatus)) {
-                actions.push({
-                    label: "Confirm Resolution",
-                    icon: "fa-solid fa-thumbs-up",
-                    action: "confirm-resolution",
-                    help: "Confirm that the recommendation worked or that the visit completed the case.",
-                });
+                if (workflowFormFields) {
+                    workflowFormFields.innerHTML = `
+                        <div style="display:grid; gap:10px;">
+                            <label style="font-size:0.9rem; font-weight:600; color:#334155;">Did the assessment resolve your issue?</label>
+                            <select id="farmer-feedback-choice" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                                <option value="resolved">Yes, my issue has been resolved.</option>
+                                <option value="needs-assistance">No, I still need assistance.</option>
+                            </select>
+                            <div id="farmer-visit-fields" style="display:grid; gap:8px;">
+                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Reason for requesting a visit</label>
+                                <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:90px;"></textarea>
+                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label>
+                                <input id="farmer-visit-date" type="date" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label>
+                                <input id="farmer-visit-time" type="time" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                            </div>
+                        </div>`;
+                }
             }
         }
 
@@ -436,6 +531,7 @@
         }
 
         setDisplay(workflowCard, true, "block");
+        currentWorkflowDefaultSubmitAction = actions[0]?.action || null;
         actions.forEach((action) => {
             const button = document.createElement("button");
             button.type = "button";
@@ -448,75 +544,194 @@
 
     async function submitWorkflowAction(actionName) {
         const workflowInput = document.getElementById("workflow-detail-input");
-        const detail = (workflowInput?.value || "").trim();
         const report = currentReportModalRecord;
         if (!report?.id) {
             alert("This report is missing an identifier.");
             return;
         }
-        if (!detail) {
-            alert("Please add a short note before advancing the workflow.");
-            return;
-        }
 
-        const payload = { report_id: report.id, reason: detail };
-        let endpoint = "";
-        let statusLabel = "";
-        let requestKey = "reason";
+        const formData = new FormData();
+        formData.append("report_id", report.id);
 
-        if (actionName === "request-visit") {
-            endpoint = "/agriculturist/request-visit";
-            statusLabel = "On-site Visit Requested";
-        } else if (actionName === "provide-availability") {
-            endpoint = "/farmer/provide-availability";
-            statusLabel = "Waiting for Schedule";
-            requestKey = "availability";
-        } else if (actionName === "select-visit-schedule") {
-            endpoint = "/agriculturist/select-visit-schedule";
-            statusLabel = "Visit Scheduled";
-            requestKey = "schedule";
-        } else if (actionName === "complete-visit") {
-            endpoint = "/agriculturist/complete-visit";
-            statusLabel = "Inspection Completed";
-            requestKey = "details";
-        } else if (actionName === "confirm-resolution") {
-            endpoint = "/farmer/confirm-resolution";
-            statusLabel = "Resolved";
-            requestKey = "confirmation";
-        } else if (actionName === "mark-resolved") {
-            endpoint = "/agriculturist/mark-resolved";
-            statusLabel = "Resolved";
-            requestKey = "resolution_note";
-        }
-
-        if (!endpoint) {
-            alert("This workflow step is not available yet.");
-            return;
-        }
-
-        payload[requestKey] = detail;
-
-        try {
-            const response = await fetch(endpoint, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok || !data.success) {
-                alert(data.message || "The workflow action could not be completed.");
+        if (actionName === "submit-assessment") {
+            const detail = (workflowInput?.value || "").trim();
+            if (!detail) {
+                alert("Please provide assessment notes before submitting.");
                 return;
             }
-            if (report) {
-                report.status = statusLabel;
+            formData.append("assessment_notes", detail);
+            try {
+                const response = await fetch("/agriculturist/submit-assessment", { method: "POST", body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The assessment could not be saved.");
+                    return;
+                }
+                report.status = "assessment_issued";
                 applyStatusStyle(report);
                 renderWorkflowActions(currentReportModalMode, report);
+                alert(data.message || "Assessment notes saved.");
+            } catch (error) {
+                alert("The assessment could not be saved right now.");
             }
-            alert(data.message || "Workflow action completed.");
-        } catch (error) {
-            alert("The workflow action could not be completed right now.");
+            return;
         }
+
+        if (actionName === "farmer-feedback") {
+            const feedbackChoice = document.getElementById("farmer-feedback-choice")?.value || "resolved";
+            formData.append("confirmation", feedbackChoice === "resolved" ? "resolved" : "needs-assistance");
+            if (feedbackChoice !== "resolved") {
+                const reason = document.getElementById("farmer-visit-reason")?.value?.trim() || "";
+                const dateValue = document.getElementById("farmer-visit-date")?.value || "";
+                const timeValue = document.getElementById("farmer-visit-time")?.value || "";
+                if (!reason || !dateValue || !timeValue) {
+                    alert("Please complete the visit request details before submitting.");
+                    return;
+                }
+                formData.append("reason", reason);
+                formData.append("preferred_date", dateValue);
+                formData.append("preferred_time", timeValue);
+            }
+            try {
+                const response = await fetch("/farmer/submit-assessment-feedback", { method: "POST", body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The feedback could not be saved.");
+                    return;
+                }
+                report.status = feedbackChoice === "resolved" ? "waiting_agriculturist_confirmation" : "visit_requested";
+                applyStatusStyle(report);
+                renderWorkflowActions(currentReportModalMode, report);
+                alert(data.message || "Feedback saved.");
+            } catch (error) {
+                alert("The feedback could not be saved right now.");
+            }
+            return;
+        }
+
+        if (actionName === "accept-visit-request" || actionName === "reject-visit-request") {
+            const decision = actionName === "accept-visit-request" ? "accept" : "reject";
+            const detail = (workflowInput?.value || "").trim();
+            formData.append("decision", decision);
+            if (decision === "accept") {
+                const preferredDate = document.getElementById("visit-review-date")?.value || "";
+                const preferredTime = document.getElementById("visit-review-time")?.value || "";
+                if (!preferredDate || !preferredTime) {
+                    alert("Please confirm the visit date and time before accepting the request.");
+                    return;
+                }
+                formData.append("preferred_date", preferredDate);
+                formData.append("preferred_time", preferredTime);
+            } else {
+                if (!detail) {
+                    alert("Please add a rejection reason before submitting.");
+                    return;
+                }
+                formData.append("reason", detail);
+            }
+            try {
+                const response = await fetch("/agriculturist/review-visit-request", { method: "POST", body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The visit review could not be saved.");
+                    return;
+                }
+                report.status = decision === "accept" ? "visit_scheduled" : "assessment_issued";
+                applyStatusStyle(report);
+                renderWorkflowActions(currentReportModalMode, report);
+                alert(data.message || "Visit request updated.");
+            } catch (error) {
+                alert("The visit review could not be saved right now.");
+            }
+            return;
+        }
+
+        if (actionName === "complete-visit") {
+            const detail = (workflowInput?.value || "").trim();
+            const visitImages = document.getElementById("workflow-visit-images")?.files || [];
+            if (!detail) {
+                alert("Please add a visit summary before submitting.");
+                return;
+            }
+            if (!visitImages.length) {
+                alert("Please upload at least one visit image before submitting.");
+                return;
+            }
+            formData.append("visit_summary", detail);
+            Array.from(visitImages).forEach((file) => formData.append("visit_images", file));
+            try {
+                const response = await fetch("/agriculturist/complete-visit", { method: "POST", body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The visit summary could not be saved.");
+                    return;
+                }
+                report.status = "visit_completed";
+                applyStatusStyle(report);
+                renderWorkflowActions(currentReportModalMode, report);
+                alert(data.message || "Visit details saved.");
+            } catch (error) {
+                alert("The visit summary could not be saved right now.");
+            }
+            return;
+        }
+
+        if (actionName === "submit-final-remarks") {
+            const detail = (workflowInput?.value || "").trim();
+            const additionalNotes = document.getElementById("workflow-additional-notes")?.value?.trim() || "";
+            if (!detail) {
+                alert("Please provide final remarks before submitting.");
+                return;
+            }
+            formData.append("final_remarks", detail);
+            if (additionalNotes) {
+                formData.append("additional_notes", additionalNotes);
+            }
+            try {
+                const response = await fetch("/agriculturist/submit-final-remarks", { method: "POST", body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The final remarks could not be saved.");
+                    return;
+                }
+                report.status = "final_remarks_issued";
+                applyStatusStyle(report);
+                renderWorkflowActions(currentReportModalMode, report);
+                alert(data.message || "Final remarks saved.");
+            } catch (error) {
+                alert("The final remarks could not be saved right now.");
+            }
+            return;
+        }
+
+        if (actionName === "mark-resolved") {
+            const detail = (workflowInput?.value || "").trim();
+            if (detail) {
+                formData.append("resolution_note", detail);
+            }
+            try {
+                const response = await fetch("/agriculturist/mark-resolved", { method: "POST", body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The case could not be marked resolved.");
+                    return;
+                }
+                report.status = "resolved";
+                applyStatusStyle(report);
+                renderWorkflowActions(currentReportModalMode, report);
+                alert(data.message || "The report has been marked as resolved.");
+            } catch (error) {
+                alert("The case could not be marked resolved right now.");
+            }
+            return;
+        }
+
+        alert("This workflow step is not available yet.");
     }
+
+    window.submitExpertValidation = function () {
+        return submitWorkflowAction(currentWorkflowDefaultSubmitAction || "submit-assessment");
+    };
 
     function closeReportModal() {
         abortActiveReportModalSubmission();

@@ -1,14 +1,13 @@
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta, timezone
 import json
 from typing import Any, Mapping
-from zoneinfo import ZoneInfo
 
 
 SUPABASE_REPORT_IMAGE_BASE_URL = (
     "https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/"
 )
 
-MANILA_TIMEZONE = ZoneInfo("Asia/Manila")
+MANILA_TIMEZONE = timezone(timedelta(hours=8))
 
 
 def resolve_field_notes(form_data: Mapping[str, Any]) -> str:
@@ -41,27 +40,44 @@ def normalize_report_status(value: Any, *, default: str = "Pending Assessment") 
         "submitted for review": "Pending Assessment",
         "for review": "Pending Assessment",
         "awaiting review": "Pending Assessment",
-        "under review": "Pending Assessment",
+        "under review": "under_review",
+        "under-review": "under_review",
+        "under_review": "under_review",
         "reviewed": "Recommendation Issued",
         "reviewed & issued": "Recommendation Issued",
         "recommendation issued": "Recommendation Issued",
         "recommendation-issued": "Recommendation Issued",
         "recommendation_issued": "Recommendation Issued",
-        "waiting for farmer feedback": "Waiting for Farmer Feedback",
-        "waiting-for-farmer-feedback": "Waiting for Farmer Feedback",
-        "waiting_for_farmer_feedback": "Waiting for Farmer Feedback",
+        "assessment issued": "assessment_issued",
+        "assessment-issued": "assessment_issued",
+        "assessment_issued": "assessment_issued",
+        "visit requested": "visit_requested",
+        "visit-requested": "visit_requested",
+        "visit_requested": "visit_requested",
+        "waiting agriculturist confirmation": "waiting_agriculturist_confirmation",
+        "waiting-agriculturist-confirmation": "waiting_agriculturist_confirmation",
+        "waiting_agriculturist_confirmation": "waiting_agriculturist_confirmation",
+        "waiting for farmer feedback": "waiting_agriculturist_confirmation",
+        "waiting-for-farmer-feedback": "waiting_agriculturist_confirmation",
+        "waiting_for_farmer_feedback": "waiting_agriculturist_confirmation",
         "on-site visit requested": "On-site Visit Requested",
         "on site visit requested": "On-site Visit Requested",
         "on-site-visit-requested": "On-site Visit Requested",
-        "waiting for schedule": "Waiting for Schedule",
-        "waiting-for-schedule": "Waiting for Schedule",
-        "waiting_for_schedule": "Waiting for Schedule",
-        "visit scheduled": "Visit Scheduled",
-        "visit-scheduled": "Visit Scheduled",
-        "visit_scheduled": "Visit Scheduled",
-        "inspection completed": "Inspection Completed",
-        "inspection-completed": "Inspection Completed",
-        "inspection_completed": "Inspection Completed",
+        "waiting for schedule": "waiting_agriculturist_confirmation",
+        "waiting-for-schedule": "waiting_agriculturist_confirmation",
+        "waiting_for_schedule": "waiting_agriculturist_confirmation",
+        "visit scheduled": "visit_scheduled",
+        "visit-scheduled": "visit_scheduled",
+        "visit_scheduled": "visit_scheduled",
+        "inspection completed": "visit_completed",
+        "inspection-completed": "visit_completed",
+        "inspection_completed": "visit_completed",
+        "visit completed": "visit_completed",
+        "visit-completed": "visit_completed",
+        "final remarks issued": "final_remarks_issued",
+        "final-remarks-issued": "final_remarks_issued",
+        "final_remarks_issued": "final_remarks_issued",
+        "closed": "closed",
         "resolved": "Resolved",
         "complete": "Resolved",
         "completed": "Resolved",
@@ -72,22 +88,31 @@ def normalize_report_status(value: Any, *, default: str = "Pending Assessment") 
 
 
 def is_pending_report_status(value: Any) -> bool:
-    return normalize_report_status(value) in {
+    normalized = normalize_report_status(value)
+    return normalized in {
         "Pending Assessment",
         "Waiting for Farmer Feedback",
         "On-site Visit Requested",
         "Waiting for Schedule",
         "Visit Scheduled",
         "Inspection Completed",
+        "under_review",
+        "assessment_issued",
+        "visit_requested",
+        "waiting_agriculturist_confirmation",
+        "visit_scheduled",
+        "visit_completed",
     }
 
 
 def is_reviewed_report_status(value: Any) -> bool:
-    return normalize_report_status(value) in {"Recommendation Issued", "Resolved"}
+    normalized = normalize_report_status(value)
+    return normalized in {"Recommendation Issued", "Resolved", "final_remarks_issued", "resolved", "closed"}
 
 
 def is_resolved_report_status(value: Any) -> bool:
-    return normalize_report_status(value) == "Resolved"
+    normalized = normalize_report_status(value)
+    return normalized in {"final_remarks_issued", "resolved", "closed"}
 
 
 def resolve_report_image_url(image_url: Any) -> str:

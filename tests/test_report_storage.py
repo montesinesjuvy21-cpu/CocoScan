@@ -5,6 +5,7 @@ from app.report_storage import (
     format_report_date,
     format_report_timestamp,
     is_pending_report_status,
+    is_resolved_report_status,
     is_reviewed_report_status,
     normalize_report_status,
     resolve_field_notes,
@@ -53,6 +54,26 @@ class ReportStorageTests(unittest.TestCase):
         self.assertTrue(is_reviewed_report_status("Resolved"))
         self.assertFalse(is_pending_report_status("Recommendation Issued"))
         self.assertFalse(is_reviewed_report_status("Pending Assessment"))
+
+    def test_new_workflow_statuses_are_normalized_and_classified(self):
+        self.assertEqual(normalize_report_status("under_review"), "under_review")
+        self.assertEqual(normalize_report_status("assessment_issued"), "assessment_issued")
+        self.assertEqual(normalize_report_status("visit_requested"), "visit_requested")
+        self.assertEqual(normalize_report_status("waiting_agriculturist_confirmation"), "waiting_agriculturist_confirmation")
+        self.assertEqual(normalize_report_status("visit_scheduled"), "visit_scheduled")
+        self.assertEqual(normalize_report_status("visit_completed"), "visit_completed")
+        self.assertEqual(normalize_report_status("final_remarks_issued"), "final_remarks_issued")
+        self.assertEqual(normalize_report_status("closed"), "closed")
+
+        self.assertTrue(is_pending_report_status("under_review"))
+        self.assertTrue(is_pending_report_status("assessment_issued"))
+        self.assertTrue(is_pending_report_status("visit_requested"))
+        self.assertTrue(is_pending_report_status("waiting_agriculturist_confirmation"))
+        self.assertTrue(is_pending_report_status("visit_scheduled"))
+        self.assertTrue(is_pending_report_status("visit_completed"))
+        self.assertFalse(is_pending_report_status("final_remarks_issued"))
+        self.assertTrue(is_resolved_report_status("final_remarks_issued"))
+        self.assertTrue(is_resolved_report_status("closed"))
 
     def test_resolve_report_image_url_handles_storage_keys_and_public_urls(self):
         base_url = "https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/"

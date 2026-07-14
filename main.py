@@ -121,6 +121,36 @@ def _update_report_workflow(report_id, status, *, note=None, extra_updates=None)
     update_response = supabase.table("reports").update(update_data).eq("id", report_id).execute()
     return update_response
 
+
+def _persist_supporting_images(report_id, files, *, uploaded_at=None):
+    if not report_id:
+        return []
+
+    if not files:
+        return []
+
+    uploaded_at = uploaded_at or datetime.now(UTC).isoformat()
+    rows = []
+    for index, uploaded_file in enumerate(files):
+        if not uploaded_file:
+            continue
+        if not getattr(uploaded_file, "filename", None):
+            continue
+        safe_name = secure_filename(uploaded_file.filename or f"supporting_{index}.jpg")
+        storage_name = f"visit_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}_{index}_{safe_name}"
+        image_bytes = uploaded_file.read()
+        image_url = upload_image_to_supabase(image_bytes, storage_name, uploaded_file.mimetype)
+        if image_url:
+            rows.append({
+                "report_id": report_id,
+                "image_url": image_url,
+                "uploaded_at": uploaded_at,
+            })
+
+    if rows:
+        supabase.table("report_supporting_images").insert(rows).execute()
+    return rows
+
 # Notifications removed: backend persistence and helper functions have been deleted.
 # If notification functionality is required again, reintroduce a lean API and helpers here.
 
@@ -1413,46 +1443,129 @@ def farmer_follow_up_report():
         logger.error(f"Error reopening report for follow-up: {str(e)}")
         return jsonify({'success': False, 'message': 'The follow-up could not be saved.'}), 500
     
-@app.route('/agriculturist/approve-report', methods=['POST'])
-def agriculturist_approve_report():
-    """Asynchronous pipeline to append specialist recommendations and update status."""
+@app.route('/agriculturist/submit-assessment', methods=['POST'])
+def agriculturist_submit_assessment():
+    """Save the agriculturist assessment notes and advance the report to assessment issued."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-    
+
     if not user_id or user_role != 'agri_expert':
         return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
-        
+
     try:
-        data = request.get_json() or {}
-        report_id = data.get('report_id')
-        expert_advice = data.get('recommendation', '').strip()
-        
-        if not report_id or not expert_advice:
-            return jsonify({'success': False, 'message': 'Missing validation parameters'}), 400
-            
-        expert_recs_array = [expert_advice]
+        payload = request.get_json(silent=True) or {}
+        report_id = payload.get('report_id') or request.form.get('report_id')
+        assessment_notes = (
+            payload.get('assessment_notes')
+            or payload.get('recommendation')
+            or request.form.get('assessment_notes')
+            or request.form.get('recommendation', '')
+        ).strip()
+
+        if not report_id or not assessment_notes:
+            return jsonify({'success': False, 'message': 'Assessment notes are required.'}), 400
+
         update_response = _update_report_workflow(
             report_id,
-            "Recommendation Issued",
-            note=f"Recommendation issued: {expert_advice}",
+            'assessment_issued',
+            note=f"Assessment issued: {assessment_notes}",
             extra_updates={
-                "expert_recommendations": expert_recs_array,
-                "reviewed_by_id": user_id,
+                'expert_recommendations': [assessment_notes],
+                'reviewed_by_id': user_id,
             },
         )
-        
-        if not update_response.data:
-            return jsonify({'success': False, 'message': 'Target record failed to save update rows'}), 500
-            
-        logger.info(f"Report ID #{report_id} successfully processed and signed off by expert #{user_id}.")
-        return jsonify({
-            'success': True,
-            'message': 'Expert diagnostic treatment recommendation logged successfully.',
-        }), 200
-        
+
+        if getattr(update_response, 'error', None):
+            logger.error(f"Assessment update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The assessment could not be saved.'}), 500
+
+        logger.info(f"Report ID #{report_id} assessment logged by expert #{user_id}.")
+        return jsonify({'success': True, 'message': 'Assessment notes saved successfully.'})
     except Exception as e:
-        logger.error(f"Error running expert approval execution route: {str(e)}")
-        return jsonify({'success': False, 'message': f"Internal validation error: {str(e)}"}), 500
+        logger.error(f"Error saving assessment: {str(e)}")
+        return jsonify({'success': False, 'message': 'The assessment could not be saved.'}), 500
+
+
+@app.route('/farmer/submit-assessment-feedback', methods=['POST'])
+def farmer_submit_assessment_feedback():
+    """Let the farmer confirm whether the assessment resolved the issue."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'farmer':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        report_id = payload.get('report_id') or request.form.get('report_id')
+        confirmation = str(payload.get('confirmation') or request.form.get('confirmation') or '').strip().lower()
+        reason = (payload.get('reason') or request.form.get('reason') or '').strip()
+        preferred_date = (payload.get('preferred_date') or request.form.get('preferred_date') or '').strip()
+        preferred_time = (payload.get('preferred_time') or request.form.get('preferred_time') or '').strip()
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+
+        if confirmation == 'resolved' or confirmation == 'yes':
+            note = "Farmer confirmed the assessment resolved the issue."
+            status = 'waiting_agriculturist_confirmation'
+            update_response = _update_report_workflow(report_id, status, note=note)
+        else:
+            if not reason or not preferred_date or not preferred_time:
+                return jsonify({'success': False, 'message': 'Please fill out the visit request details.'}), 400
+            note = f"Farmer requested a visit. Reason: {reason}. Preferred date: {preferred_date}. Preferred time: {preferred_time}."
+            update_response = _update_report_workflow(report_id, 'visit_requested', note=note)
+
+        if getattr(update_response, 'error', None):
+            logger.error(f"Assessment feedback update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The feedback could not be saved.'}), 500
+
+        return jsonify({'success': True, 'message': 'Your feedback has been saved.'})
+    except Exception as e:
+        logger.error(f"Error saving assessment feedback: {str(e)}")
+        return jsonify({'success': False, 'message': 'The feedback could not be saved.'}), 500
+
+
+@app.route('/agriculturist/review-visit-request', methods=['POST'])
+def agriculturist_review_visit_request():
+    """Accept or reject a farmer visit request."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'agri_expert':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        report_id = payload.get('report_id') or request.form.get('report_id')
+        decision = str(payload.get('decision') or request.form.get('decision') or '').strip().lower()
+        reason = (payload.get('reason') or request.form.get('reason') or '').strip()
+        preferred_date = (payload.get('preferred_date') or request.form.get('preferred_date') or '').strip()
+        preferred_time = (payload.get('preferred_time') or request.form.get('preferred_time') or '').strip()
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+
+        if decision == 'accept':
+            if not preferred_date or not preferred_time:
+                return jsonify({'success': False, 'message': 'Please confirm the visit date and time.'}), 400
+            note = f"Visit schedule confirmed for {preferred_date} at {preferred_time}."
+            status = 'visit_scheduled'
+        else:
+            if not reason:
+                return jsonify({'success': False, 'message': 'A rejection reason is required.'}), 400
+            note = f"Visit request rejected. Reason: {reason}"
+            status = 'assessment_issued'
+
+        update_response = _update_report_workflow(report_id, status, note=note)
+        if getattr(update_response, 'error', None):
+            logger.error(f"Visit request review failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The visit review could not be saved.'}), 500
+
+        return jsonify({'success': True, 'message': 'Visit request updated.'})
+    except Exception as e:
+        logger.error(f"Error reviewing visit request: {str(e)}")
+        return jsonify({'success': False, 'message': 'The visit review could not be saved.'}), 500
 
 
 @app.route('/agriculturist/request-visit', methods=['POST'])
@@ -1555,52 +1668,62 @@ def agriculturist_complete_visit():
         return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
-        data = request.get_json(silent=True) or {}
-        report_id = data.get('report_id') or request.form.get('report_id')
-        details = (data.get('details') or request.form.get('details') or '').strip()
+        payload = request.get_json(silent=True) or {}
+        report_id = payload.get('report_id') or request.form.get('report_id')
+        visit_summary = (payload.get('visit_summary') or request.form.get('visit_summary') or payload.get('details') or request.form.get('details') or '').strip()
+        visit_files = request.files.getlist('visit_images')
 
         if not report_id:
             return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+        if not visit_summary:
+            return jsonify({'success': False, 'message': 'Visit summary is required.'}), 400
+        if not visit_files:
+            return jsonify({'success': False, 'message': 'Please upload at least one visit image.'}), 400
 
-        note = f"Inspection completed: {details or 'Visit completed without extra details.'}"
-        update_response = _update_report_workflow(report_id, 'Inspection Completed', note=note)
+        note = f"Visit completed: {visit_summary}"
+        update_response = _update_report_workflow(report_id, 'visit_completed', note=note)
         if getattr(update_response, 'error', None):
             logger.error(f"Visit completion update failed: {update_response.error}")
             return jsonify({'success': False, 'message': 'The visit completion note could not be saved.'}), 500
 
-        return jsonify({'success': True, 'message': 'Inspection details saved successfully.'})
+        _persist_supporting_images(report_id, visit_files, uploaded_at=datetime.now(UTC).isoformat())
+        return jsonify({'success': True, 'message': 'Visit summary and images saved successfully.'})
     except Exception as e:
         logger.error(f"Error saving inspection completion: {str(e)}")
         return jsonify({'success': False, 'message': 'The visit completion note could not be saved.'}), 500
 
 
-@app.route('/farmer/confirm-resolution', methods=['POST'])
-def farmer_confirm_resolution():
-    """Let the farmer confirm that the recommendation worked or the visit was completed."""
+@app.route('/agriculturist/submit-final-remarks', methods=['POST'])
+def agriculturist_submit_final_remarks():
+    """Save final remarks and move the report into the final remarks stage."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
 
-    if not user_id or user_role != 'farmer':
+    if not user_id or user_role != 'agri_expert':
         return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
-        data = request.get_json(silent=True) or {}
-        report_id = data.get('report_id') or request.form.get('report_id')
-        confirmation = (data.get('confirmation') or request.form.get('confirmation') or '').strip()
+        payload = request.get_json(silent=True) or {}
+        report_id = payload.get('report_id') or request.form.get('report_id')
+        final_remarks = (payload.get('final_remarks') or request.form.get('final_remarks') or '').strip()
+        additional_notes = (payload.get('additional_notes') or request.form.get('additional_notes') or '').strip()
 
-        if not report_id:
-            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+        if not report_id or not final_remarks:
+            return jsonify({'success': False, 'message': 'Final remarks are required.'}), 400
 
-        note = f"Farmer confirmed resolution: {confirmation or 'No extra confirmation provided.'}"
-        update_response = _update_report_workflow(report_id, 'Resolved', note=note)
+        note_parts = [f"Final remarks: {final_remarks}"]
+        if additional_notes:
+            note_parts.append(f"Additional notes: {additional_notes}")
+        note = "\n".join(note_parts)
+        update_response = _update_report_workflow(report_id, 'final_remarks_issued', note=note)
         if getattr(update_response, 'error', None):
-            logger.error(f"Resolution confirmation update failed: {update_response.error}")
-            return jsonify({'success': False, 'message': 'The confirmation could not be saved.'}), 500
+            logger.error(f"Final remarks update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The final remarks could not be saved.'}), 500
 
-        return jsonify({'success': True, 'message': 'The report has been marked as resolved.'})
+        return jsonify({'success': True, 'message': 'Final remarks saved successfully.'})
     except Exception as e:
-        logger.error(f"Error confirming resolution: {str(e)}")
-        return jsonify({'success': False, 'message': 'The confirmation could not be saved.'}), 500
+        logger.error(f"Error saving final remarks: {str(e)}")
+        return jsonify({'success': False, 'message': 'The final remarks could not be saved.'}), 500
 
 
 @app.route('/agriculturist/mark-resolved', methods=['POST'])
@@ -1621,7 +1744,7 @@ def agriculturist_mark_resolved():
             return jsonify({'success': False, 'message': 'Missing report reference'}), 400
 
         note = f"Agriculturist marked resolved: {resolution_note or 'Case closed.'}"
-        update_response = _update_report_workflow(report_id, 'Resolved', note=note)
+        update_response = _update_report_workflow(report_id, 'resolved', note=note)
         if getattr(update_response, 'error', None):
             logger.error(f"Resolution update failed: {update_response.error}")
             return jsonify({'success': False, 'message': 'The resolution could not be saved.'}), 500
@@ -1697,7 +1820,7 @@ def farmer_submit_report():
             farmer_name=farmer_name,
             created_at=now_iso,
             submitted_at=now_iso,
-            status='Pending',
+            status='under_review',
             image_url='',
             barangay=barangay,
             municipality=municipality,
