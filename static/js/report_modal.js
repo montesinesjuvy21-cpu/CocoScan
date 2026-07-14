@@ -460,6 +460,13 @@
             renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.");
             applyStatusStyle(report);
             renderWorkflowActions(currentReportModalMode, report);
+            // Refresh lists on the page if available and close modal for agriculturists
+            if (typeof window.  renderReportsGrid === "function") {
+                try { window.renderReportsGrid(); } catch (e) { console.debug(e); }
+            }
+            if (currentReportModalMode === "agriculturist") {
+                closeReportModal();
+            }
             alert(data.message || "Assessment notes saved successfully.");
         } catch (error) {
             console.error("Assessment submission error:", error);
@@ -499,6 +506,8 @@
         const actions = [];
         if (feedbackContainer) {
             feedbackContainer.innerHTML = "";
+            const feedbackCard = document.getElementById('report-farmer-feedback-card');
+            if (feedbackCard) setDisplay(feedbackCard, false, 'block');
         }
         if (mode === "agriculturist") {
             // Agriculturist uses the report-expert-card for assessment submission in pending view.
@@ -517,7 +526,22 @@
                     help: "Reject the visit request and explain why.",
                 });
                 if (workflowFormFields) {
-                    workflowFormFields.innerHTML = `
+                    // If the farmer provided preferred schedules, render them for selection
+                    if (Array.isArray(report.farmerSchedules) && report.farmerSchedules.length) {
+                        let listHtml = '<div style="display:grid; gap:10px;">';
+                        listHtml += '<p style="margin:0; font-weight:600; color:#334155;">Farmer\'s Preferred Schedules</p>';
+                        report.farmerSchedules.forEach((s, idx) => {
+                            listHtml += `<label style="display:flex; align-items:center; gap:10px; font-size:0.95rem;">` +
+                                `<input type="radio" name="agri-selected-schedule" value="${idx}" style="accent-color:#1d4ed8;"> ${escapeHtml(s.display)}</label>`;
+                        });
+                        listHtml += '<div style="margin-top:8px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Or pick a custom schedule</label></div>';
+                        listHtml += `<div style="display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">`;
+                        listHtml += `<div style="display:grid; gap:6px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label><input id="visit-review-date" type="date" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;"></div>`;
+                        listHtml += `<div style="display:grid; gap:6px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label><input id="visit-review-time" type="time" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;"></div>`;
+                        listHtml += `</div></div>`;
+                        workflowFormFields.innerHTML = listHtml;
+                    } else {
+                        workflowFormFields.innerHTML = `
                         <div style="display:grid; gap:10px;">
                             <label style="font-size:0.9rem; font-weight:600; color:#334155;">Decision</label>
                             <select id="visit-review-decision" class="notes-input-box" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
@@ -535,6 +559,7 @@
                                 </div>
                             </div>
                         </div>`;
+                    }
                 }
             } else if (normalizedStatus === "visit_scheduled") {
                 actions.push({
@@ -607,25 +632,35 @@
                             <div id="farmer-visit-request-details" style="display:none; gap:12px;">
                                 <label style="font-size:0.9rem; font-weight:600; color:#334155;">Reason for requesting a visit</label>
                                 <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:90px; width:100%; box-sizing:border-box;"></textarea>
-                                <div style="display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
-                                    <div style="display:grid; gap:6px;">
-                                        <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date/time option 1</label>
-                                        <input id="farmer-visit-date-1" type="date" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
-                                        <input id="farmer-visit-time-1" type="time" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
+                                <div style="display:grid; gap:8px;">
+                                    <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
+                                        <strong style="font-size:0.95rem;">Choose up to 3 preferred schedules</strong>
+                                        <button type="button" id="farmer-add-schedule-btn" class="btn-control submit-primary" style="min-height:36px; padding:6px 10px;">+ Add Schedule</button>
                                     </div>
-                                    <div style="display:grid; gap:6px;">
-                                        <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date/time option 2</label>
-                                        <input id="farmer-visit-date-2" type="date" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
-                                        <input id="farmer-visit-time-2" type="time" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
-                                    </div>
-                                    <div style="display:grid; gap:6px;">
-                                        <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date/time option 3</label>
-                                        <input id="farmer-visit-date-3" type="date" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
-                                        <input id="farmer-visit-time-3" type="time" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
-                                    </div>
+                                    <div id="farmer-schedules-list" style="display:grid; gap:8px;"></div>
                                 </div>
                             </div>
+                            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                                <button id="farmer-submit-feedback-btn" class="btn-control submit-primary" type="button">Submit Request</button>
+                            </div>
                         </div>`;
+                    // Attach add schedule behavior and initialize one row
+                    const schedulesList = document.getElementById('farmer-schedules-list');
+                    const addBtn = document.getElementById('farmer-add-schedule-btn');
+                    if (schedulesList && addBtn) {
+                        addBtn.addEventListener('click', (ev) => {
+                            addFarmerScheduleRow(schedulesList);
+                        });
+                        // start with one schedule row
+                        addFarmerScheduleRow(schedulesList);
+                    }
+                    // Wire submit button to trigger the workflow action click
+                    const submitFeedbackBtn = document.getElementById('farmer-submit-feedback-btn');
+                    if (submitFeedbackBtn) {
+                        submitFeedbackBtn.addEventListener('click', () => submitWorkflowAction('farmer-feedback'));
+                    }
+                    const feedbackCard = document.getElementById('report-farmer-feedback-card');
+                    if (feedbackCard) setDisplay(feedbackCard, true, 'block');
                 }
             }
         }
@@ -668,6 +703,45 @@
         }
     }
 
+    /* Helper functions for dynamic farmer schedule rows inside the feedback card */
+    function addFarmerScheduleRow(container, dateVal = "", timeVal = "") {
+        if (!container) return;
+        const existing = container.querySelectorAll('.farmer-schedule-row');
+        if (existing.length >= 3) return;
+        const idx = existing.length + 1;
+        const row = document.createElement('div');
+        row.className = 'farmer-schedule-row';
+        row.style.display = 'grid';
+        row.style.gridTemplateColumns = '1fr 1fr auto';
+        row.style.gap = '8px';
+        row.style.alignItems = 'center';
+        row.innerHTML = `
+            <input type="date" class="notes-input-box farmer-schedule-date" value="${escapeHtml(dateVal)}" style="padding:8px 10px;">
+            <input type="time" class="notes-input-box farmer-schedule-time" value="${escapeHtml(timeVal)}" style="padding:8px 10px;">
+            <button type="button" class="btn-control cancel-secondary remove-schedule-btn" style="min-height:36px; padding:8px 10px;">Remove</button>
+        `;
+        container.appendChild(row);
+        row.querySelector('.remove-schedule-btn').addEventListener('click', () => { row.remove(); });
+    }
+
+    function collectFarmerSchedules(container) {
+        if (!container) return [];
+        const rows = Array.from(container.querySelectorAll('.farmer-schedule-row'));
+        const schedules = rows.map(r => {
+            const d = r.querySelector('.farmer-schedule-date')?.value || '';
+            const t = r.querySelector('.farmer-schedule-time')?.value || '';
+            let display = '';
+            if (d && t) {
+                try {
+                    const dt = new Date(`${d}T${t}`);
+                    display = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dt) + ' • ' + new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(dt);
+                } catch (e) { display = `${d} ${t}`; }
+            }
+            return { date: d, time: t, display };
+        }).filter(s => s.date && s.time);
+        return schedules.slice(0,3);
+    }
+
     async function submitWorkflowAction(actionName) {
         const workflowInput = document.getElementById("workflow-detail-input");
         const report = currentReportModalRecord;
@@ -695,7 +769,12 @@
                 }
                 report.status = "assessment_issued";
                 applyStatusStyle(report);
+                if (typeof window.renderReportsGrid === "function") {
+                    try { window.renderReportsGrid(); } catch (e) { console.debug(e); }
+                }
                 renderWorkflowActions(currentReportModalMode, report);
+                // Close modal for agriculturist after submit
+                if (currentReportModalMode === 'agriculturist') closeReportModal();
                 alert(data.message || "Assessment notes saved.");
             } catch (error) {
                 alert("The assessment could not be saved right now.");
@@ -708,25 +787,19 @@
             formData.append("confirmation", feedbackChoice === "resolved" ? "resolved" : "needs-assistance");
             if (feedbackChoice !== "resolved") {
                 const reason = document.getElementById("farmer-visit-reason")?.value?.trim() || "";
-                const dates = [
-                    document.getElementById("farmer-visit-date-1")?.value || "",
-                    document.getElementById("farmer-visit-date-2")?.value || "",
-                    document.getElementById("farmer-visit-date-3")?.value || "",
-                ];
-                const times = [
-                    document.getElementById("farmer-visit-time-1")?.value || "",
-                    document.getElementById("farmer-visit-time-2")?.value || "",
-                    document.getElementById("farmer-visit-time-3")?.value || "",
-                ];
-                if (!reason || dates.some(d => !d) || times.some(t => !t)) {
-                    alert("Please provide a reason and propose three preferred date/time options before submitting.");
+                const schedulesList = document.getElementById('farmer-schedules-list');
+                const schedules = collectFarmerSchedules(schedulesList);
+                if (!reason || schedules.length === 0) {
+                    alert("Please provide a reason and at least one preferred date/time option before submitting.");
                     return;
                 }
                 formData.append("reason", reason);
-                dates.forEach((d, idx) => {
-                    formData.append(`preferred_date_${idx+1}`, d);
-                    formData.append(`preferred_time_${idx+1}`, times[idx] || "");
+                schedules.forEach((s, idx) => {
+                    formData.append(`preferred_date_${idx+1}`, s.date);
+                    formData.append(`preferred_time_${idx+1}`, s.time || "");
                 });
+                // keep the schedules locally so agriculturists can see them immediately
+                report.farmerSchedules = schedules.map(s => ({ date: s.date, time: s.time, display: s.display }));
             }
             try {
                 const response = await fetch("/farmer/submit-assessment-feedback", { method: "POST", body: formData });
@@ -737,6 +810,9 @@
                 }
                 report.status = feedbackChoice === "resolved" ? "resolved" : "visit_requested";
                 applyStatusStyle(report);
+                if (typeof window.renderReportsGrid === "function") {
+                    try { window.renderReportsGrid(); } catch (e) { console.debug(e); }
+                }
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "Feedback saved.");
             } catch (error) {
@@ -750,14 +826,22 @@
             const detail = (workflowInput?.value || "").trim();
             formData.append("decision", decision);
             if (decision === "accept") {
-                const preferredDate = document.getElementById("visit-review-date")?.value || "";
-                const preferredTime = document.getElementById("visit-review-time")?.value || "";
-                if (!preferredDate || !preferredTime) {
-                    alert("Please confirm the visit date and time before accepting the request.");
-                    return;
+                // Allow selecting from farmer-provided schedules or a custom date/time
+                const selectedIdx = document.querySelector("input[name='agri-selected-schedule']:checked")?.value;
+                if (selectedIdx !== undefined && selectedIdx !== null && report.farmerSchedules && report.farmerSchedules[selectedIdx]) {
+                    const picked = report.farmerSchedules[selectedIdx];
+                    formData.append("preferred_date", picked.date);
+                    formData.append("preferred_time", picked.time || "");
+                } else {
+                    const preferredDate = document.getElementById("visit-review-date")?.value || "";
+                    const preferredTime = document.getElementById("visit-review-time")?.value || "";
+                    if (!preferredDate || !preferredTime) {
+                        alert("Please confirm the visit date and time before accepting the request.");
+                        return;
+                    }
+                    formData.append("preferred_date", preferredDate);
+                    formData.append("preferred_time", preferredTime);
                 }
-                formData.append("preferred_date", preferredDate);
-                formData.append("preferred_time", preferredTime);
             } else {
                 if (!detail) {
                     alert("Please add a rejection reason before submitting.");
@@ -775,6 +859,9 @@
                 report.status = decision === "accept" ? "visit_scheduled" : "assessment_issued";
                 applyStatusStyle(report);
                 renderWorkflowActions(currentReportModalMode, report);
+                if (typeof window.renderReportsGrid === "function") {
+                    try { window.renderReportsGrid(); } catch (e) { console.debug(e); }
+                }
                 alert(data.message || "Visit request updated.");
             } catch (error) {
                 alert("The visit review could not be saved right now.");
@@ -1040,8 +1127,44 @@
         applyModeState(currentReportModalMode, report);
         renderWorkflowActions(currentReportModalMode, report);
 
+        // Expert card visibility and input controls depend on existing assessment state
+        const statusKey = getStatusKey(report?.status || "");
+        const assessmentAlreadyIssued = ["assessment_issued", "recommendation_issued", "waiting_for_agriculturist_confirmation", "waiting_agriculturist_confirmation", "visit_requested", "visit_scheduled", "visit_completed", "final_remarks_issued", "resolved", "closed"].includes(statusKey) || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
         if (expertCard) {
             setDisplay(expertCard, true, "flex");
+            const expertInput = document.getElementById("expert-notes-input");
+            const expertHelp = document.getElementById("expert-notes-help");
+            setDisplay(expertInput, currentReportModalMode === "agriculturist" && !assessmentAlreadyIssued, "block");
+            setDisplay(expertHelp, currentReportModalMode === "agriculturist" && !assessmentAlreadyIssued, "block");
+        }
+
+        // Render any farmer schedules into a dedicated display area for agriculturists
+        const schedulesNode = document.getElementById("report-farmer-preferred-schedules");
+        if (schedulesNode) {
+            schedulesNode.innerHTML = "";
+            const schedules = report.farmerSchedules || [];
+            if (Array.isArray(schedules) && schedules.length) {
+                const wrapper = document.createElement('div');
+                wrapper.style.display = 'grid';
+                wrapper.style.gap = '8px';
+                const title = document.createElement('h4');
+                title.style.margin = '0';
+                title.style.fontSize = '0.98rem';
+                title.textContent = "Farmer's Preferred Schedules";
+                wrapper.appendChild(title);
+                schedules.forEach((s, idx) => {
+                    const row = document.createElement('label');
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'center';
+                    row.style.gap = '8px';
+                    row.style.fontSize = '0.95rem';
+                    row.innerHTML = `<input type="radio" name="agri-selected-schedule" value="${idx}" style="accent-color:#1d4ed8;"> ${escapeHtml(s.display)}`;
+                    wrapper.appendChild(row);
+                });
+                schedulesNode.appendChild(wrapper);
+            }
+            // Only show this card to agriculturists when schedules exist
+            setDisplay(schedulesNode, Array.isArray(schedules) && schedules.length && currentReportModalMode === 'agriculturist', 'block');
         }
 
         setReportModalSubmissionState(false);
