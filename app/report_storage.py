@@ -22,7 +22,7 @@ def resolve_field_notes(form_data: Mapping[str, Any]) -> str:
     return ""
 
 
-def normalize_report_status(value: Any, *, default: str = "Pending") -> str:
+def normalize_report_status(value: Any, *, default: str = "Pending Assessment") -> str:
     """Normalize report status values from the UI and database to a canonical workflow state."""
     if value is None:
         return default
@@ -32,22 +32,39 @@ def normalize_report_status(value: Any, *, default: str = "Pending") -> str:
         return default
 
     aliases = {
-        "pending": "Pending",
-        "pending review": "Pending",
-        "pending-review": "Pending",
-        "pending_review": "Pending",
-        "submitted": "Pending",
-        "submitted for review": "Pending",
-        "for review": "Pending",
-        "awaiting review": "Pending",
-        "under review": "Pending",
+        "pending": "Pending Assessment",
+        "pending assessment": "Pending Assessment",
+        "pending review": "Pending Assessment",
+        "pending-review": "Pending Assessment",
+        "pending_review": "Pending Assessment",
+        "submitted": "Pending Assessment",
+        "submitted for review": "Pending Assessment",
+        "for review": "Pending Assessment",
+        "awaiting review": "Pending Assessment",
+        "under review": "Pending Assessment",
         "reviewed": "Recommendation Issued",
         "reviewed & issued": "Recommendation Issued",
         "recommendation issued": "Recommendation Issued",
         "recommendation-issued": "Recommendation Issued",
         "recommendation_issued": "Recommendation Issued",
-        "resolved": "Recommendation Issued",
-        "completed": "Recommendation Issued",
+        "waiting for farmer feedback": "Waiting for Farmer Feedback",
+        "waiting-for-farmer-feedback": "Waiting for Farmer Feedback",
+        "waiting_for_farmer_feedback": "Waiting for Farmer Feedback",
+        "on-site visit requested": "On-site Visit Requested",
+        "on site visit requested": "On-site Visit Requested",
+        "on-site-visit-requested": "On-site Visit Requested",
+        "waiting for schedule": "Waiting for Schedule",
+        "waiting-for-schedule": "Waiting for Schedule",
+        "waiting_for_schedule": "Waiting for Schedule",
+        "visit scheduled": "Visit Scheduled",
+        "visit-scheduled": "Visit Scheduled",
+        "visit_scheduled": "Visit Scheduled",
+        "inspection completed": "Inspection Completed",
+        "inspection-completed": "Inspection Completed",
+        "inspection_completed": "Inspection Completed",
+        "resolved": "Resolved",
+        "complete": "Resolved",
+        "completed": "Resolved",
     }
 
     key = normalized.lower().replace("_", " ").replace("-", " ")
@@ -55,11 +72,22 @@ def normalize_report_status(value: Any, *, default: str = "Pending") -> str:
 
 
 def is_pending_report_status(value: Any) -> bool:
-    return not is_reviewed_report_status(value)
+    return normalize_report_status(value) in {
+        "Pending Assessment",
+        "Waiting for Farmer Feedback",
+        "On-site Visit Requested",
+        "Waiting for Schedule",
+        "Visit Scheduled",
+        "Inspection Completed",
+    }
 
 
 def is_reviewed_report_status(value: Any) -> bool:
-    return normalize_report_status(value) == "Recommendation Issued"
+    return normalize_report_status(value) in {"Recommendation Issued", "Resolved"}
+
+
+def is_resolved_report_status(value: Any) -> bool:
+    return normalize_report_status(value) == "Resolved"
 
 
 def resolve_report_image_url(image_url: Any) -> str:
@@ -123,7 +151,7 @@ def build_report_payload(
     farmer_name: str = "Farmer",
     created_at: str | None = None,
     submitted_at: str | None = None,
-    status: str = "Pending",
+    status: str = "Pending Assessment",
     image_url: str = "",
     barangay: str = "",
     municipality: str = "",
@@ -160,7 +188,7 @@ def build_report_payload(
     except (ValueError, TypeError):
         confidence = 0.0
 
-    status = normalize_report_status(status, default="Pending")
+    status = normalize_report_status(status, default="Pending Assessment")
 
     return {
         "user_id": user_id,

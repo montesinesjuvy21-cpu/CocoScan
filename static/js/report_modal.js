@@ -304,7 +304,7 @@
         const isReviewed = isRecommendationIssuedStatus(report?.status || "");
 
         setDisplay(scanButton, mode === "scan", "flex");
-        setDisplay(farmerButton, mode === "farmer", "flex");
+        setDisplay(farmerButton, false, "flex");
         setDisplay(agriButton, mode === "agriculturist" && !isReviewed, "flex");
         setDisplay(cancelButton, !(mode === "agriculturist" && isReviewed), "inline-flex");
 
@@ -354,6 +354,167 @@
             } else {
                 expertHelp.innerHTML = "";
             }
+        }
+    }
+
+    function renderWorkflowActions(mode, report = currentReportModalRecord) {
+        const workflowCard = document.getElementById("workflow-actions-card");
+        const workflowHelp = document.getElementById("workflow-actions-help");
+        const workflowButtons = document.getElementById("workflow-actions-buttons");
+        const workflowInput = document.getElementById("workflow-detail-input");
+        if (!workflowCard || !workflowButtons) {
+            return;
+        }
+
+        const normalizedStatus = String(report?.status || "").trim();
+        workflowButtons.innerHTML = "";
+        if (workflowInput) {
+            workflowInput.value = "";
+            workflowInput.placeholder = "Add notes, a reason, availability, or the selected schedule...";
+        }
+
+        const actions = [];
+        if (mode === "agriculturist") {
+            if (["Pending Assessment", "Recommendation Issued", "Waiting for Farmer Feedback"].includes(normalizedStatus)) {
+                actions.push({
+                    label: "Request On-site Visit",
+                    icon: "fa-solid fa-map-location-dot",
+                    action: "request-visit",
+                    help: "Capture the need for a field visit and the justification for the farmer.",
+                });
+            }
+            if (normalizedStatus === "Waiting for Schedule") {
+                actions.push({
+                    label: "Select Visit Schedule",
+                    icon: "fa-solid fa-calendar-check",
+                    action: "select-visit-schedule",
+                    help: "Choose one farmer-supplied schedule option for the visit.",
+                });
+            }
+            if (normalizedStatus === "Visit Scheduled") {
+                actions.push({
+                    label: "Confirm Visit Completed",
+                    icon: "fa-solid fa-circle-check",
+                    action: "complete-visit",
+                    help: "Record the visit outcome and any proof or inspection details.",
+                });
+            }
+            if (normalizedStatus === "Inspection Completed") {
+                actions.push({
+                    label: "Mark as Resolved",
+                    icon: "fa-solid fa-check-double",
+                    action: "mark-resolved",
+                    help: "Close the case after the inspection and final follow-up.",
+                });
+            }
+        } else if (mode === "farmer") {
+            if (normalizedStatus === "On-site Visit Requested") {
+                actions.push({
+                    label: "Share Availability",
+                    icon: "fa-solid fa-calendar-days",
+                    action: "provide-availability",
+                    help: "Send your available dates and time slots to the agriculturist.",
+                });
+            }
+            if (["Recommendation Issued", "Waiting for Farmer Feedback", "Inspection Completed"].includes(normalizedStatus)) {
+                actions.push({
+                    label: "Confirm Resolution",
+                    icon: "fa-solid fa-thumbs-up",
+                    action: "confirm-resolution",
+                    help: "Confirm that the recommendation worked or that the visit completed the case.",
+                });
+            }
+        }
+
+        if (workflowHelp) {
+            workflowHelp.textContent = actions[0]?.help || "Advance the report to the next stage.";
+        }
+
+        if (actions.length === 0) {
+            setDisplay(workflowCard, false, "block");
+            return;
+        }
+
+        setDisplay(workflowCard, true, "block");
+        actions.forEach((action) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "btn-control submit-primary";
+            button.innerHTML = `<i class="${action.icon}"></i> ${action.label}`;
+            button.onclick = () => submitWorkflowAction(action.action);
+            workflowButtons.appendChild(button);
+        });
+    }
+
+    async function submitWorkflowAction(actionName) {
+        const workflowInput = document.getElementById("workflow-detail-input");
+        const detail = (workflowInput?.value || "").trim();
+        const report = currentReportModalRecord;
+        if (!report?.id) {
+            alert("This report is missing an identifier.");
+            return;
+        }
+        if (!detail) {
+            alert("Please add a short note before advancing the workflow.");
+            return;
+        }
+
+        const payload = { report_id: report.id, reason: detail };
+        let endpoint = "";
+        let statusLabel = "";
+        let requestKey = "reason";
+
+        if (actionName === "request-visit") {
+            endpoint = "/agriculturist/request-visit";
+            statusLabel = "On-site Visit Requested";
+        } else if (actionName === "provide-availability") {
+            endpoint = "/farmer/provide-availability";
+            statusLabel = "Waiting for Schedule";
+            requestKey = "availability";
+        } else if (actionName === "select-visit-schedule") {
+            endpoint = "/agriculturist/select-visit-schedule";
+            statusLabel = "Visit Scheduled";
+            requestKey = "schedule";
+        } else if (actionName === "complete-visit") {
+            endpoint = "/agriculturist/complete-visit";
+            statusLabel = "Inspection Completed";
+            requestKey = "details";
+        } else if (actionName === "confirm-resolution") {
+            endpoint = "/farmer/confirm-resolution";
+            statusLabel = "Resolved";
+            requestKey = "confirmation";
+        } else if (actionName === "mark-resolved") {
+            endpoint = "/agriculturist/mark-resolved";
+            statusLabel = "Resolved";
+            requestKey = "resolution_note";
+        }
+
+        if (!endpoint) {
+            alert("This workflow step is not available yet.");
+            return;
+        }
+
+        payload[requestKey] = detail;
+
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                alert(data.message || "The workflow action could not be completed.");
+                return;
+            }
+            if (report) {
+                report.status = statusLabel;
+                applyStatusStyle(report);
+                renderWorkflowActions(currentReportModalMode, report);
+            }
+            alert(data.message || "Workflow action completed.");
+        } catch (error) {
+            alert("The workflow action could not be completed right now.");
         }
     }
 
@@ -484,6 +645,7 @@
 
         applyStatusStyle(report);
         applyModeState(currentReportModalMode, report);
+        renderWorkflowActions(currentReportModalMode, report);
 
         if (expertCard) {
             setDisplay(expertCard, true, "flex");

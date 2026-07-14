@@ -31,6 +31,7 @@ from app.report_storage import (
     format_report_date,
     format_report_timestamp,
     is_pending_report_status,
+    is_resolved_report_status,
     is_reviewed_report_status,
     normalize_report_status,
     resolve_field_notes,
@@ -82,6 +83,43 @@ supabase: Client = create_client(url, key)
 
 def normalize_role(value) -> str:
     return str(value or "").strip().lower()
+
+
+def _append_status_note(existing_notes, note_text):
+    cleaned_existing = str(existing_notes or "").strip()
+    cleaned_note = str(note_text or "").strip()
+    if not cleaned_note:
+        return cleaned_existing
+    if not cleaned_existing:
+        return cleaned_note
+    return f"{cleaned_existing}\n\n{cleaned_note}"
+
+
+def _update_report_workflow(report_id, status, *, note=None, extra_updates=None):
+    if not report_id:
+        raise ValueError("Missing report reference")
+
+    now_iso = datetime.now(UTC).isoformat()
+    update_data = {
+        "status": normalize_report_status(status, default="Pending Assessment"),
+        "updated_at": now_iso,
+    }
+
+    if note and (not extra_updates or "field_notes" not in extra_updates):
+        existing_response = supabase.table("reports").select("field_notes").eq("id", report_id).execute()
+        existing_rows = getattr(existing_response, "data", None) or []
+        existing_report = existing_rows[0] if existing_rows else {}
+        existing_notes = existing_report.get("field_notes") or ""
+        update_data["field_notes"] = _append_status_note(existing_notes, note)
+
+    if extra_updates:
+        if "field_notes" in extra_updates:
+            update_data["field_notes"] = extra_updates["field_notes"]
+            extra_updates = {k: v for k, v in extra_updates.items() if k != "field_notes"}
+        update_data.update(extra_updates)
+
+    update_response = supabase.table("reports").update(update_data).eq("id", report_id).execute()
+    return update_response
 
 # Notifications removed: backend persistence and helper functions have been deleted.
 # If notification functionality is required again, reintroduce a lean API and helpers here.
@@ -637,7 +675,7 @@ def _fetch_weather_snapshot(latitude, longitude):
         }
 
 
-def _build_report_modal_payload(item, *, supporting_images=None, weather=None, default_status="Pending"):
+def _build_report_modal_payload(item, *, supporting_images=None, weather=None, default_status="Pending Assessment"):
     if supporting_images is None:
         supporting_images = []
     if weather is None:
@@ -698,7 +736,7 @@ def farmer_dashboard():
 
         total_cases = len(reports)
         pending_cases = sum(1 for report in reports if is_pending_report_status(report.get('status')))
-        resolved_cases = sum(1 for report in reports if is_reviewed_report_status(report.get('status')))
+        resolved_cases = sum(1 for report in reports if is_resolved_report_status(report.get('status')))
 
         metrics = {
             "total_cases": total_cases,
@@ -892,7 +930,7 @@ def farmer_reports():
                 item,
                 supporting_images=supporting_map.get(str(item.get("id")), []),
                 weather=_fetch_weather_snapshot(item.get("latitude"), item.get("longitude")),
-                default_status="Pending",
+                default_status="Pending Assessment",
             )
 
             reports_data.append({
@@ -949,7 +987,7 @@ def agriculturist_dashboard():
 
         total_cases = len(reports)
         pending_cases = sum(1 for report in reports if is_pending_report_status(report.get('status')))
-        resolved_cases = sum(1 for report in reports if is_reviewed_report_status(report.get('status')))
+        resolved_cases = sum(1 for report in reports if is_resolved_report_status(report.get('status')))
         affected_areas = len({str(report.get('barangay') or '').strip() for report in reports if str(report.get('barangay') or '').strip()})
 
         metrics = {
@@ -1014,7 +1052,7 @@ def lgu_dashboard():
 
         total_cases = len(reports)
         pending_cases = sum(1 for report in reports if is_pending_report_status(report.get('status')))
-        resolved_cases = sum(1 for report in reports if is_reviewed_report_status(report.get('status')))
+        resolved_cases = sum(1 for report in reports if is_resolved_report_status(report.get('status')))
         affected_areas = len({str(report.get('barangay') or '').strip() for report in reports if str(report.get('barangay') or '').strip()})
 
         metrics = {
@@ -1079,7 +1117,7 @@ def lgu_analytics():
 
         total_cases = len(reports)
         pending_cases = sum(1 for report in reports if is_pending_report_status(report.get('status')))
-        resolved_cases = sum(1 for report in reports if is_reviewed_report_status(report.get('status')))
+        resolved_cases = sum(1 for report in reports if is_resolved_report_status(report.get('status')))
         affected_areas = len({str(report.get('barangay') or '').strip() for report in reports if str(report.get('barangay') or '').strip()})
 
         metrics = {
@@ -1178,7 +1216,7 @@ def agriculturist_pending():
                 item,
                 supporting_images=supporting_map.get(str(item.get("id")), []),
                 weather=_fetch_weather_snapshot(item.get("latitude"), item.get("longitude")),
-                default_status="Pending",
+                default_status="Pending Assessment",
             )
 
             pending_reports_list.append({
@@ -1228,13 +1266,13 @@ def agriculturist_reviewed():
         reviewed_reports_list = []
         
         for item in raw_reports:
-            if not is_reviewed_report_status(item.get("status")):
+            if not is_resolved_report_status(item.get("status")):
                 continue
             payload = _build_report_modal_payload(
                 item,
                 supporting_images=supporting_map.get(str(item.get("id")), []),
                 weather=_fetch_weather_snapshot(item.get("latitude"), item.get("longitude")),
-                default_status="Recommendation Issued",
+                default_status="Resolved",
             )
 
             reviewed_reports_list.append({
@@ -1300,7 +1338,7 @@ def agriculturist_map():
                 "latitude": lat,
                 "longitude": lng,
                 "pest_type": item.get("pest_type") or "Unknown Pest",
-                "status": normalize_report_status(item.get("status"), default="Pending"),
+                "status": normalize_report_status(item.get("status"), default="Pending Assessment"),
                 "cases_count": 1 # Serves as baseline cluster weight variable
             })
 
@@ -1350,14 +1388,16 @@ def farmer_follow_up_report():
         else:
             combined_notes = existing_notes
 
-        now_iso = datetime.now(UTC).isoformat()
-        update_response = supabase.table('reports').update({
-            'status': 'Pending',
-            'field_notes': combined_notes,
-            'updated_at': now_iso,
-            'expert_recommendations': [],
-            'reviewed_by_id': None,
-        }).eq('id', report_id).execute()
+        update_response = _update_report_workflow(
+            report_id,
+            'Pending Assessment',
+            note=f"Follow-up update: {follow_up_notes}",
+            extra_updates={
+                'field_notes': combined_notes,
+                'expert_recommendations': [],
+                'reviewed_by_id': None,
+            },
+        )
 
         if getattr(update_response, 'error', None):
             logger.error(f"Follow-up report update failed: {update_response.error}")
@@ -1390,18 +1430,16 @@ def agriculturist_approve_report():
         if not report_id or not expert_advice:
             return jsonify({'success': False, 'message': 'Missing validation parameters'}), 400
             
-        now_iso = datetime.now(UTC).isoformat()
-        
-        # Format specialist notes to array wrapper matching expected view parameters
         expert_recs_array = [expert_advice]
-        
-        # Update row matrix inside Supabase reports data schema
-        update_response = supabase.table("reports").update({
-            "status": "Recommendation Issued",
-            "expert_recommendations": expert_recs_array,
-            "reviewed_by_id": user_id,
-            "updated_at": now_iso
-        }).eq("id", report_id).execute()
+        update_response = _update_report_workflow(
+            report_id,
+            "Recommendation Issued",
+            note=f"Recommendation issued: {expert_advice}",
+            extra_updates={
+                "expert_recommendations": expert_recs_array,
+                "reviewed_by_id": user_id,
+            },
+        )
         
         if not update_response.data:
             return jsonify({'success': False, 'message': 'Target record failed to save update rows'}), 500
@@ -1415,6 +1453,183 @@ def agriculturist_approve_report():
     except Exception as e:
         logger.error(f"Error running expert approval execution route: {str(e)}")
         return jsonify({'success': False, 'message': f"Internal validation error: {str(e)}"}), 500
+
+
+@app.route('/agriculturist/request-visit', methods=['POST'])
+def agriculturist_request_visit():
+    """Advance a case into the on-site visit workflow."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'agri_expert':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        report_id = data.get('report_id') or request.form.get('report_id')
+        reason = (data.get('reason') or request.form.get('reason') or '').strip()
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+
+        note = f"On-site visit requested: {reason or 'No reason provided.'}"
+        update_response = _update_report_workflow(report_id, 'On-site Visit Requested', note=note)
+        if getattr(update_response, 'error', None):
+            logger.error(f"Visit request update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The visit request could not be saved.'}), 500
+
+        return jsonify({
+            'success': True,
+            'message': 'On-site visit requested successfully.',
+        })
+    except Exception as e:
+        logger.error(f"Error requesting on-site visit: {str(e)}")
+        return jsonify({'success': False, 'message': 'The visit request could not be saved.'}), 500
+
+
+@app.route('/farmer/provide-availability', methods=['POST'])
+def farmer_provide_availability():
+    """Let the farmer share time slots for the requested visit."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'farmer':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        report_id = data.get('report_id') or request.form.get('report_id')
+        availability = (data.get('availability') or request.form.get('availability') or '').strip()
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+
+        note = f"Farmer availability: {availability or 'No slots provided.'}"
+        update_response = _update_report_workflow(report_id, 'Waiting for Schedule', note=note)
+        if getattr(update_response, 'error', None):
+            logger.error(f"Availability update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The availability could not be submitted.'}), 500
+
+        return jsonify({'success': True, 'message': 'Your availability has been shared with the agriculturist.'})
+    except Exception as e:
+        logger.error(f"Error saving farmer availability: {str(e)}")
+        return jsonify({'success': False, 'message': 'The availability could not be submitted.'}), 500
+
+
+@app.route('/agriculturist/select-visit-schedule', methods=['POST'])
+def agriculturist_select_visit_schedule():
+    """Select the farmer availability slot for the visit."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'agri_expert':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        report_id = data.get('report_id') or request.form.get('report_id')
+        schedule = (data.get('schedule') or request.form.get('schedule') or '').strip()
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+
+        note = f"Visit scheduled: {schedule or 'No schedule selected.'}"
+        update_response = _update_report_workflow(report_id, 'Visit Scheduled', note=note)
+        if getattr(update_response, 'error', None):
+            logger.error(f"Schedule update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The visit schedule could not be saved.'}), 500
+
+        return jsonify({'success': True, 'message': 'The visit schedule has been shared with the farmer.'})
+    except Exception as e:
+        logger.error(f"Error saving visit schedule: {str(e)}")
+        return jsonify({'success': False, 'message': 'The visit schedule could not be saved.'}), 500
+
+
+@app.route('/agriculturist/complete-visit', methods=['POST'])
+def agriculturist_complete_visit():
+    """Record that the on-site visit was completed."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'agri_expert':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        report_id = data.get('report_id') or request.form.get('report_id')
+        details = (data.get('details') or request.form.get('details') or '').strip()
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+
+        note = f"Inspection completed: {details or 'Visit completed without extra details.'}"
+        update_response = _update_report_workflow(report_id, 'Inspection Completed', note=note)
+        if getattr(update_response, 'error', None):
+            logger.error(f"Visit completion update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The visit completion note could not be saved.'}), 500
+
+        return jsonify({'success': True, 'message': 'Inspection details saved successfully.'})
+    except Exception as e:
+        logger.error(f"Error saving inspection completion: {str(e)}")
+        return jsonify({'success': False, 'message': 'The visit completion note could not be saved.'}), 500
+
+
+@app.route('/farmer/confirm-resolution', methods=['POST'])
+def farmer_confirm_resolution():
+    """Let the farmer confirm that the recommendation worked or the visit was completed."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'farmer':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        report_id = data.get('report_id') or request.form.get('report_id')
+        confirmation = (data.get('confirmation') or request.form.get('confirmation') or '').strip()
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+
+        note = f"Farmer confirmed resolution: {confirmation or 'No extra confirmation provided.'}"
+        update_response = _update_report_workflow(report_id, 'Resolved', note=note)
+        if getattr(update_response, 'error', None):
+            logger.error(f"Resolution confirmation update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The confirmation could not be saved.'}), 500
+
+        return jsonify({'success': True, 'message': 'The report has been marked as resolved.'})
+    except Exception as e:
+        logger.error(f"Error confirming resolution: {str(e)}")
+        return jsonify({'success': False, 'message': 'The confirmation could not be saved.'}), 500
+
+
+@app.route('/agriculturist/mark-resolved', methods=['POST'])
+def agriculturist_mark_resolved():
+    """Allow the agriculturist to finalise the case as resolved."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'agri_expert':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        report_id = data.get('report_id') or request.form.get('report_id')
+        resolution_note = (data.get('resolution_note') or request.form.get('resolution_note') or '').strip()
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+
+        note = f"Agriculturist marked resolved: {resolution_note or 'Case closed.'}"
+        update_response = _update_report_workflow(report_id, 'Resolved', note=note)
+        if getattr(update_response, 'error', None):
+            logger.error(f"Resolution update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The resolution could not be saved.'}), 500
+
+        return jsonify({'success': True, 'message': 'The report has been marked as resolved.'})
+    except Exception as e:
+        logger.error(f"Error marking report resolved: {str(e)}")
+        return jsonify({'success': False, 'message': 'The resolution could not be saved.'}), 500
     
 @app.route('/farmer/submit-report', methods=['POST'])
 def farmer_submit_report():

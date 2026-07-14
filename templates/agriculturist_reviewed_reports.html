@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CocoScan - Reviewed Reports</title>
+    <title>CocoScan - Resolved Reports</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -624,7 +624,7 @@
                 <ul class="sidebar-menu-list">
                     <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
                     <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i> Pending Reports</a></li>
-                    <li><a href="/agriculturist/reviewed" class="menu-item-link active"><i class="fa-solid fa-check-double"></i> Reviewed</a></li>
+                    <li><a href="/agriculturist/reviewed" class="menu-item-link active"><i class="fa-solid fa-check-double"></i> Resolved</a></li>
                     <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
                 </ul>
             </div>
@@ -645,8 +645,8 @@
             
             <header class="section-title-wrap">
                 <div>
-                    <h1>Reviewed Reports</h1>
-                    <p>Overall reviewed reports from submitted cases</p>
+                    <h1>Resolved Reports</h1>
+                    <p>Completed cases that have been closed with a final outcome</p>
                 </div>
             </header>
 
@@ -940,7 +940,7 @@
                 container.innerHTML = `
                     <div class="premium-empty-state-card">
                         <div class="empty-state-icon-circle"><i class="fa-solid fa-folder-open"></i></div>
-                        <h3>No Reviewed Reports</h3>
+                        <h3>No Resolved Reports</h3>
                         <p>No historical records match your current filtration settings criteria.</p>
                     </div>`;
                 updatePaginationController(0);

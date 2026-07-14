@@ -253,6 +253,13 @@
             <div id="report-additional-images-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px;"></div>
         </div>
 
+        <div class="premium-form-card" id="workflow-actions-card" style="display:none;">
+            <h4><i class="fa-solid fa-route"></i> Workflow Actions</h4>
+            <p id="workflow-actions-help" style="font-size:0.92rem; color:#64748b; margin-bottom:10px;">Advance the report to the next stage.</p>
+            <textarea id="workflow-detail-input" class="notes-input-box" placeholder="Add notes, a reason, availability, or the selected schedule..." style="min-height:90px;"></textarea>
+            <div id="workflow-actions-buttons" class="control-action-bar" style="justify-content:flex-start; margin-top:12px;"></div>
+        </div>
+
         <div class="premium-form-card" data-scan-only>
             <h4><i class="fa-solid fa-images"></i> Supporting Photos (optional)</h4>
             <div class="modern-micro-upload-zone" onclick="triggerSupportingPhotoUpload()">

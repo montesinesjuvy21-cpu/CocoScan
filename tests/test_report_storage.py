@@ -38,18 +38,21 @@ class ReportStorageTests(unittest.TestCase):
         self.assertEqual(payload["field_notes"], "Leaf damage observed")
         self.assertEqual(payload["created_at"], "2026-07-08T10:00:00+00:00")
         self.assertEqual(payload["submitted_at"], "2026-07-08T10:00:00+00:00")
-        self.assertEqual(payload["status"], "Pending")
+        self.assertEqual(payload["status"], "Pending Assessment")
         self.assertNotIn("damage_severity", payload)
 
     def test_status_helpers_normalize_pending_and_reviewed_states(self):
-        self.assertEqual(normalize_report_status("Pending Review"), "Pending")
+        self.assertEqual(normalize_report_status("Pending Review"), "Pending Assessment")
         self.assertEqual(normalize_report_status("Reviewed"), "Recommendation Issued")
-        self.assertEqual(normalize_report_status("Submitted"), "Pending")
+        self.assertEqual(normalize_report_status("Submitted"), "Pending Assessment")
+        self.assertEqual(normalize_report_status("On-site Visit Requested"), "On-site Visit Requested")
+        self.assertEqual(normalize_report_status("Resolved"), "Resolved")
         self.assertTrue(is_pending_report_status("pending review"))
         self.assertTrue(is_pending_report_status("Submitted"))
         self.assertTrue(is_reviewed_report_status("reviewed"))
+        self.assertTrue(is_reviewed_report_status("Resolved"))
         self.assertFalse(is_pending_report_status("Recommendation Issued"))
-        self.assertFalse(is_reviewed_report_status("Pending"))
+        self.assertFalse(is_reviewed_report_status("Pending Assessment"))
 
     def test_resolve_report_image_url_handles_storage_keys_and_public_urls(self):
         base_url = "https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/"
