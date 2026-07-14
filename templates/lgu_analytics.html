@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CocoScan - LGU Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/weather_widget.css') }}">
+</head>
+<body style="font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 24px;">
+    <main style="max-width: 1120px; margin: 0 auto;">
+        <header style="margin-bottom: 24px;">
+            <h1 style="font-size: 2rem; margin-bottom: 8px;">LGU Analytics</h1>
+            <p style="font-size: 1rem; color: #475569;">Welcome, {{ user_name }}. This page is a starting point for LGU analytics.</p>
+        </header>
+
+        <section style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);">
+            <h2 style="font-size: 1.25rem; margin-bottom: 16px;">Analytics overview</h2>
+            <div style="display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                <div style="padding: 18px; background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0;">
+                    <h3 style="margin: 0 0 8px; font-size: 0.95rem; color: #334155;">Total Reports</h3>
+                    <p style="font-size: 2rem; font-weight: 700; margin: 0;">{{ metrics.total_cases or 0 }}</p>
+                </div>
+                <div style="padding: 18px; background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0;">
+                    <h3 style="margin: 0 0 8px; font-size: 0.95rem; color: #334155;">Pending</h3>
+                    <p style="font-size: 2rem; font-weight: 700; margin: 0;">{{ metrics.pending_cases or 0 }}</p>
+                </div>
+                <div style="padding: 18px; background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0;">
+                    <h3 style="margin: 0 0 8px; font-size: 0.95rem; color: #334155;">Resolved</h3>
+                    <p style="font-size: 2rem; font-weight: 700; margin: 0;">{{ metrics.resolved_cases or 0 }}</p>
+                </div>
+                <div style="padding: 18px; background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0;">
+                    <h3 style="margin: 0 0 8px; font-size: 0.95rem; color: #334155;">Affected Areas</h3>
+                    <p style="font-size: 2rem; font-weight: 700; margin: 0;">{{ metrics.affected_areas or 0 }}</p>
+                </div>
+            </div>
+
+            <p style="margin-top: 24px; color: #475569;">The LGU analytics page is not yet fully implemented. You can use the dashboard link below to return to the main page.</p>
+            <a href="{{ url_for('lgu_dashboard') }}" style="display: inline-block; margin-top: 14px; padding: 12px 20px; background: #164630; color: #ffffff; border-radius: 12px; text-decoration: none;">Return to Dashboard</a>
+        </section>
+    </main>
+</body>
+</html>

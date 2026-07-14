@@ -439,6 +439,8 @@ def dashboard():
         return redirect(url_for('farmer_dashboard'))
     elif user_role == 'agri_expert':
         return redirect(url_for('agriculturist_dashboard'))
+    elif user_role == 'lgu':
+        return redirect(url_for('lgu_dashboard'))
     elif user_role == 'admin':
         return redirect(url_for('admin_user_management'))
         
@@ -992,6 +994,136 @@ def agriculturist_dashboard():
         
     except Exception as e:
         logger.error(f"Agriculturist dashboard routing exception: {str(e)}")
+        return redirect(url_for('logout'))
+
+@app.route('/lgu/dashboard')
+def lgu_dashboard():
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role != 'lgu':
+        flash("Unauthorized access path.", "error")
+        return redirect(url_for('login'))
+        
+    try:
+        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
+        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "LGU Officer"
+        
+        reports_response = supabase.table('reports').select('*').order('created_at', desc=True).execute()
+        reports = getattr(reports_response, 'data', []) or []
+
+        total_cases = len(reports)
+        pending_cases = sum(1 for report in reports if is_pending_report_status(report.get('status')))
+        resolved_cases = sum(1 for report in reports if is_reviewed_report_status(report.get('status')))
+        affected_areas = len({str(report.get('barangay') or '').strip() for report in reports if str(report.get('barangay') or '').strip()})
+
+        metrics = {
+            "total_cases": total_cases,
+            "pending_cases": pending_cases,
+            "resolved_cases": resolved_cases,
+            "affected_areas": affected_areas
+        }
+        chart_data = build_dashboard_chart_payload(reports)
+        
+        weather = {
+            "location": "San Pablo City, Laguna",
+            "temp": "--",
+            "humidity": "--",
+            "rainfall": "--",
+            "wind": "--",
+            "is_down": False
+        }
+        
+        latitude = 14.0708
+        longitude = 121.3256
+        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m"
+        
+        try:
+            response = requests.get(weather_url, timeout=4)
+            if response.status_code == 200:
+                data = response.json()
+                current_data = data.get("current", {})
+                weather["temp"] = round(current_data.get("temperature_2m"))
+                weather["humidity"] = current_data.get("relative_humidity_2m")
+                weather["rainfall"] = current_data.get("precipitation", 0.0)
+                weather["wind"] = round(current_data.get("wind_speed_10m"))
+            else:
+                weather["is_down"] = True
+        except Exception as weather_err:
+            weather["is_down"] = True
+            logger.error(f"Weather diagnostic error: {str(weather_err)}")
+
+        risk = calculate_environmental_risk(weather["temp"], weather["humidity"], weather["rainfall"])
+
+        return render_template('lgu_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk, chart_data=chart_data)
+        
+    except Exception as e:
+        logger.error(f"LGU dashboard routing exception: {str(e)}")
+        return redirect(url_for('logout'))
+
+@app.route('/lgu/analytics')
+def lgu_analytics():
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role != 'lgu':
+        flash("Unauthorized access path.", "error")
+        return redirect(url_for('login'))
+
+    try:
+        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
+        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "LGU Officer"
+
+        reports_response = supabase.table('reports').select('*').order('created_at', desc=True).execute()
+        reports = getattr(reports_response, 'data', []) or []
+
+        total_cases = len(reports)
+        pending_cases = sum(1 for report in reports if is_pending_report_status(report.get('status')))
+        resolved_cases = sum(1 for report in reports if is_reviewed_report_status(report.get('status')))
+        affected_areas = len({str(report.get('barangay') or '').strip() for report in reports if str(report.get('barangay') or '').strip()})
+
+        metrics = {
+            "total_cases": total_cases,
+            "pending_cases": pending_cases,
+            "resolved_cases": resolved_cases,
+            "affected_areas": affected_areas
+        }
+        chart_data = build_dashboard_chart_payload(reports)
+
+        weather = {
+            "location": "San Pablo City, Laguna",
+            "temp": "--",
+            "humidity": "--",
+            "rainfall": "--",
+            "wind": "--",
+            "is_down": False
+        }
+        
+        latitude = 14.0708
+        longitude = 121.3256
+        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m"
+        
+        try:
+            response = requests.get(weather_url, timeout=4)
+            if response.status_code == 200:
+                data = response.json()
+                current_data = data.get("current", {})
+                weather["temp"] = round(current_data.get("temperature_2m"))
+                weather["humidity"] = current_data.get("relative_humidity_2m")
+                weather["rainfall"] = current_data.get("precipitation", 0.0)
+                weather["wind"] = round(current_data.get("wind_speed_10m"))
+            else:
+                weather["is_down"] = True
+        except Exception as weather_err:
+            weather["is_down"] = True
+            logger.error(f"Weather diagnostic error: {str(weather_err)}")
+
+        risk = calculate_environmental_risk(weather["temp"], weather["humidity"], weather["rainfall"])
+
+        return render_template('lgu_analytics.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk, chart_data=chart_data)
+
+    except Exception as e:
+        logger.error(f"LGU analytics routing exception: {str(e)}")
         return redirect(url_for('logout'))
 
 @app.route('/debug/reports')

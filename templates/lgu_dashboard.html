@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CocoScan - Agriculturist Dashboard</title>
+    <title>CocoScan - LGU Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/weather_widget.css') }}">
@@ -552,10 +552,10 @@
            <div>
             <div class="menu-label">Main Menu</div>
             <ul class="sidebar-menu-list">
-                <li><a href="/agriculturist/dashboard" class="menu-item-link active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-                <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i> Pending Reports</a></li>
-                <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Reviewed</a></li>
-                <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                <li><a href="/lgu/dashboard" class="menu-item-link active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                <li><a href="/lgu/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+                <li><a href="/lgu/reports" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> Reports</a></li>
+                <li><a href="/lgu/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
             </ul>
         </div>
 
@@ -564,7 +564,7 @@
                     <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
                     <div class="user-identity-text">
                         <h4>{{ user_name }}</h4>
-                        <p>Agriculturist</p>
+                        <p>LGU Officer</p>
                     </div>
                 </div>
                 <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
@@ -576,7 +576,7 @@
             
             <header class="dashboard-header-container" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-bottom: 12px; position: relative;">
                 <div>
-                    <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;"> Agriculturist Dashboard</h1>
+                    <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;"> LGU Dashboard</h1>
                     <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview of reported and detected pests</p>
                 </div>
 
@@ -626,12 +626,12 @@
                 </div>
             </div>
 
-            <!-- Pending Reports Action -->
+            <!-- Statistical Reports Action -->
             <div class="quick-action-card">
-                <h3>Pending Reports</h3>
+                <h3>Statistical Reports</h3>
                 <p>Review reports that are still waiting for your expert recommendation.</p>
-                <a href="{{ url_for('agriculturist_pending') }}" class="btn-primary-scan" style="text-decoration: none;">
-                    <i class="fa-solid fa-list-ul"></i> View Pending Reports
+                <a href="{{ url_for('lgu_analytics') }}" class="btn-primary-scan" style="text-decoration: none;">
+                    <i class="fa-solid fa-list-ul"></i> View Statistical Reports
                 </a>
             </div>
 
