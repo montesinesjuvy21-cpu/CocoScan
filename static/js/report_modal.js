@@ -337,11 +337,13 @@
         const readonlyOnlyNodes = document.querySelectorAll("[data-readonly-only]");
         const isReviewed = isRecommendationIssuedStatus(report?.status || "");
 
+        const statusKey = getStatusKey(report?.status || "");
+        const assessmentAlreadyIssued = statusKey === "assessment_issued" || statusKey === "recommendation_issued" || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
+
         setDisplay(scanButton, mode === "scan", "flex");
         setDisplay(farmerButton, false, "flex");
-        // Show agriculturist button area when in agriculturist mode; disable if already issued or reviewed
-        setDisplay(agriButton, mode === "agriculturist", "flex");
-        setDisplay(cancelButton, !(mode === "agriculturist" && isReviewed), "inline-flex");
+        setDisplay(agriButton, mode === "agriculturist" && !assessmentAlreadyIssued && !isReviewed, "flex");
+        setDisplay(cancelButton, true, "inline-flex");
 
         scanOnlyNodes.forEach((node) => setDisplay(node, mode === "scan", "block"));
         readonlyOnlyNodes.forEach((node) => setDisplay(node, mode !== "scan", "block"));
@@ -557,23 +559,43 @@
                     label: "Submit Feedback",
                     icon: "fa-solid fa-comments",
                     action: "farmer-feedback",
-                    help: "Let the agriculturist know whether the assessment resolved your issue.",
+                    help: "Tell us whether the assessment helped your issue. If not, request a visit.",
                 });
+                if (workflowInput) {
+                    setDisplay(workflowInput, false);
+                }
                 if (workflowFormFields) {
                     workflowFormFields.innerHTML = `
-                        <div style="display:grid; gap:10px;">
-                            <label style="font-size:0.9rem; font-weight:600; color:#334155;">Did the assessment resolve your issue?</label>
-                            <select id="farmer-feedback-choice" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
-                                <option value="resolved">Yes, my issue has been resolved.</option>
-                                <option value="needs-assistance">No, I still need assistance.</option>
-                            </select>
-                            <div id="farmer-visit-fields" style="display:grid; gap:8px;">
+                        <div style="display:grid; gap:14px;">
+                            <p style="font-size:0.92rem; color:#334155; margin:0;">Did the initial recommendation and expert assessment help your issue?</p>
+                            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                                <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#102a43;">
+                                    <input type="radio" name="farmer-feedback-choice" value="resolved" checked style="accent-color:#059669;"> Yes
+                                </label>
+                                <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#102a43;">
+                                    <input type="radio" name="farmer-feedback-choice" value="needs-assistance" style="accent-color:#be185d;"> No
+                                </label>
+                            </div>
+                            <div id="farmer-visit-request-details" style="display:none; gap:12px;">
                                 <label style="font-size:0.9rem; font-weight:600; color:#334155;">Reason for requesting a visit</label>
                                 <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:90px;"></textarea>
-                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label>
-                                <input id="farmer-visit-date" type="date" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
-                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label>
-                                <input id="farmer-visit-time" type="time" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                                <div style="display:grid; gap:10px;">
+                                    <div style="display:grid; gap:6px;">
+                                        <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date/time option 1</label>
+                                        <input id="farmer-visit-date-1" type="date" class="notes-input-box" style="padding:12px 14px;">
+                                        <input id="farmer-visit-time-1" type="time" class="notes-input-box" style="padding:12px 14px;">
+                                    </div>
+                                    <div style="display:grid; gap:6px;">
+                                        <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date/time option 2</label>
+                                        <input id="farmer-visit-date-2" type="date" class="notes-input-box" style="padding:12px 14px;">
+                                        <input id="farmer-visit-time-2" type="time" class="notes-input-box" style="padding:12px 14px;">
+                                    </div>
+                                    <div style="display:grid; gap:6px;">
+                                        <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date/time option 3</label>
+                                        <input id="farmer-visit-date-3" type="date" class="notes-input-box" style="padding:12px 14px;">
+                                        <input id="farmer-visit-time-3" type="time" class="notes-input-box" style="padding:12px 14px;">
+                                    </div>
+                                </div>
                             </div>
                         </div>`;
                 }
@@ -599,6 +621,23 @@
             button.onclick = () => submitWorkflowAction(action.action);
             workflowButtons.appendChild(button);
         });
+
+        const feedbackRadios = workflowFormFields?.querySelectorAll("input[name='farmer-feedback-choice']");
+        const requestDetails = workflowFormFields?.querySelector("#farmer-visit-request-details");
+        const actionButton = workflowButtons.querySelector("button");
+
+        if (feedbackRadios && feedbackRadios.length && actionButton) {
+            const refreshFormState = () => {
+                const selectedValue = Array.from(feedbackRadios).find((input) => input.checked)?.value || "resolved";
+                const showDetails = selectedValue === "needs-assistance";
+                if (requestDetails) {
+                    setDisplay(requestDetails, showDetails, "grid");
+                }
+                actionButton.innerHTML = `<i class="fa-solid ${showDetails ? 'fa-calendar-plus' : 'fa-check-circle'}"></i> ${showDetails ? 'Request Visit' : 'Confirm Resolved'}`;
+            };
+            feedbackRadios.forEach((input) => input.addEventListener("change", refreshFormState));
+            refreshFormState();
+        }
     }
 
     async function submitWorkflowAction(actionName) {
@@ -637,7 +676,7 @@
         }
 
         if (actionName === "farmer-feedback") {
-            const feedbackChoice = document.getElementById("farmer-feedback-choice")?.value || "resolved";
+            const feedbackChoice = document.querySelector("input[name='farmer-feedback-choice']:checked")?.value || "resolved";
             formData.append("confirmation", feedbackChoice === "resolved" ? "resolved" : "needs-assistance");
             if (feedbackChoice !== "resolved") {
                 const reason = document.getElementById("farmer-visit-reason")?.value?.trim() || "";
@@ -656,7 +695,6 @@
                     return;
                 }
                 formData.append("reason", reason);
-                // append the three preferred date/time pairs
                 dates.forEach((d, idx) => {
                     formData.append(`preferred_date_${idx+1}`, d);
                     formData.append(`preferred_time_${idx+1}`, times[idx] || "");
@@ -669,7 +707,7 @@
                     alert(data.message || "The feedback could not be saved.");
                     return;
                 }
-                report.status = feedbackChoice === "resolved" ? "waiting_agriculturist_confirmation" : "visit_requested";
+                report.status = feedbackChoice === "resolved" ? "resolved" : "visit_requested";
                 applyStatusStyle(report);
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "Feedback saved.");
@@ -923,12 +961,8 @@
         const notesDisplay = document.getElementById("report-notes-display");
         const expertInput = document.getElementById("expert-notes-input");
         const expertCard = document.getElementById("report-expert-card");
-        const closeHeaderBtn = document.getElementById("report-close-btn-header");
 
         const isReviewed = isRecommendationIssuedStatus(report?.status || "");
-        if (closeHeaderBtn) {
-            setDisplay(closeHeaderBtn, mode === "agriculturist" && isReviewed, "inline-flex");
-        }
 
         if (pestTitle) pestTitle.textContent = report.pest;
         if (confidenceNode) confidenceNode.textContent = report.confidence;

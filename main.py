@@ -31,9 +31,7 @@ from app.report_storage import (
     format_report_date,
     format_report_timestamp,
     is_pending_report_status,
-    is_active_report_status,
     is_resolved_report_status,
-    is_reviewed_report_status,
     normalize_report_status,
     resolve_field_notes,
     resolve_report_image_url,
@@ -102,7 +100,7 @@ def _update_report_workflow(report_id, status, *, note=None, extra_updates=None)
 
     now_iso = datetime.now(UTC).isoformat()
     update_data = {
-        "status": normalize_report_status(status, default="Pending Assessment"),
+        "status": normalize_report_status(status, default="Under Review"),
         "updated_at": now_iso,
     }
 
@@ -706,7 +704,7 @@ def _fetch_weather_snapshot(latitude, longitude):
         }
 
 
-def _build_report_modal_payload(item, *, supporting_images=None, weather=None, default_status="Pending Assessment"):
+def _build_report_modal_payload(item, *, supporting_images=None, weather=None, default_status="Under Review"):
     if supporting_images is None:
         supporting_images = []
     if weather is None:
@@ -1239,15 +1237,14 @@ def agriculturist_pending():
         
         for item in raw_reports:
             status = item.get("status")
-            is_active = is_active_report_status(status)
-            if not is_active:
-                logger.debug(f"[ACTIVE] Skipping report {item.get('id')}: status={status} (not active)")
+            if is_resolved_report_status(status):
+                logger.debug(f"[ACTIVE] Skipping report {item.get('id')}: status={status} (resolved)")
                 continue
             payload = _build_report_modal_payload(
                 item,
                 supporting_images=supporting_map.get(str(item.get("id")), []),
                 weather=_fetch_weather_snapshot(item.get("latitude"), item.get("longitude")),
-                default_status="Under Review",
+                default_status="Pending Assessment",
             )
 
             active_reports_list.append({
@@ -1369,7 +1366,7 @@ def agriculturist_map():
                 "latitude": lat,
                 "longitude": lng,
                 "pest_type": item.get("pest_type") or "Unknown Pest",
-                "status": normalize_report_status(item.get("status"), default="Pending Assessment"),
+                "status": normalize_report_status(item.get("status"), default="Under Review"),
                 "cases_count": 1 # Serves as baseline cluster weight variable
             })
 
@@ -1421,7 +1418,7 @@ def farmer_follow_up_report():
 
         update_response = _update_report_workflow(
             report_id,
-            'Pending Assessment',
+            'Under Review',
             note=f"Follow-up update: {follow_up_notes}",
             extra_updates={
                 'field_notes': combined_notes,
@@ -1500,20 +1497,32 @@ def farmer_submit_assessment_feedback():
         report_id = payload.get('report_id') or request.form.get('report_id')
         confirmation = str(payload.get('confirmation') or request.form.get('confirmation') or '').strip().lower()
         reason = (payload.get('reason') or request.form.get('reason') or '').strip()
-        preferred_date = (payload.get('preferred_date') or request.form.get('preferred_date') or '').strip()
-        preferred_time = (payload.get('preferred_time') or request.form.get('preferred_time') or '').strip()
+
+        preferred_dates = [
+            str(payload.get('preferred_date_1') or request.form.get('preferred_date_1') or '').strip(),
+            str(payload.get('preferred_date_2') or request.form.get('preferred_date_2') or '').strip(),
+            str(payload.get('preferred_date_3') or request.form.get('preferred_date_3') or '').strip(),
+        ]
+        preferred_times = [
+            str(payload.get('preferred_time_1') or request.form.get('preferred_time_1') or '').strip(),
+            str(payload.get('preferred_time_2') or request.form.get('preferred_time_2') or '').strip(),
+            str(payload.get('preferred_time_3') or request.form.get('preferred_time_3') or '').strip(),
+        ]
 
         if not report_id:
             return jsonify({'success': False, 'message': 'Missing report reference'}), 400
 
         if confirmation == 'resolved' or confirmation == 'yes':
             note = "Farmer confirmed the assessment resolved the issue."
-            status = 'waiting_agriculturist_confirmation'
-            update_response = _update_report_workflow(report_id, status, note=note)
+            update_response = _update_report_workflow(report_id, 'resolved', note=note)
         else:
-            if not reason or not preferred_date or not preferred_time:
-                return jsonify({'success': False, 'message': 'Please fill out the visit request details.'}), 400
-            note = f"Farmer requested a visit. Reason: {reason}. Preferred date: {preferred_date}. Preferred time: {preferred_time}."
+            if not reason or any(not d for d in preferred_dates) or any(not t for t in preferred_times):
+                return jsonify({'success': False, 'message': 'Please fill out the visit request details and provide three date/time options.'}), 400
+
+            note_lines = [f"Farmer requested a visit. Reason: {reason}."]
+            for idx, (day, time) in enumerate(zip(preferred_dates, preferred_times), start=1):
+                note_lines.append(f"Option {idx}: {day} at {time}.")
+            note = " ".join(note_lines)
             update_response = _update_report_workflow(report_id, 'visit_requested', note=note)
 
         if getattr(update_response, 'error', None):
@@ -1586,7 +1595,7 @@ def agriculturist_request_visit():
             return jsonify({'success': False, 'message': 'Missing report reference'}), 400
 
         note = f"On-site visit requested: {reason or 'No reason provided.'}"
-        update_response = _update_report_workflow(report_id, 'On-site Visit Requested', note=note)
+        update_response = _update_report_workflow(report_id, 'Waiting for Agriculturist Confirmation', note=note)
         if getattr(update_response, 'error', None):
             logger.error(f"Visit request update failed: {update_response.error}")
             return jsonify({'success': False, 'message': 'The visit request could not be saved.'}), 500
@@ -1618,7 +1627,7 @@ def farmer_provide_availability():
             return jsonify({'success': False, 'message': 'Missing report reference'}), 400
 
         note = f"Farmer availability: {availability or 'No slots provided.'}"
-        update_response = _update_report_workflow(report_id, 'Waiting for Schedule', note=note)
+        update_response = _update_report_workflow(report_id, 'Waiting for Agriculturist Confirmation', note=note)
         if getattr(update_response, 'error', None):
             logger.error(f"Availability update failed: {update_response.error}")
             return jsonify({'success': False, 'message': 'The availability could not be submitted.'}), 500

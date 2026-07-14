@@ -655,7 +655,7 @@
                     <div class="filter-button-group" style="display:flex; gap:8px; flex:1 1 220px; min-width:0; flex-wrap:wrap;">
                         <button id="filter-all-btn" class="chip-filter-btn">All</button>
                         <button id="filter-barangay-btn" class="chip-filter-btn">Barangay ▾</button>
-                        <button id="filter-pest-btn" class="chip-filter-btn">Pest ▾</button>
+                        <button id="filter-status-btn" class="chip-filter-btn">Status ▾</button>
                         <button id="filter-calendar-btn" class="chip-filter-btn" title="Filter by date"><i class="fa-solid fa-calendar-days"></i></button>
                         <input type="date" id="report-date-filter" aria-label="Filter by date" style="display:none;">
                     </div>
@@ -666,7 +666,7 @@
                 <div id="barangay-dropdown" class="filter-dropdown" style="position:relative; margin-top:8px;">
                     <div class="filter-dropdown-panel" style="display:none; position:fixed; z-index:80; background:var(--bg-card); border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:8px; padding:8px; min-width:220px; max-height:320px; overflow:auto;"></div>
                 </div>
-                <div id="pest-dropdown" class="filter-dropdown" style="position:relative; margin-top:8px;">
+                <div id="status-dropdown" class="filter-dropdown" style="position:relative; margin-top:8px;">
                     <div class="filter-dropdown-panel" style="display:none; position:fixed; z-index:80; background:var(--bg-card); border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:8px; padding:8px; min-width:220px; max-height:240px; overflow:auto;"></div>
                 </div>
             </div>
@@ -682,19 +682,23 @@
     <!-- Shared report summary modal reused across the app -->
     {% include 'components/report_modal.html' %}
 
+    <script type="application/json" id="reviewed-reports-data">
+        {{ reviewed_reports | tojson | safe }}
+    </script>
+
     <script>
         let reports = [];
-        try {
-            reports = JSON.parse('{{ reviewed_reports | tojson | safe }}');
-            if (!reports || reports.length === 0) {
+        const reportsDataElement = document.getElementById('reviewed-reports-data');
+        if (reportsDataElement) {
+            try {
+                reports = JSON.parse(reportsDataElement.textContent || '[]');
+            } catch (e) {
                 reports = [];
             }
-        } catch (e) {
-            reports = [];
         }
 
         let activeSearchQuery = "";
-        let activePestFilter = "";
+        let activeStatusFilter = "all";
         let activeBarangayFilter = "all";
         let activeDateFilter = "";
         let currentPage = 1;
@@ -709,11 +713,11 @@
         function initSearchAndFilters() {
             const allBtn = document.getElementById('filter-all-btn');
             const barangayBtn = document.getElementById('filter-barangay-btn');
-            const pestBtn = document.getElementById('filter-pest-btn');
+            const statusBtn = document.getElementById('filter-status-btn');
             const calendarBtn = document.getElementById('filter-calendar-btn');
             const dateInput = document.getElementById('report-date-filter');
             const barangayPanel = document.querySelector('#barangay-dropdown .filter-dropdown-panel');
-            const pestPanel = document.querySelector('#pest-dropdown .filter-dropdown-panel');
+            const statusPanel = document.querySelector('#status-dropdown .filter-dropdown-panel');
 
             const barangays = [
 "Bagong Bayan II-A","Bagong Pook VI-C","Barangay I-A","Barangay I-B","Barangay II-A","Barangay II-B","Barangay II-C","Barangay II-D","Barangay II-E","Barangay II-F","Barangay III-A","Barangay III-B","Barangay III-C","Barangay III-D","Barangay III-E","Barangay III-F","Barangay IV-A","Barangay IV-B","Barangay IV-C","Barangay V-A","Barangay V-B","Barangay V-C","Barangay V-D","Barangay VI-A","Barangay VI-B","Bautista","Concepcion","Del Remedio","Dolores","San Antonio 1","San Antonio 2","San Bartolome","San Buenaventura","San Crispin","San Cristobal","San Diego","San Francisco","San Gabriel","San Gregorio","San Ignacio","San Isidro","San Joaquin","San Jose","San Juan","San Lorenzo","San Lucas 1","San Lucas 2","San Marcos","San Mateo","San Miguel","San Nicolas","San Pedro","San Rafael","San Roque","San Vicente","Santa Ana","Santa Catalina","Santa Cruz","Santa Elena","Santa Filomena","Santa Isabel","Santa Maria","Santa Maria Magdalena","Santa Monica","Santa Veronica","Santiago I","Santiago II","Santisimo Rosario","Santo Angel","Santo Cristo","Santo Niño","Soledad","Atisan","Balagtas","Dapdap","Dolores","Sta. Catalina","Sta. Cruz","Sta. Elena"
@@ -724,7 +728,7 @@
                 allBtn.classList.add('active-chip');
                 allBtn.addEventListener('click', () => {
                     activeSearchQuery = '';
-                    activePestFilter = '';
+                    activeStatusFilter = 'all';
                     activeBarangayFilter = 'all';
                     activeDateFilter = '';
                     currentPage = 1;
@@ -745,21 +749,28 @@
                 });
             }
 
-            const pests = ['Brontispa', 'Rhinoceros Beetle'];
-            if (pestPanel) {
-                pestPanel.innerHTML = '';
-                pests.forEach(p => {
+            const statuses = [
+                'Under Review',
+                'Assessment Issued',
+                'Waiting for Agriculturist Confirmation',
+                'Visit Scheduled',
+                'Visit Completed',
+                'Resolved'
+            ];
+            if (statusPanel) {
+                statusPanel.innerHTML = '';
+                statuses.forEach(s => {
                     const btn = document.createElement('button');
                     btn.className = 'dropdown-item';
-                    btn.textContent = p;
-                    btn.onclick = () => { activePestFilter = p; currentPage = 1; closeAllDropdowns(); updateFilterButtonStates(); evaluateClearFilterButtonState(); renderReportsGrid(); };
-                    pestPanel.appendChild(btn);
+                    btn.textContent = s;
+                    btn.onclick = () => { activeStatusFilter = s; currentPage = 1; closeAllDropdowns(); updateFilterButtonStates(); evaluateClearFilterButtonState(); renderReportsGrid(); };
+                    statusPanel.appendChild(btn);
                 });
             }
 
             function closeAllDropdowns() {
                 if (barangayPanel) barangayPanel.style.display = 'none';
-                if (pestPanel) pestPanel.style.display = 'none';
+                if (statusPanel) statusPanel.style.display = 'none';
             }
 
             if (barangayBtn) {
@@ -769,17 +780,17 @@
                     barangayPanel.style.left = rect.left + 'px';
                     barangayPanel.style.top = (rect.bottom + 8) + 'px';
                     barangayPanel.style.display = barangayPanel.style.display === 'block' ? 'none' : 'block';
-                    if (pestPanel) pestPanel.style.display = 'none';
+                    if (statusPanel) statusPanel.style.display = 'none';
                 });
             }
 
-            if (pestBtn) {
-                pestBtn.addEventListener('click', () => {
-                    if (!pestPanel) return;
-                    const rect = pestBtn.getBoundingClientRect();
-                    pestPanel.style.left = rect.left + 'px';
-                    pestPanel.style.top = (rect.bottom + 8) + 'px';
-                    pestPanel.style.display = pestPanel.style.display === 'block' ? 'none' : 'block';
+            if (statusBtn) {
+                statusBtn.addEventListener('click', () => {
+                    if (!statusPanel) return;
+                    const rect = statusBtn.getBoundingClientRect();
+                    statusPanel.style.left = rect.left + 'px';
+                    statusPanel.style.top = (rect.bottom + 8) + 'px';
+                    statusPanel.style.display = statusPanel.style.display === 'block' ? 'none' : 'block';
                     if (barangayPanel) barangayPanel.style.display = 'none';
                 });
             }
@@ -814,7 +825,7 @@
             document.addEventListener('click', (ev) => {
                 const target = ev.target;
                 if (barangayPanel && !barangayPanel.contains(target) && target !== barangayBtn) barangayPanel.style.display = 'none';
-                if (pestPanel && !pestPanel.contains(target) && target !== pestBtn) pestPanel.style.display = 'none';
+                if (statusPanel && !statusPanel.contains(target) && target !== statusBtn) statusPanel.style.display = 'none';
             });
 
             updateFilterButtonStates();
@@ -823,16 +834,16 @@
         function updateFilterButtonStates() {
             const allBtn = document.getElementById('filter-all-btn');
             const barangayBtn = document.getElementById('filter-barangay-btn');
-            const pestBtn = document.getElementById('filter-pest-btn');
+            const statusBtn = document.getElementById('filter-status-btn');
             const calendarBtn = document.getElementById('filter-calendar-btn');
 
-            if (!allBtn || !barangayBtn || !pestBtn || !calendarBtn) return;
+            if (!allBtn || !barangayBtn || !statusBtn || !calendarBtn) return;
             document.querySelectorAll('.chip-filter-btn').forEach(c => c.classList.remove('active-chip'));
 
             const barangayActive = activeBarangayFilter !== 'all';
-            const pestActive = activePestFilter !== '';
+            const statusActive = activeStatusFilter !== 'all';
             const dateActive = activeDateFilter !== '';
-            const anyActive = barangayActive || pestActive || dateActive;
+            const anyActive = barangayActive || statusActive || dateActive;
 
             if (!anyActive) {
                 allBtn.classList.add('active-chip');
@@ -840,8 +851,8 @@
             if (barangayActive) {
                 barangayBtn.classList.add('active-chip');
             }
-            if (pestActive) {
-                pestBtn.classList.add('active-chip');
+            if (statusActive) {
+                statusBtn.classList.add('active-chip');
             }
             if (dateActive) {
                 calendarBtn.classList.add('active-chip');
@@ -849,7 +860,7 @@
 
             allBtn.textContent = `All (${reports.length})`;
             barangayBtn.textContent = barangayActive ? `${activeBarangayFilter} ▾` : 'Barangay ▾';
-            pestBtn.textContent = pestActive ? `${activePestFilter} ▾` : 'Pest ▾';
+            statusBtn.textContent = statusActive ? `${activeStatusFilter} ▾` : 'Status ▾';
 
             const formattedDate = formatDateForButton(activeDateFilter);
             if (formattedDate) {
@@ -862,7 +873,7 @@
         function evaluateClearFilterButtonState() {
             const clearBtn = document.getElementById("clear-filters-btn");
             if (clearBtn) {
-                if (activeSearchQuery !== "" || activePestFilter !== "" || activeDateFilter !== "" || activeBarangayFilter !== "all") {
+                if (activeSearchQuery !== "" || activeStatusFilter !== "all" || activeDateFilter !== "" || activeBarangayFilter !== "all") {
                     clearBtn.style.display = "inline-flex";
                 } else {
                     clearBtn.style.display = "none";
@@ -886,7 +897,7 @@
             }
 
             activeSearchQuery = "";
-            activePestFilter = "";
+            activeStatusFilter = "all";
             activeBarangayFilter = "all";
             activeDateFilter = "";
             currentPage = 1;
@@ -928,12 +939,11 @@
             if (countLabel) countLabel.textContent = `All (${reports.length})`;
 
             let processedRecords = reports.filter(item => {
-                const pestText = String(item.pest || item.pest_type || "").toLowerCase();
-                const matchesPest = !activePestFilter || pestText.includes(activePestFilter.toLowerCase());
+                const matchesStatus = activeStatusFilter === 'all' || String(item.status || "") === activeStatusFilter;
                 const matchesDate = !activeDateFilter || String(item.date || "") === activeDateFilter;
                 const itemBarangay = String(item.barangay || item.location || "").toLowerCase();
                 const matchesBarangay = (activeBarangayFilter === 'all') || (itemBarangay === activeBarangayFilter.toLowerCase()) || (itemBarangay.includes(activeBarangayFilter.toLowerCase()));
-                return matchesPest && matchesDate && matchesBarangay;
+                return matchesStatus && matchesDate && matchesBarangay;
             });
 
             if (processedRecords.length === 0) {

@@ -39,41 +39,31 @@ class ReportStorageTests(unittest.TestCase):
         self.assertEqual(payload["field_notes"], "Leaf damage observed")
         self.assertEqual(payload["created_at"], "2026-07-08T10:00:00+00:00")
         self.assertEqual(payload["submitted_at"], "2026-07-08T10:00:00+00:00")
-        self.assertEqual(payload["status"], "Pending Assessment")
+        self.assertEqual(payload["status"], "Under Review")
         self.assertNotIn("damage_severity", payload)
 
-    def test_status_helpers_normalize_pending_and_reviewed_states(self):
-        self.assertEqual(normalize_report_status("Pending Review"), "Pending Assessment")
-        self.assertEqual(normalize_report_status("Reviewed"), "Recommendation Issued")
-        self.assertEqual(normalize_report_status("Submitted"), "Pending Assessment")
-        self.assertEqual(normalize_report_status("On-site Visit Requested"), "On-site Visit Requested")
+    def test_status_helpers_use_the_simple_workflow_states(self):
+        self.assertEqual(normalize_report_status("Pending Review"), "Under Review")
+        self.assertEqual(normalize_report_status("Reviewed"), "Under Review")
+        self.assertEqual(normalize_report_status("Submitted"), "Under Review")
+        self.assertEqual(normalize_report_status("On-site Visit Requested"), "Waiting for Agriculturist Confirmation")
         self.assertEqual(normalize_report_status("Resolved"), "Resolved")
+        self.assertEqual(normalize_report_status("assessment_issued"), "Assessment Issued")
+        self.assertEqual(normalize_report_status("visit_scheduled"), "Visit Scheduled")
+        self.assertEqual(normalize_report_status("visit_completed"), "Visit Completed")
+        self.assertEqual(normalize_report_status("final_remarks_issued"), "Resolved")
+        self.assertEqual(normalize_report_status("closed"), "Resolved")
+
         self.assertTrue(is_pending_report_status("pending review"))
         self.assertTrue(is_pending_report_status("Submitted"))
-        self.assertTrue(is_reviewed_report_status("reviewed"))
-        self.assertTrue(is_reviewed_report_status("Resolved"))
-        self.assertFalse(is_pending_report_status("Recommendation Issued"))
-        self.assertFalse(is_reviewed_report_status("Pending Assessment"))
-
-    def test_new_workflow_statuses_are_normalized_and_classified(self):
-        self.assertEqual(normalize_report_status("under_review"), "under_review")
-        self.assertEqual(normalize_report_status("assessment_issued"), "assessment_issued")
-        self.assertEqual(normalize_report_status("visit_requested"), "visit_requested")
-        self.assertEqual(normalize_report_status("waiting_agriculturist_confirmation"), "waiting_agriculturist_confirmation")
-        self.assertEqual(normalize_report_status("visit_scheduled"), "visit_scheduled")
-        self.assertEqual(normalize_report_status("visit_completed"), "visit_completed")
-        self.assertEqual(normalize_report_status("final_remarks_issued"), "final_remarks_issued")
-        self.assertEqual(normalize_report_status("closed"), "closed")
-
-        self.assertTrue(is_pending_report_status("under_review"))
         self.assertTrue(is_pending_report_status("assessment_issued"))
-        self.assertTrue(is_pending_report_status("visit_requested"))
         self.assertTrue(is_pending_report_status("waiting_agriculturist_confirmation"))
         self.assertTrue(is_pending_report_status("visit_scheduled"))
         self.assertTrue(is_pending_report_status("visit_completed"))
-        self.assertFalse(is_pending_report_status("final_remarks_issued"))
-        self.assertTrue(is_resolved_report_status("final_remarks_issued"))
-        self.assertTrue(is_resolved_report_status("closed"))
+        self.assertFalse(is_pending_report_status("Resolved"))
+        self.assertTrue(is_resolved_report_status("Resolved"))
+        self.assertTrue(is_resolved_report_status("Closed"))
+        self.assertFalse(is_resolved_report_status("Under Review"))
 
     def test_resolve_report_image_url_handles_storage_keys_and_public_urls(self):
         base_url = "https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/"

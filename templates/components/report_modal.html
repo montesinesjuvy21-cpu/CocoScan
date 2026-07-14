@@ -184,30 +184,10 @@
             .modal-card-head h4 {
                 margin: 0;
             }
-            #report-close-btn-header {
-                background: #bb2525;
-                color: #ffffff;
-                border: 1px solid rgba(0, 0, 0, 0.12);
-                padding: 10px 20px;
-                border-radius: 999px;
-                font-size: 1rem;
-                cursor: pointer;
-                min-width: auto;
-                width: auto;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-                transition: background 0.2s ease, transform 0.15s ease;
-            }
-            #report-close-btn-header:hover {
-                background: #991b1b;
-                transform: translateY(-1px);
-            }
         </style>
 
         <div class="modal-header-inline" style="display: flex; justify-content: space-between; align-items: center;">
             <h2 style="margin: 0;">Report Summary</h2>
-            <button class="btn-control cancel-secondary" id="report-close-btn-header" type="button" onclick="closeReportModal()" style="display: none;">
-                Close
-            </button>
         </div>
 
         <div class="status-row-bar">Status: <span id="report-status-text">--</span></div>

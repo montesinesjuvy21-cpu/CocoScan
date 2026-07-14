@@ -983,16 +983,20 @@
         </div>
     </div>
 
+    <script type="application/json" id="farmer-reports-data">
+        {{ reports_data | tojson | safe }}
+    </script>
+
     <script>
         // Production State Containers
         let reports = [];
-        try {
-            reports = JSON.parse('{{ reports_data | tojson | safe }}');
-            if (!Array.isArray(reports)) {
+        const reportsDataElement = document.getElementById('farmer-reports-data');
+        if (reportsDataElement) {
+            try {
+                reports = JSON.parse(reportsDataElement.textContent || '[]');
+            } catch (e) {
                 reports = [];
             }
-        } catch (e) {
-            reports = [];
         }
 
         let activeSearchQuery = "";
@@ -1044,8 +1048,15 @@
                 });
             }
 
-            // Build unique status list and pest list from data
-            const statuses = Array.from(new Set(reports.map(r => r.status).filter(Boolean)));
+            // Fixed workflow status list for filtering
+            const statuses = [
+                'Under Review',
+                'Assessment Issued',
+                'Waiting for Agriculturist Confirmation',
+                'Visit Scheduled',
+                'Visit Completed',
+                'Resolved'
+            ];
             const pests = Array.from(new Set(reports.map(r => (r.pest || '').trim()).filter(Boolean))).sort();
 
             // Populate status dropdown (only statuses; 'All' is the separate button)
@@ -1260,6 +1271,42 @@
             return escapedText.replace(regex, '<span class="search-highlight">$1</span>');
         }
 
+        function normalizeStatusKey(status) {
+            return String(status || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+        }
+
+        function formatWorkflowStatusLabel(status) {
+            const normalized = normalizeStatusKey(status);
+            const labels = {
+                "under_review": "Under Review",
+                "assessment_issued": "Assessment Issued",
+                "visit_requested": "Visit Requested",
+                "waiting_agriculturist_confirmation": "Waiting for Agriculturist Confirmation",
+                "visit_scheduled": "Visit Scheduled",
+                "visit_completed": "Visit Completed",
+                "final_remarks_issued": "Final Remarks Issued",
+                "resolved": "Resolved",
+                "recommendation_issued": "Recommendation Issued",
+            };
+            return labels[normalized] || String(status || "").trim() || "Unknown";
+        }
+
+        function getWorkflowStatusBadgeStyle(status) {
+            const normalized = normalizeStatusKey(status);
+            const palette = {
+                "under_review": { backgroundColor: "#fef3c7", color: "#92400e" },
+                "assessment_issued": { backgroundColor: "#ecfdf5", color: "#065f46" },
+                "visit_requested": { backgroundColor: "#fdf2f8", color: "#be185d" },
+                "waiting_agriculturist_confirmation": { backgroundColor: "#eff6ff", color: "#1d4ed8" },
+                "visit_scheduled": { backgroundColor: "#fefce8", color: "#a16207" },
+                "visit_completed": { backgroundColor: "#ecfeff", color: "#0f766e" },
+                "final_remarks_issued": { backgroundColor: "#ede9fe", color: "#5b21b6" },
+                "resolved": { backgroundColor: "#dcfce7", color: "#166534" },
+                "recommendation_issued": { backgroundColor: "#ecfdf5", color: "#065f46" },
+            };
+            return palette[normalized] || { backgroundColor: "#f8fafc", color: "#475569" };
+        }
+
         /* ================== DYNAMIC INTERACTIVE REPORTS ENGINE ================== */
         function renderReportsGrid() {
             const container = document.getElementById("reports-list-container");
@@ -1296,7 +1343,8 @@
 
             paginatedRecords.forEach(item => {
                 const row = document.createElement("div");
-                const badgeText = item.status;
+                const statusLabel = formatWorkflowStatusLabel(item.status || "");
+                const statusBadge = getWorkflowStatusBadgeStyle(item.status || "");
                 const isUnread = item.status === 'Recommendation Issued';
                 row.className = `report-row-node${isUnread ? ' is-unread' : ''}`;
                 row.tabIndex = 0;
@@ -1307,7 +1355,7 @@
                         <p>${item.timestamp}</p>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px; background:${item.status === 'Recommendation Issued' ? '#ecfdf5' : 'rgba(217,119,6,0.1)'}; color:${item.status === 'Recommendation Issued' ? '#065f46' : '#d97706'}">${badgeText}</span>
+                        <span style="font-size:0.7rem; font-weight:700; padding:4px 8px; border-radius:8px; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">${escapeHtml(statusLabel)}</span>
                         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.85rem;"></i>
                     </div>`;
                 

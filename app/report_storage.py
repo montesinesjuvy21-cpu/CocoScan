@@ -21,8 +21,8 @@ def resolve_field_notes(form_data: Mapping[str, Any]) -> str:
     return ""
 
 
-def normalize_report_status(value: Any, *, default: str = "Pending Assessment") -> str:
-    """Normalize report status values from the UI and database to a canonical workflow state."""
+def normalize_report_status(value: Any, *, default: str = "Under Review") -> str:
+    """Normalize report status values to the simple workflow used across the app."""
     if value is None:
         return default
 
@@ -30,123 +30,47 @@ def normalize_report_status(value: Any, *, default: str = "Pending Assessment") 
     if not normalized:
         return default
 
-    aliases = {
-        "pending": "Pending Assessment",
-        "pending assessment": "Pending Assessment",
-        "pending review": "Pending Assessment",
-        "pending-review": "Pending Assessment",
-        "pending_review": "Pending Assessment",
-        "submitted": "Pending Assessment",
-        "submitted for review": "Pending Assessment",
-        "for review": "Pending Assessment",
-        "awaiting review": "Pending Assessment",
-        "under review": "under_review",
-        "under-review": "under_review",
-        "under_review": "under_review",
-        "reviewed": "Recommendation Issued",
-        "reviewed & issued": "Recommendation Issued",
-        "recommendation issued": "Recommendation Issued",
-        "recommendation-issued": "Recommendation Issued",
-        "recommendation_issued": "Recommendation Issued",
-        "assessment issued": "assessment_issued",
-        "assessment-issued": "assessment_issued",
-        "assessment_issued": "assessment_issued",
-        "visit requested": "visit_requested",
-        "visit-requested": "visit_requested",
-        "visit_requested": "visit_requested",
-        "waiting agriculturist confirmation": "waiting_agriculturist_confirmation",
-        "waiting-agriculturist-confirmation": "waiting_agriculturist_confirmation",
-        "waiting_agriculturist_confirmation": "waiting_agriculturist_confirmation",
-        "waiting for farmer feedback": "waiting_agriculturist_confirmation",
-        "waiting-for-farmer-feedback": "waiting_agriculturist_confirmation",
-        "waiting_for_farmer_feedback": "waiting_agriculturist_confirmation",
-        "on-site visit requested": "On-site Visit Requested",
-        "on site visit requested": "On-site Visit Requested",
-        "on-site-visit-requested": "On-site Visit Requested",
-        "waiting for schedule": "waiting_agriculturist_confirmation",
-        "waiting-for-schedule": "waiting_agriculturist_confirmation",
-        "waiting_for_schedule": "waiting_agriculturist_confirmation",
-        "visit scheduled": "visit_scheduled",
-        "visit-scheduled": "visit_scheduled",
-        "visit_scheduled": "visit_scheduled",
-        "inspection completed": "visit_completed",
-        "inspection-completed": "visit_completed",
-        "inspection_completed": "visit_completed",
-        "visit completed": "visit_completed",
-        "visit-completed": "visit_completed",
-        "final remarks issued": "final_remarks_issued",
-        "final-remarks-issued": "final_remarks_issued",
-        "final_remarks_issued": "final_remarks_issued",
-        "closed": "closed",
+    key = normalized.lower().replace("_", " ").replace("-", " ")
+    status_map = {
+        "pending assessment": "Under Review",
+        "pending review": "Under Review",
+        "under review": "Under Review",
+        "reviewed": "Under Review",
+        "submitted": "Under Review",
+        "assessment issued": "Assessment Issued",
+        "assessment": "Assessment Issued",
+        "on site visit requested": "Waiting for Agriculturist Confirmation",
+        "visit requested": "Waiting for Agriculturist Confirmation",
+        "waiting for agriculturist confirmation": "Waiting for Agriculturist Confirmation",
+        "waiting for schedule": "Waiting for Agriculturist Confirmation",
+        "visit scheduled": "Visit Scheduled",
+        "visit completed": "Visit Completed",
         "resolved": "Resolved",
         "complete": "Resolved",
         "completed": "Resolved",
+        "closed": "Resolved",
+        "final remarks issued": "Resolved",
+        "final remarks": "Resolved",
+        "recommendation issued": "Resolved",
     }
 
-    key = normalized.lower().replace("_", " ").replace("-", " ")
-    return aliases.get(key, normalized)
+    return status_map.get(key, normalized)
 
 
 def is_pending_report_status(value: Any) -> bool:
-    def canonical_key(val: Any) -> str:
-        s = normalize_report_status(val)
-        key = str(s or "").strip().lower()
-        # normalize non-alphanumeric to underscores for robust comparison
-        import re
-        return re.sub(r"[^a-z0-9]+", "_", key).strip("_")
-
-    return canonical_key(value) in {
-        "pending_assessment",
-        "waiting_for_farmer_feedback",
-        "on_site_visit_requested",
-        "waiting_for_schedule",
-        "visit_scheduled",
-        "inspection_completed",
-        "under_review",
-        "assessment_issued",
-        "visit_requested",
-        "waiting_agriculturist_confirmation",
-        "visit_scheduled",
-        "visit_completed",
-    }
+    return not is_resolved_report_status(value)
 
 
 def is_active_report_status(value: Any) -> bool:
-    def canonical_key(val: Any) -> str:
-        s = normalize_report_status(val)
-        key = str(s or "").strip().lower()
-        import re
-        return re.sub(r"[^a-z0-9]+", "_", key).strip("_")
-
-    return canonical_key(value) in {
-        "under_review",
-        "assessment_issued",
-        "visit_requested",
-        "waiting_agriculturist_confirmation",
-        "visit_scheduled",
-        "visit_completed",
-        "final_remarks_issued",
-    }
+    return is_pending_report_status(value)
 
 
 def is_reviewed_report_status(value: Any) -> bool:
-    def canonical_key(val: Any) -> str:
-        s = normalize_report_status(val)
-        key = str(s or "").strip().lower()
-        import re
-        return re.sub(r"[^a-z0-9]+", "_", key).strip("_")
-
-    return canonical_key(value) in {"recommendation_issued", "resolved", "final_remarks_issued", "closed"}
+    return is_resolved_report_status(value)
 
 
 def is_resolved_report_status(value: Any) -> bool:
-    def canonical_key(val: Any) -> str:
-        s = normalize_report_status(val)
-        key = str(s or "").strip().lower()
-        import re
-        return re.sub(r"[^a-z0-9]+", "_", key).strip("_")
-
-    return canonical_key(value) in {"final_remarks_issued", "resolved", "closed"}
+    return normalize_report_status(value, default="Under Review") == "Resolved"
 
 
 def resolve_report_image_url(image_url: Any) -> str:
@@ -210,7 +134,7 @@ def build_report_payload(
     farmer_name: str = "Farmer",
     created_at: str | None = None,
     submitted_at: str | None = None,
-    status: str = "Pending Assessment",
+    status: str = "Under Review",
     image_url: str = "",
     barangay: str = "",
     municipality: str = "",
@@ -247,7 +171,7 @@ def build_report_payload(
     except (ValueError, TypeError):
         confidence = 0.0
 
-    status = normalize_report_status(status, default="Pending Assessment")
+    status = normalize_report_status(status, default="Under Review")
 
     return {
         "user_id": user_id,
