@@ -88,14 +88,20 @@ def normalize_report_status(value: Any, *, default: str = "Pending Assessment") 
 
 
 def is_pending_report_status(value: Any) -> bool:
-    normalized = normalize_report_status(value)
-    return normalized in {
-        "Pending Assessment",
-        "Waiting for Farmer Feedback",
-        "On-site Visit Requested",
-        "Waiting for Schedule",
-        "Visit Scheduled",
-        "Inspection Completed",
+    def canonical_key(val: Any) -> str:
+        s = normalize_report_status(val)
+        key = str(s or "").strip().lower()
+        # normalize non-alphanumeric to underscores for robust comparison
+        import re
+        return re.sub(r"[^a-z0-9]+", "_", key).strip("_")
+
+    return canonical_key(value) in {
+        "pending_assessment",
+        "waiting_for_farmer_feedback",
+        "on_site_visit_requested",
+        "waiting_for_schedule",
+        "visit_scheduled",
+        "inspection_completed",
         "under_review",
         "assessment_issued",
         "visit_requested",
@@ -106,13 +112,23 @@ def is_pending_report_status(value: Any) -> bool:
 
 
 def is_reviewed_report_status(value: Any) -> bool:
-    normalized = normalize_report_status(value)
-    return normalized in {"Recommendation Issued", "Resolved", "final_remarks_issued", "resolved", "closed"}
+    def canonical_key(val: Any) -> str:
+        s = normalize_report_status(val)
+        key = str(s or "").strip().lower()
+        import re
+        return re.sub(r"[^a-z0-9]+", "_", key).strip("_")
+
+    return canonical_key(value) in {"recommendation_issued", "resolved", "final_remarks_issued", "closed"}
 
 
 def is_resolved_report_status(value: Any) -> bool:
-    normalized = normalize_report_status(value)
-    return normalized in {"final_remarks_issued", "resolved", "closed"}
+    def canonical_key(val: Any) -> str:
+        s = normalize_report_status(val)
+        key = str(s or "").strip().lower()
+        import re
+        return re.sub(r"[^a-z0-9]+", "_", key).strip("_")
+
+    return canonical_key(value) in {"final_remarks_issued", "resolved", "closed"}
 
 
 def resolve_report_image_url(image_url: Any) -> str:

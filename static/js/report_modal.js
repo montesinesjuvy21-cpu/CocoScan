@@ -376,11 +376,42 @@
             setDisplay(expertHelp, shouldShowHelp, "block");
             if (shouldShowHelp) {
                 expertHelp.innerHTML = isReviewed
-                    ? '<em>Recommendation already issued and locked for this report.</em>'
-                    : '<em>Add treatment guidance for the farmer and submit.</em>';
+                    ? '<em>Assessment already issued and locked for this report.</em>'
+                    : '<em>Add assessment notes for the farmer and submit using the button below.</em>';
             } else {
                 expertHelp.innerHTML = "";
             }
+        }
+    }
+
+    async function submitExpertAssessment() {
+        const advice = document.getElementById("expert-notes-input")?.value?.trim();
+        if (!advice) {
+            alert("Please write assessment notes before submitting.");
+            return;
+        }
+
+        const payload = { report_id: currentReportModalRecord?.id, assessment_notes: advice };
+        try {
+            const res = await fetch('/agriculturist/submit-assessment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.success) {
+                alert(data.message || 'The assessment could not be saved.');
+                return;
+            }
+            if (currentReportModalRecord) {
+                currentReportModalRecord.status = 'assessment_issued';
+                applyStatusStyle(currentReportModalRecord);
+                renderWorkflowActions(currentReportModalMode, currentReportModalRecord);
+            }
+            alert(data.message || 'Assessment saved successfully.');
+            closeReportModal();
+        } catch (err) {
+            alert('The assessment could not be submitted right now.');
         }
     }
 
@@ -730,6 +761,10 @@
     }
 
     window.submitExpertValidation = function () {
+        // Prefer direct expert assessment submit if input exists
+        if (document.getElementById("expert-notes-input")) {
+            return submitExpertAssessment();
+        }
         return submitWorkflowAction(currentWorkflowDefaultSubmitAction || "submit-assessment");
     };
 
