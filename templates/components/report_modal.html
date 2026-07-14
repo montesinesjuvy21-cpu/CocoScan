@@ -233,14 +233,7 @@
             <ul id="report-initial-list"></ul>
         </div>
 
-        <div class="premium-reco-card" id="report-expert-card">
-            <div class="modal-card-head">
-                <h4><i class="fa-solid fa-user-shield"></i> Expert Assessment</h4>
-            </div>
-            <ul id="report-expert-list" class="expert-reco-clean-list"></ul>
-            <textarea id="expert-notes-input" class="notes-input-box" placeholder="Write expert assessment notes here..." style="display:none; margin-top: 12px;"></textarea>
-            <p id="expert-notes-help" class="expert-notes-help-text" style="font-size:0.88rem; display:none;">Share assessment notes for the farmer using the Submit button.</p>
-        </div>
+        <!-- Expert card removed from here; placed below Additional Images for agriculturist pending view -->
 
         <div class="premium-form-card" id="report-notes-card">
             <h4><i class="fa-solid fa-pen-to-square"></i> Additional Notes</h4>
@@ -251,6 +244,18 @@
         <div class="premium-form-card" data-readonly-only>
             <h4><i class="fa-solid fa-images"></i> Additional Images</h4>
             <div id="report-additional-images-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px;"></div>
+        </div>
+
+        <div class="premium-reco-card" id="report-expert-card" style="display:block;">
+            <div class="modal-card-head">
+                <h4><i class="fa-solid fa-user-shield"></i> Expert Assessment</h4>
+            </div>
+            <ul id="report-expert-list" class="expert-reco-clean-list"></ul>
+            <div id="report-farmer-feedback" style="margin-top:10px;">
+                <!-- Farmer feedback UI (question + optional visit request) will be injected here for farmers -->
+            </div>
+            <textarea id="expert-notes-input" class="notes-input-box" placeholder="Write expert assessment notes here..." style="display:none; margin-top: 12px;"></textarea>
+            <p id="expert-notes-help" class="expert-notes-help-text" style="font-size:0.88rem; display:none;">Share assessment notes for the farmer using the Submit button.</p>
         </div>
 
         <div class="premium-form-card" id="workflow-actions-card" style="display:none;">

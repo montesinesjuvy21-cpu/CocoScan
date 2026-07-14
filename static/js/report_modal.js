@@ -332,7 +332,8 @@
 
         setDisplay(scanButton, mode === "scan", "flex");
         setDisplay(farmerButton, false, "flex");
-        setDisplay(agriButton, mode === "agriculturist" && !isReviewed, "flex");
+        // Show agriculturist button area when in agriculturist mode; disable if already issued or reviewed
+        setDisplay(agriButton, mode === "agriculturist", "flex");
         setDisplay(cancelButton, !(mode === "agriculturist" && isReviewed), "inline-flex");
 
         scanOnlyNodes.forEach((node) => setDisplay(node, mode === "scan", "block"));
@@ -353,6 +354,31 @@
                 : '<i class="fa-solid fa-lock"></i> Awaiting Recommendation';
         }
 
+        // Agriculturist submit button state: disable when assessment already issued or report reviewed
+        if (agriButton) {
+            const normalizedStatus = String(report?.status || "").trim().toLowerCase();
+            const assessmentAlreadyIssued = normalizedStatus === "assessment_issued";
+            const disableAgri = assessmentAlreadyIssued || isReviewed;
+            agriButton.disabled = disableAgri;
+            agriButton.classList.toggle("is-disabled", disableAgri);
+            agriButton.setAttribute("aria-disabled", String(disableAgri));
+            if (disableAgri) {
+                // Gray out and show issued label
+                agriButton.style.backgroundColor = "#cbd5e1";
+                agriButton.style.color = "#475569";
+                agriButton.innerHTML = '<i class="fa-solid fa-lock"></i> Assessment Issued';
+            } else {
+                // Restore default appearance
+                if (agriButton.dataset.defaultHtml) {
+                    agriButton.innerHTML = agriButton.dataset.defaultHtml;
+                } else {
+                    agriButton.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Assessment';
+                }
+                agriButton.style.backgroundColor = "";
+                agriButton.style.color = "";
+            }
+        }
+
         if (notesInput && notesDisplay) {
             if (mode === "scan") {
                 setDisplay(notesInput, true, "block");
@@ -362,35 +388,10 @@
                 setDisplay(notesDisplay, true, "block");
             }
         }
-
+        // Show expert input textarea only to agriculturist when report not yet reviewed
         if (expertInput) {
-            const shouldShowInput = mode === "agriculturist" && !isReviewed;
-            setDisplay(expertInput, shouldShowInput, "block");
-            if (!shouldShowInput) {
-                expertInput.value = "";
-            }
+            setDisplay(expertInput, mode === "agriculturist" && !isReviewed, "block");
         }
-
-        if (expertHelp) {
-            const shouldShowHelp = mode === "agriculturist";
-            setDisplay(expertHelp, shouldShowHelp, "block");
-            if (shouldShowHelp) {
-                expertHelp.innerHTML = isReviewed
-                    ? '<em>Assessment already issued and locked for this report.</em>'
-                    : '<em>Add assessment notes for the farmer and submit using the button below.</em>';
-            } else {
-                expertHelp.innerHTML = "";
-            }
-        }
-    }
-
-    async function submitExpertAssessment() {
-        const advice = document.getElementById("expert-notes-input")?.value?.trim();
-        if (!advice) {
-            alert("Please write assessment notes before submitting.");
-            return;
-        }
-
         const payload = { report_id: currentReportModalRecord?.id, assessment_notes: advice };
         try {
             const res = await fetch('/agriculturist/submit-assessment', {
@@ -439,17 +440,9 @@
 
         const actions = [];
         if (mode === "agriculturist") {
-            if (normalizedStatus === "under_review") {
-                actions.push({
-                    label: "Submit Assessment",
-                    icon: "fa-solid fa-file-signature",
-                    action: "submit-assessment",
-                    help: "Share the expert assessment notes with the farmer.",
-                });
-                if (workflowInput) {
-                    workflowInput.placeholder = "Enter the assessment notes the farmer should receive...";
-                }
-            } else if (normalizedStatus === "visit_requested") {
+            // Agriculturist uses the report-expert-card for assessment submission in pending view.
+            // Do not create a workflow action for initial assessment here to avoid duplicating UI.
+            if (normalizedStatus === "visit_requested") {
                 actions.push({
                     label: "Accept Request",
                     icon: "fa-solid fa-calendar-check",
@@ -613,15 +606,26 @@
             formData.append("confirmation", feedbackChoice === "resolved" ? "resolved" : "needs-assistance");
             if (feedbackChoice !== "resolved") {
                 const reason = document.getElementById("farmer-visit-reason")?.value?.trim() || "";
-                const dateValue = document.getElementById("farmer-visit-date")?.value || "";
-                const timeValue = document.getElementById("farmer-visit-time")?.value || "";
-                if (!reason || !dateValue || !timeValue) {
-                    alert("Please complete the visit request details before submitting.");
+                const dates = [
+                    document.getElementById("farmer-visit-date-1")?.value || "",
+                    document.getElementById("farmer-visit-date-2")?.value || "",
+                    document.getElementById("farmer-visit-date-3")?.value || "",
+                ];
+                const times = [
+                    document.getElementById("farmer-visit-time-1")?.value || "",
+                    document.getElementById("farmer-visit-time-2")?.value || "",
+                    document.getElementById("farmer-visit-time-3")?.value || "",
+                ];
+                if (!reason || dates.some(d => !d) || times.some(t => !t)) {
+                    alert("Please provide a reason and propose three preferred date/time options before submitting.");
                     return;
                 }
                 formData.append("reason", reason);
-                formData.append("preferred_date", dateValue);
-                formData.append("preferred_time", timeValue);
+                // append the three preferred date/time pairs
+                dates.forEach((d, idx) => {
+                    formData.append(`preferred_date_${idx+1}`, d);
+                    formData.append(`preferred_time_${idx+1}`, times[idx] || "");
+                });
             }
             try {
                 const response = await fetch("/farmer/submit-assessment-feedback", { method: "POST", body: formData });
