@@ -1299,6 +1299,8 @@
                 const badgeText = item.status;
                 const isUnread = item.status === 'Recommendation Issued';
                 row.className = `report-row-node${isUnread ? ' is-unread' : ''}`;
+                row.tabIndex = 0;
+                row.style.cursor = 'pointer';
                 row.innerHTML = `
                     <div class="report-main-meta">
                         <h4>${highlightSearchText(item.pest, activeSearchQuery)}</h4>
@@ -1312,6 +1314,7 @@
                 row.onclick = () => {
                     openReportSummary(item);
                 };
+                row.addEventListener('keydown', (evt) => { if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); openReportSummary(item); } });
                 container.appendChild(row);
             });
 

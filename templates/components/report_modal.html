@@ -167,6 +167,7 @@
             .btn-control:disabled {
                 opacity: 0.6;
                 cursor: not-allowed;
+                pointer-events: none;
                 transform: none;
                 box-shadow: none;
             }
@@ -236,8 +237,8 @@
         <!-- Expert card removed from here; placed below Additional Images for agriculturist pending view -->
 
         <div class="premium-form-card" id="report-notes-card">
-            <h4><i class="fa-solid fa-pen-to-square"></i> Additional Notes</h4>
-            <textarea class="notes-input-box" id="field-notes-capture" placeholder="Write your additional notes here..."></textarea>
+            <h4><i class="fa-solid fa-pen-to-square"></i> Farmer Notes</h4>
+            <textarea class="notes-input-box" id="field-notes-capture" placeholder="Write farmer notes here..."></textarea>
             <p id="report-notes-display" style="font-size: 0.88rem; color: var(--text-dark); line-height: 1.5; padding: 2px 0; display: none;">--</p>
         </div>
 

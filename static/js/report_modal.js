@@ -116,13 +116,17 @@
         };
     }
 
+    function getStatusKey(status) {
+        return String(status || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    }
+
     function setDisplay(element, visible, displayValue = "block") {
         if (!element) return;
         element.style.display = visible ? displayValue : "none";
     }
 
     function getWorkflowStatusDisplayLabel(status) {
-        const normalized = String(status ?? "").trim();
+        const normalized = getStatusKey(status);
         const labels = {
             "under_review": "Under Review",
             "assessment_issued": "Assessment Issued",
@@ -138,17 +142,19 @@
     }
 
     function isRecommendationIssuedStatus(status) {
-        const normalized = String(status ?? "").trim().toLowerCase();
+        const normalized = getStatusKey(status);
         return [
-            "recommendation issued",
-            "reviewed",
-            "reviewed & issued",
-            "recommendation-issued",
             "recommendation_issued",
+            "recommendation-issued",
+            "reviewed",
+            "reviewed_&_issued",
             "final_remarks_issued",
             "resolved",
             "closed",
             "completed",
+            "assessment_issued",
+            "assessment-issued",
+            "assessment issued",
         ].includes(normalized);
     }
 
@@ -302,8 +308,9 @@
         const bannerStyle = pestStyles[pestKey] || null;
 
         if (statusNode) {
+            const statusKey = getStatusKey(report.status || "--");
             statusNode.textContent = getWorkflowStatusDisplayLabel(report.status || "--");
-            statusNode.style.color = ["assessment_issued", "final_remarks_issued", "resolved", "closed"].includes(String(report.status || "").trim().toLowerCase()) ? "#059669" : "#d97706";
+            statusNode.style.color = ["assessment_issued", "final_remarks_issued", "resolved", "closed"].includes(statusKey) ? "#059669" : "#d97706";
         }
 
         if (severityBanner) {
@@ -356,19 +363,17 @@
 
         // Agriculturist submit button state: disable when assessment already issued or report reviewed
         if (agriButton) {
-            const normalizedStatus = String(report?.status || "").trim().toLowerCase();
-            const assessmentAlreadyIssued = normalizedStatus === "assessment_issued";
+            const statusKey = getStatusKey(report?.status || "");
+            const assessmentAlreadyIssued = statusKey === "assessment_issued";
             const disableAgri = assessmentAlreadyIssued || isReviewed;
             agriButton.disabled = disableAgri;
             agriButton.classList.toggle("is-disabled", disableAgri);
             agriButton.setAttribute("aria-disabled", String(disableAgri));
             if (disableAgri) {
-                // Gray out and show issued label
                 agriButton.style.backgroundColor = "#cbd5e1";
                 agriButton.style.color = "#475569";
                 agriButton.innerHTML = '<i class="fa-solid fa-lock"></i> Assessment Issued';
             } else {
-                // Restore default appearance
                 if (agriButton.dataset.defaultHtml) {
                     agriButton.innerHTML = agriButton.dataset.defaultHtml;
                 } else {
@@ -377,6 +382,12 @@
                 agriButton.style.backgroundColor = "";
                 agriButton.style.color = "";
             }
+        }
+
+        if (expertInput) {
+            const statusKey = getStatusKey(report?.status || "");
+            const allowExpertInput = mode === "agriculturist" && !isReviewed && statusKey !== "assessment_issued";
+            setDisplay(expertInput, allowExpertInput, "block");
         }
 
         if (notesInput && notesDisplay) {
@@ -388,33 +399,57 @@
                 setDisplay(notesDisplay, true, "block");
             }
         }
-        // Show expert input textarea only to agriculturist when report not yet reviewed
-        if (expertInput) {
-            setDisplay(expertInput, mode === "agriculturist" && !isReviewed, "block");
+    }
+
+    async function submitExpertAssessment() {
+        const expertInput = document.getElementById("expert-notes-input");
+        const report = currentReportModalRecord;
+        if (!report?.id) {
+            alert("This report does not have a valid identifier.");
+            return;
         }
-        const payload = { report_id: currentReportModalRecord?.id, assessment_notes: advice };
+        if (!expertInput) {
+            return submitWorkflowAction(currentWorkflowDefaultSubmitAction || "submit-assessment");
+        }
+
+        const assessment = String(expertInput.value || "").trim();
+        if (!assessment) {
+            alert("Please provide expert assessment notes before submitting.");
+            return;
+        }
+
+        setReportModalSubmissionState(true, "Submitting assessment…");
         try {
-            const res = await fetch('/agriculturist/submit-assessment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+            const response = await fetch("/agriculturist/submit-assessment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ report_id: report.id, assessment_notes: assessment }),
             });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || !data.success) {
-                alert(data.message || 'The assessment could not be saved.');
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                alert(data.message || "The assessment could not be saved.");
                 return;
             }
-            if (currentReportModalRecord) {
-                currentReportModalRecord.status = 'assessment_issued';
-                applyStatusStyle(currentReportModalRecord);
-                renderWorkflowActions(currentReportModalMode, currentReportModalRecord);
+            report.status = "assessment_issued";
+            if (!Array.isArray(report.expertRecommendations)) {
+                report.expertRecommendations = [];
             }
-            alert(data.message || 'Assessment saved successfully.');
-            closeReportModal();
-        } catch (err) {
-            alert('The assessment could not be submitted right now.');
+            report.expertRecommendations.push(assessment);
+            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.");
+            applyStatusStyle(report);
+            renderWorkflowActions(currentReportModalMode, report);
+            alert(data.message || "Assessment notes saved successfully.");
+        } catch (error) {
+            console.error("Assessment submission error:", error);
+            alert("The assessment could not be submitted right now.");
+        } finally {
+            setReportModalSubmissionState(false);
         }
     }
+
+    window.submitExpertValidation = function () {
+        return submitExpertAssessment();
+    };
 
     function renderWorkflowActions(mode, report = currentReportModalRecord) {
         const workflowCard = document.getElementById("workflow-actions-card");
@@ -426,7 +461,7 @@
             return;
         }
 
-        const normalizedStatus = String(report?.status || "").trim();
+        const normalizedStatus = getStatusKey(report?.status || "");
         workflowButtons.innerHTML = "";
         currentWorkflowDefaultSubmitAction = null;
         if (workflowFormFields) {
@@ -764,12 +799,54 @@
         alert("This workflow step is not available yet.");
     }
 
-    window.submitExpertValidation = function () {
-        // Prefer direct expert assessment submit if input exists
-        if (document.getElementById("expert-notes-input")) {
-            return submitExpertAssessment();
+    async function submitExpertAssessment() {
+        const expertInput = document.getElementById("expert-notes-input");
+        const report = currentReportModalRecord;
+        if (!report?.id) {
+            alert("This report does not have a valid identifier.");
+            return;
         }
-        return submitWorkflowAction(currentWorkflowDefaultSubmitAction || "submit-assessment");
+        if (!expertInput) {
+            return submitWorkflowAction(currentWorkflowDefaultSubmitAction || "submit-assessment");
+        }
+
+        const assessment = String(expertInput.value || "").trim();
+        if (!assessment) {
+            alert("Please provide expert assessment notes before submitting.");
+            return;
+        }
+
+        setReportModalSubmissionState(true, "Submitting assessment…");
+        try {
+            const response = await fetch("/agriculturist/submit-assessment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ report_id: report.id, assessment_notes: assessment }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                alert(data.message || "The assessment could not be saved.");
+                return;
+            }
+            report.status = "assessment_issued";
+            if (!Array.isArray(report.expertRecommendations)) {
+                report.expertRecommendations = [];
+            }
+            report.expertRecommendations.push(assessment);
+            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.");
+            applyStatusStyle(report);
+            renderWorkflowActions(currentReportModalMode, report);
+            alert(data.message || "Assessment notes saved successfully.");
+        } catch (error) {
+            console.error("Assessment submission error:", error);
+            alert("The assessment could not be submitted right now.");
+        } finally {
+            setReportModalSubmissionState(false);
+        }
+    }
+
+    window.submitExpertValidation = function () {
+        return submitExpertAssessment();
     };
 
     function closeReportModal() {

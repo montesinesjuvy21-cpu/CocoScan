@@ -111,6 +111,24 @@ def is_pending_report_status(value: Any) -> bool:
     }
 
 
+def is_active_report_status(value: Any) -> bool:
+    def canonical_key(val: Any) -> str:
+        s = normalize_report_status(val)
+        key = str(s or "").strip().lower()
+        import re
+        return re.sub(r"[^a-z0-9]+", "_", key).strip("_")
+
+    return canonical_key(value) in {
+        "under_review",
+        "assessment_issued",
+        "visit_requested",
+        "waiting_agriculturist_confirmation",
+        "visit_scheduled",
+        "visit_completed",
+        "final_remarks_issued",
+    }
+
+
 def is_reviewed_report_status(value: Any) -> bool:
     def canonical_key(val: Any) -> str:
         s = normalize_report_status(val)

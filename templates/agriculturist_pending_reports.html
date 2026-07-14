@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CocoScan - Pending Reports</title>
+    <title>CocoScan - Active Reports</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -657,7 +657,7 @@
                 <div class="menu-label">Main Menu</div>
                 <ul class="sidebar-menu-list">
                     <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-                    <li><a href="/agriculturist/pending" class="menu-item-link active"><i class="fa-solid fa-list-ul"></i> Pending Reports</a></li>
+                    <li><a href="/agriculturist/pending" class="menu-item-link active"><i class="fa-solid fa-list-ul"></i> Active Reports</a></li>
                     <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Resolved</a></li>
                     <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
                 </ul>
@@ -679,8 +679,8 @@
             
             <header class="section-title-wrap">
                 <div>
-                    <h1>Pending Reports</h1>
-                    <p>Overall reports waiting for recommendation response</p>
+                    <h1>Active Reports</h1>
+                    <p>Overall reports awaiting action</p>
                 </div>
             </header>
 
@@ -966,17 +966,32 @@
             return escapedText.replace(regex, '<span class="search-highlight">$1</span>');
         }
 
+        function formatWorkflowStatusLabel(status) {
+            const normalized = String(status || "").trim().toLowerCase();
+            const labels = {
+                "under_review": "Under Review",
+                "assessment_issued": "Assessment Issued",
+                "visit_requested": "Visit Requested",
+                "waiting_agriculturist_confirmation": "Waiting for Agriculturist Confirmation",
+                "visit_scheduled": "Visit Scheduled",
+                "visit_completed": "Visit Completed",
+                "final_remarks_issued": "Final Remarks Issued",
+                "resolved": "Resolved",
+            };
+            return labels[normalized] || String(status || "").trim() || "Unknown";
+        }
+
         function getWorkflowStatusBadgeStyle(status) {
-            const normalized = String(status || "").trim();
+            const normalized = String(status || "").trim().toLowerCase();
             const palette = {
-                "Pending Assessment": { backgroundColor: "#fef3c7", color: "#92400e" },
-                "Recommendation Issued": { backgroundColor: "#ecfdf5", color: "#065f46" },
-                "Waiting for Farmer Feedback": { backgroundColor: "#eff6ff", color: "#1d4ed8" },
-                "On-site Visit Requested": { backgroundColor: "#fdf2f8", color: "#be185d" },
-                "Waiting for Schedule": { backgroundColor: "#f5f3ff", color: "#6d28d9" },
-                "Visit Scheduled": { backgroundColor: "#fefce8", color: "#a16207" },
-                "Inspection Completed": { backgroundColor: "#ecfeff", color: "#0f766e" },
-                "Resolved": { backgroundColor: "#dcfce7", color: "#166534" }
+                "under_review": { backgroundColor: "#fef3c7", color: "#92400e" },
+                "assessment_issued": { backgroundColor: "#ecfdf5", color: "#065f46" },
+                "visit_requested": { backgroundColor: "#fdf2f8", color: "#be185d" },
+                "waiting_agriculturist_confirmation": { backgroundColor: "#eff6ff", color: "#1d4ed8" },
+                "visit_scheduled": { backgroundColor: "#fefce8", color: "#a16207" },
+                "visit_completed": { backgroundColor: "#ecfeff", color: "#0f766e" },
+                "final_remarks_issued": { backgroundColor: "#ede9fe", color: "#5b21b6" },
+                "resolved": { backgroundColor: "#dcfce7", color: "#166534" }
             };
             return palette[normalized] || { backgroundColor: "#f8fafc", color: "#475569" };
         }
@@ -1007,8 +1022,8 @@
                 container.innerHTML = `
                     <div class="premium-empty-state-card">
                         <div class="empty-state-icon-circle"><i class="fa-solid fa-folder-open"></i></div>
-                        <h3>No Pending Reports</h3>
-                        <p>All items caught up! No reports require expert technical evaluation metrics currently.</p>
+                        <h3>No Active Reports</h3>
+                        <p>All items caught up! No active workflow reports are currently available.</p>
                     </div>`;
                 updatePaginationController(0);
                 return;
@@ -1022,23 +1037,25 @@
             paginatedRecords.forEach(item => {
                 const card = document.createElement("div");
                 card.className = "report-row-node";
-                const statusLabel = String(item.status || "Pending Assessment");
-                const statusBadge = getWorkflowStatusBadgeStyle(statusLabel);
+                const statusLabel = formatWorkflowStatusLabel(item.status || "under_review");
+                const statusBadge = getWorkflowStatusBadgeStyle(item.status || "under_review");
 
                 card.innerHTML = `
                     <div class="report-main-meta">
                             <h4>${highlightSearchText(String(item.pest || item.pest_type || ""), activeSearchQuery)}</h4>
                             <p>Farmer: <strong>${highlightSearchText(String(item.farmer || item.farmer_name || ""), activeSearchQuery)}</strong></p>
-                        <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(String(item.location || item.full_location || ""))}</div>
-                        <div class="status-badge-pill" style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: ${statusBadge.backgroundColor}; color: ${statusBadge.color};">
-                            <i class="fa-solid fa-circle-dot"></i> ${escapeHtml(statusLabel)}
-                        </div>
+                            <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(String(item.location || item.full_location || ""))}</div>
                     </div>
-                    <div class="report-row-action">
+                    <div class="report-row-action" style="align-items:center; gap:10px;">
+                        <span class="status-badge-pill" style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-size:0.78rem; font-weight:700; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">
+                            <i class="fa-solid fa-circle-dot"></i> ${escapeHtml(statusLabel)}
+                        </span>
                         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.95rem"></i>
                     </div>`;
                 
+                card.tabIndex = 0;
                 card.onclick = () => openReviewModal(item);
+                card.addEventListener('keydown', (evt) => { if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); openReviewModal(item); } });
                 container.appendChild(card);
             });
 

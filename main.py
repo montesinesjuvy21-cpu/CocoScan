@@ -31,6 +31,7 @@ from app.report_storage import (
     format_report_date,
     format_report_timestamp,
     is_pending_report_status,
+    is_active_report_status,
     is_resolved_report_status,
     is_reviewed_report_status,
     normalize_report_status,
@@ -1209,7 +1210,7 @@ def debug_reports():
 
 @app.route('/agriculturist/pending')
 def agriculturist_pending():
-    """Fetches reports with 'Pending' status from Supabase and renders the queue."""
+    """Fetches active workflow reports from Supabase and renders the active reports queue."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
@@ -1222,34 +1223,34 @@ def agriculturist_pending():
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
         
-        # Pull reports awaiting expert review from database
+        # Pull reports in active workflow statuses from database
         reports_response = supabase.table("reports")\
             .select("*")\
             .order("created_at", desc=True)\
             .execute()
             
         raw_reports = reports_response.data or []
-        logger.info(f"[PENDING] Fetched {len(raw_reports)} total reports from database")
+        logger.info(f"[ACTIVE] Fetched {len(raw_reports)} total reports from database")
         for r in raw_reports[:3]:  # Log first 3 reports
-            logger.info(f"[PENDING] Report: id={r.get('id')}, status={r.get('status')}, pest={r.get('pest_type')}")
+            logger.info(f"[ACTIVE] Report: id={r.get('id')}, status={r.get('status')}, pest={r.get('pest_type')}")
         
         supporting_map = _fetch_report_supporting_images([item.get("id") for item in raw_reports])
-        pending_reports_list = []
+        active_reports_list = []
         
         for item in raw_reports:
             status = item.get("status")
-            is_pending = is_pending_report_status(status)
-            if not is_pending:
-                logger.debug(f"[PENDING] Skipping report {item.get('id')}: status={status} (not pending)")
+            is_active = is_active_report_status(status)
+            if not is_active:
+                logger.debug(f"[ACTIVE] Skipping report {item.get('id')}: status={status} (not active)")
                 continue
             payload = _build_report_modal_payload(
                 item,
                 supporting_images=supporting_map.get(str(item.get("id")), []),
                 weather=_fetch_weather_snapshot(item.get("latitude"), item.get("longitude")),
-                default_status="Pending Assessment",
+                default_status="Under Review",
             )
 
-            pending_reports_list.append({
+            active_reports_list.append({
                 **payload,
                 "location": payload["location_text"],
                 "full_location": payload["location_text"],
@@ -1257,12 +1258,12 @@ def agriculturist_pending():
                 "img": payload["primary_image"],
             })
         
-        logger.info(f"[PENDING] Returning {len(pending_reports_list)} pending reports to template")
+        logger.info(f"[ACTIVE] Returning {len(active_reports_list)} active reports to template")
             
         return render_template(
             'agriculturist_pending_reports.html', 
             user_name=user_name, 
-            pending_reports=pending_reports_list
+            pending_reports=active_reports_list
         )
         
     except Exception as e:
@@ -1468,7 +1469,6 @@ def agriculturist_submit_assessment():
         update_response = _update_report_workflow(
             report_id,
             'assessment_issued',
-            note=f"Assessment issued: {assessment_notes}",
             extra_updates={
                 'expert_recommendations': [assessment_notes],
                 'reviewed_by_id': user_id,
