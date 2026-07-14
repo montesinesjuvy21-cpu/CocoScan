@@ -753,6 +753,7 @@
                 'Under Review',
                 'Assessment Issued',
                 'Waiting for Agriculturist Confirmation',
+                'Visit Requested',
                 'Visit Scheduled',
                 'Visit Completed',
                 'Resolved'
@@ -929,6 +930,24 @@
             return `https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/${resolved.replace(/^\/+/, "")}`;
         }
 
+        function normalizeStatusKey(status) {
+            const raw = String(status || "").trim();
+            if (!raw) return "";
+            const clean = raw.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+            const officialWorkflowStates = {
+                "under review": "under_review",
+                "assessment issued": "assessment_issued",
+                "waiting for agriculturist confirmation": "waiting_agriculturist_confirmation",
+                "visit requested": "visit_requested",
+                "visit scheduled": "visit_scheduled",
+                "visit completed": "visit_completed",
+                "final remarks issued": "final_remarks_issued",
+                "recommendation issued": "recommendation_issued",
+                "resolved": "resolved",
+            };
+            return officialWorkflowStates[clean] || clean.replace(/ /g, "_");
+        }
+
         function renderReportsGrid() {
             updateFilterButtonStates();
             const container = document.getElementById("reports-list-container");
@@ -939,7 +958,7 @@
             if (countLabel) countLabel.textContent = `All (${reports.length})`;
 
             let processedRecords = reports.filter(item => {
-                const matchesStatus = activeStatusFilter === 'all' || String(item.status || "") === activeStatusFilter;
+                const matchesStatus = activeStatusFilter === 'all' || normalizeStatusKey(item.status) === normalizeStatusKey(activeStatusFilter);
                 const matchesDate = !activeDateFilter || String(item.date || "") === activeDateFilter;
                 const itemBarangay = String(item.barangay || item.location || "").toLowerCase();
                 const matchesBarangay = (activeBarangayFilter === 'all') || (itemBarangay === activeBarangayFilter.toLowerCase()) || (itemBarangay.includes(activeBarangayFilter.toLowerCase()));

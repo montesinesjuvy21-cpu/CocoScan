@@ -131,14 +131,34 @@
             "under_review": "Under Review",
             "assessment_issued": "Assessment Issued",
             "visit_requested": "Visit Requested",
+            "waiting_for_agriculturist_confirmation": "Waiting for Agriculturist Confirmation",
             "waiting_agriculturist_confirmation": "Waiting for Agriculturist Confirmation",
             "visit_scheduled": "Visit Scheduled",
             "visit_completed": "Visit Completed",
             "final_remarks_issued": "Final Remarks Issued",
+            "recommendation_issued": "Recommendation Issued",
             "closed": "Closed",
             "resolved": "Resolved",
         };
         return labels[normalized] || normalized || "Pending";
+    }
+
+    function getWorkflowStatusBadgeStyle(status) {
+        const normalized = getStatusKey(status);
+        const palette = {
+            "under_review": { backgroundColor: "#fef3c7", color: "#92400e" },
+            "assessment_issued": { backgroundColor: "#ecfdf5", color: "#065f46" },
+            "visit_requested": { backgroundColor: "#fdf2f8", color: "#be185d" },
+            "waiting_for_agriculturist_confirmation": { backgroundColor: "#eff6ff", color: "#1d4ed8" },
+            "waiting_agriculturist_confirmation": { backgroundColor: "#eff6ff", color: "#1d4ed8" },
+            "visit_scheduled": { backgroundColor: "#fefce8", color: "#a16207" },
+            "visit_completed": { backgroundColor: "#ecfeff", color: "#0f766e" },
+            "final_remarks_issued": { backgroundColor: "#ede9fe", color: "#5b21b6" },
+            "recommendation_issued": { backgroundColor: "#ecfdf5", color: "#065f46" },
+            "resolved": { backgroundColor: "#dcfce7", color: "#166534" },
+            "closed": { backgroundColor: "#dcfce7", color: "#166534" },
+        };
+        return palette[normalized] || { backgroundColor: "#f8fafc", color: "#475569" };
     }
 
     function isRecommendationIssuedStatus(status) {
@@ -308,9 +328,9 @@
         const bannerStyle = pestStyles[pestKey] || null;
 
         if (statusNode) {
-            const statusKey = getStatusKey(report.status || "--");
+            const statusStyle = getWorkflowStatusBadgeStyle(report.status || "--");
             statusNode.textContent = getWorkflowStatusDisplayLabel(report.status || "--");
-            statusNode.style.color = ["assessment_issued", "final_remarks_issued", "resolved", "closed"].includes(statusKey) ? "#059669" : "#d97706";
+            statusNode.style.color = statusStyle.color;
         }
 
         if (severityBanner) {
@@ -338,7 +358,7 @@
         const isReviewed = isRecommendationIssuedStatus(report?.status || "");
 
         const statusKey = getStatusKey(report?.status || "");
-        const assessmentAlreadyIssued = statusKey === "assessment_issued" || statusKey === "recommendation_issued" || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
+        const assessmentAlreadyIssued = ["assessment_issued", "recommendation_issued", "waiting_for_agriculturist_confirmation", "waiting_agriculturist_confirmation", "visit_requested", "visit_scheduled", "visit_completed", "final_remarks_issued", "resolved", "closed"].includes(statusKey) || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
 
         setDisplay(scanButton, mode === "scan", "flex");
         setDisplay(farmerButton, false, "flex");
@@ -459,6 +479,7 @@
         const workflowButtons = document.getElementById("workflow-actions-buttons");
         const workflowInput = document.getElementById("workflow-detail-input");
         const workflowFormFields = document.getElementById("workflow-form-fields");
+        const feedbackContainer = document.getElementById("report-farmer-feedback");
         if (!workflowCard || !workflowButtons) {
             return;
         }
@@ -476,6 +497,9 @@
         }
 
         const actions = [];
+        if (feedbackContainer) {
+            feedbackContainer.innerHTML = "";
+        }
         if (mode === "agriculturist") {
             // Agriculturist uses the report-expert-card for assessment submission in pending view.
             // Do not create a workflow action for initial assessment here to avoid duplicating UI.
@@ -496,15 +520,19 @@
                     workflowFormFields.innerHTML = `
                         <div style="display:grid; gap:10px;">
                             <label style="font-size:0.9rem; font-weight:600; color:#334155;">Decision</label>
-                            <select id="visit-review-decision" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                            <select id="visit-review-decision" class="notes-input-box" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
                                 <option value="accept">Accept request</option>
                                 <option value="reject">Reject request</option>
                             </select>
-                            <div style="display:grid; gap:8px;">
-                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label>
-                                <input id="visit-review-date" type="date" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
-                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label>
-                                <input id="visit-review-time" type="time" class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                            <div style="display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
+                                <div style="display:grid; gap:6px;">
+                                    <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label>
+                                    <input id="visit-review-date" type="date" class="notes-input-box" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
+                                </div>
+                                <div style="display:grid; gap:6px;">
+                                    <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label>
+                                    <input id="visit-review-time" type="time" class="notes-input-box" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
+                                </div>
                             </div>
                         </div>`;
                 }
@@ -564,10 +592,10 @@
                 if (workflowInput) {
                     setDisplay(workflowInput, false);
                 }
-                if (workflowFormFields) {
-                    workflowFormFields.innerHTML = `
-                        <div style="display:grid; gap:14px;">
-                            <p style="font-size:0.92rem; color:#334155; margin:0;">Did the initial recommendation and expert assessment help your issue?</p>
+                if (feedbackContainer) {
+                    feedbackContainer.innerHTML = `
+                        <div style="margin-top:10px; padding:12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; display:grid; gap:12px;">
+                            <p style="font-size:0.92rem; color:#334155; margin:0;">Did the expert assessment help your issue? Confirm the guidance or request a visit with preferred date/time options.</p>
                             <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
                                 <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#102a43;">
                                     <input type="radio" name="farmer-feedback-choice" value="resolved" checked style="accent-color:#059669;"> Yes
@@ -578,22 +606,22 @@
                             </div>
                             <div id="farmer-visit-request-details" style="display:none; gap:12px;">
                                 <label style="font-size:0.9rem; font-weight:600; color:#334155;">Reason for requesting a visit</label>
-                                <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:90px;"></textarea>
-                                <div style="display:grid; gap:10px;">
+                                <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:90px; width:100%; box-sizing:border-box;"></textarea>
+                                <div style="display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
                                     <div style="display:grid; gap:6px;">
                                         <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date/time option 1</label>
-                                        <input id="farmer-visit-date-1" type="date" class="notes-input-box" style="padding:12px 14px;">
-                                        <input id="farmer-visit-time-1" type="time" class="notes-input-box" style="padding:12px 14px;">
+                                        <input id="farmer-visit-date-1" type="date" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
+                                        <input id="farmer-visit-time-1" type="time" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
                                     </div>
                                     <div style="display:grid; gap:6px;">
                                         <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date/time option 2</label>
-                                        <input id="farmer-visit-date-2" type="date" class="notes-input-box" style="padding:12px 14px;">
-                                        <input id="farmer-visit-time-2" type="time" class="notes-input-box" style="padding:12px 14px;">
+                                        <input id="farmer-visit-date-2" type="date" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
+                                        <input id="farmer-visit-time-2" type="time" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
                                     </div>
                                     <div style="display:grid; gap:6px;">
                                         <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date/time option 3</label>
-                                        <input id="farmer-visit-date-3" type="date" class="notes-input-box" style="padding:12px 14px;">
-                                        <input id="farmer-visit-time-3" type="time" class="notes-input-box" style="padding:12px 14px;">
+                                        <input id="farmer-visit-date-3" type="date" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
+                                        <input id="farmer-visit-time-3" type="time" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;">
                                     </div>
                                 </div>
                             </div>
@@ -622,8 +650,8 @@
             workflowButtons.appendChild(button);
         });
 
-        const feedbackRadios = workflowFormFields?.querySelectorAll("input[name='farmer-feedback-choice']");
-        const requestDetails = workflowFormFields?.querySelector("#farmer-visit-request-details");
+        const feedbackRadios = feedbackContainer?.querySelectorAll("input[name='farmer-feedback-choice']");
+        const requestDetails = feedbackContainer?.querySelector("#farmer-visit-request-details");
         const actionButton = workflowButtons.querySelector("button");
 
         if (feedbackRadios && feedbackRadios.length && actionButton) {
