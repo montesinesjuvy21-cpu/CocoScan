@@ -1053,7 +1053,7 @@
                                 <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:110px; width:100%; box-sizing:border-box; padding:14px 16px;"></textarea>
                             </div>
                             <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
-                                <button id="farmer-submit-feedback-btn" class="btn-control submit-primary" type="button">Submit Request</button>
+                                <button id="farmer-submit-feedback-btn" class="btn-control submit-primary" type="button">Submit</button>
                             </div>
                         </div>`;
                     const feedbackRadios = feedbackContainer.querySelectorAll("input[name='farmer-feedback-choice']");
