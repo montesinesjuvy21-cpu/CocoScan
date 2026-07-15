@@ -10,15 +10,19 @@ SUPABASE_REPORT_IMAGE_BASE_URL = (
 MANILA_TIMEZONE = timezone(timedelta(hours=8))
 
 
-def resolve_field_notes(form_data: Mapping[str, Any]) -> str:
+def resolve_farmer_notes(form_data: Mapping[str, Any]) -> str:
     """Return the farmer notes from the submitted form data."""
-    for key in ("field_notes", "location_notes", "notes"):
+    for key in ("farmer_notes", "field_notes", "location_notes", "notes"):
         value = form_data.get(key, "") if hasattr(form_data, "get") else ""
         if isinstance(value, str):
             value = value.strip()
             if value:
                 return value
     return ""
+
+
+# Backward-compatible alias so existing imports keep working during migration.
+resolve_field_notes = resolve_farmer_notes
 
 
 def normalize_report_status(value: Any, *, default: str = "Under Review") -> str:
@@ -123,7 +127,7 @@ def build_report_payload(
     *,
     user_id: str,
     pest_type: str,
-    field_notes: str,
+    farmer_notes: str,
     confidence: Any,
     latitude: str,
     longitude: str,
@@ -179,7 +183,7 @@ def build_report_payload(
         "pest_type": pest_type,
         "confidence": confidence,
         "image_url": image_url,
-        "field_notes": field_notes,
+        "farmer_notes": farmer_notes,
         "status": status,
         "created_at": created_at,
         "initial_recommendations": initial_recommendations,

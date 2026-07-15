@@ -719,7 +719,7 @@
 
                 const formData = new FormData();
                 formData.append('pest_type', draft.pest || 'Unknown Pest');
-                formData.append('location_notes', draft.field_notes || '');
+                formData.append('location_notes', draft.farmer_notes || draft.field_notes || '');
                 formData.append('confidence', draft.confidence_value !== undefined ? draft.confidence_value : parseFloat((draft.confidence || '').replace('%', '')) || 0);
                 const lat = draft.gps?.latitude ? parseFloat(draft.gps.latitude) : '';
                 const lng = draft.gps?.longitude ? parseFloat(draft.gps.longitude) : '';

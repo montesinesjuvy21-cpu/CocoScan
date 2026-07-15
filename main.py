@@ -33,6 +33,7 @@ from app.report_storage import (
     is_pending_report_status,
     is_resolved_report_status,
     normalize_report_status,
+    resolve_farmer_notes,
     resolve_field_notes,
     resolve_report_image_url,
 )
@@ -187,9 +188,9 @@ def _fetch_visit_workflow_payload(report_id):
     for chat_row in chat_rows:
         sender_id = chat_row.get("sender_id")
         sender_label = "Farmer"
-        if sender_id and report_row.get("reviewed_by_id") and int(sender_id) == int(report_row.get("reviewed_by_id")):
+        if sender_id and report_row.get("reviewed_by_id") and str(sender_id) == str(report_row.get("reviewed_by_id")):
             sender_label = "Agriculturist"
-        elif sender_id and report_row.get("user_id") and int(sender_id) == int(report_row.get("user_id")):
+        elif sender_id and report_row.get("user_id") and str(sender_id) == str(report_row.get("user_id")):
             sender_label = "Farmer"
         else:
             sender_label = "Agriculturist" if sender_id and report_row.get("reviewed_by_id") else "Farmer"
@@ -224,17 +225,17 @@ def _update_report_workflow(report_id, status, *, note=None, extra_updates=None)
         "updated_at": now_iso,
     }
 
-    if note and (not extra_updates or "field_notes" not in extra_updates):
-        existing_response = supabase.table("reports").select("field_notes").eq("id", report_id).execute()
+    if note and (not extra_updates or "farmer_notes" not in extra_updates):
+        existing_response = supabase.table("reports").select("farmer_notes").eq("id", report_id).execute()
         existing_rows = getattr(existing_response, "data", None) or []
         existing_report = existing_rows[0] if existing_rows else {}
-        existing_notes = existing_report.get("field_notes") or ""
-        update_data["field_notes"] = _append_status_note(existing_notes, note)
+        existing_notes = existing_report.get("farmer_notes") or ""
+        update_data["farmer_notes"] = _append_status_note(existing_notes, note)
 
     if extra_updates:
-        if "field_notes" in extra_updates:
-            update_data["field_notes"] = extra_updates["field_notes"]
-            extra_updates = {k: v for k, v in extra_updates.items() if k != "field_notes"}
+        if "farmer_notes" in extra_updates:
+            update_data["farmer_notes"] = extra_updates["farmer_notes"]
+            extra_updates = {k: v for k, v in extra_updates.items() if k != "farmer_notes"}
         update_data.update(extra_updates)
 
     update_response = supabase.table("reports").update(update_data).eq("id", report_id).execute()
@@ -849,7 +850,7 @@ def _build_report_modal_payload(item, *, supporting_images=None, weather=None, d
         "timestamp": format_report_timestamp(item.get("created_at") or item.get("submitted_at") or item.get("photo_taken_at")),
         "date": format_report_date(item.get("created_at") or item.get("submitted_at") or item.get("photo_taken_at")),
         "farmer": item.get("farmer_name") or item.get("farmer") or "Farmer",
-        "notes": item.get("field_notes") or item.get("notes") or item.get("farmer_notes") or "No notes logged.",
+        "notes": item.get("farmer_notes") or item.get("notes") or "No notes logged.",
         "location_text": _format_report_location(item),
         "gps": {
             "latitude": item.get("latitude"),
@@ -1530,7 +1531,7 @@ def farmer_follow_up_report():
         if not existing_report:
             return jsonify({'success': False, 'message': 'Report not found'}), 404
 
-        existing_notes = str(existing_report.get('field_notes') or '').strip()
+        existing_notes = str(existing_report.get('farmer_notes') or '').strip()
         if follow_up_notes:
             combined_notes = "\n\n".join(filter(None, [existing_notes, f"Follow-up update: {follow_up_notes}"]))
         else:
@@ -1541,7 +1542,7 @@ def farmer_follow_up_report():
             'Under Review',
             note=f"Follow-up update: {follow_up_notes}",
             extra_updates={
-                'field_notes': combined_notes,
+                'farmer_notes': combined_notes,
                 'expert_recommendations': [],
                 'reviewed_by_id': None,
             },
@@ -1645,7 +1646,7 @@ def farmer_submit_assessment_feedback():
             chat_insert_response = supabase.table('visit_chats').insert({
                 'report_id': report_id,
                 'sender_id': user_id,
-                'message': f"Visit request submitted. Reason: {reason}",
+                'message': reason,
             }).execute()
             if getattr(chat_insert_response, 'error', None):
                 logger.warning(f"Visit chat insert failed: {chat_insert_response.error}")
@@ -1962,16 +1963,21 @@ def agriculturist_submit_final_remarks():
         payload = request.get_json(silent=True) or {}
         report_id = payload.get('report_id') or request.form.get('report_id')
         final_remarks = (payload.get('final_remarks') or request.form.get('final_remarks') or '').strip()
-        additional_notes = (payload.get('additional_notes') or request.form.get('additional_notes') or '').strip()
+        feedback = (payload.get('feedback') or payload.get('additional_notes') or request.form.get('feedback') or request.form.get('additional_notes') or '').strip()
 
         if not report_id or not final_remarks:
             return jsonify({'success': False, 'message': 'Final remarks are required.'}), 400
 
         note_parts = [f"Final remarks: {final_remarks}"]
-        if additional_notes:
-            note_parts.append(f"Additional notes: {additional_notes}")
+        if feedback:
+            note_parts.append(f"Feedback: {feedback}")
         note = "\n".join(note_parts)
-        update_response = _update_report_workflow(report_id, 'final_remarks_issued', note=note)
+
+        extra = {}
+        if feedback:
+            extra['feedback'] = feedback
+
+        update_response = _update_report_workflow(report_id, 'final_remarks_issued', note=note, extra_updates=extra if extra else None)
         if getattr(update_response, 'error', None):
             logger.error(f"Final remarks update failed: {update_response.error}")
             return jsonify({'success': False, 'message': 'The final remarks could not be saved.'}), 500
@@ -2022,7 +2028,7 @@ def farmer_submit_report():
     try:
         # 1. Extract data sent by your scanning interface/form
         pest_type = request.form.get('pest_type', 'Unknown Pest').strip()
-        field_notes = resolve_field_notes(request.form)
+        farmer_notes = resolve_farmer_notes(request.form)
         confidence = request.form.get('confidence', '0').strip()
         latitude = request.form.get('gps_latitude', '').strip()
         longitude = request.form.get('gps_longitude', '').strip()
@@ -2065,7 +2071,7 @@ def farmer_submit_report():
         report_payload = build_report_payload(
             user_id=user_id,
             pest_type=pest_type,
-            field_notes=field_notes,
+            farmer_notes=farmer_notes,
             confidence=confidence,
             latitude=latitude,
             longitude=longitude,

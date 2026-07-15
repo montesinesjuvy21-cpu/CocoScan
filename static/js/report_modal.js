@@ -122,7 +122,7 @@
         const gps = reportData.gps || {};
         const primaryImage = reportData.primary_image || reportData.img || reportData.image_url || reportData.image || "";
         const additionalImages = normalizeList(reportData.additional_images || reportData.supporting_images);
-        const notes = reportData.notes || reportData.field_notes || reportData.farmer_notes || "";
+        const notes = reportData.notes || reportData.farmer_notes || reportData.field_notes || "";
         const feedbackData = extractFarmerFeedback(notes, reportData.status);
 
         return {
@@ -350,24 +350,23 @@
     }
 
     function setReportModalSubmissionState(isSubmitting, pendingLabel = "Submitting your report…") {
-        const followUpButton = document.getElementById("summary-followup-button");
         const scanSubmitButton = document.getElementById("report-scan-submit-btn");
         const agriSubmitButton = document.getElementById("report-agri-submit-btn");
         const cancelButton = document.getElementById("report-modal-cancel-btn");
-        const actionButtons = [followUpButton, scanSubmitButton, agriSubmitButton].filter(Boolean);
+        const actionButtons = [scanSubmitButton, agriSubmitButton].filter(Boolean);
 
         actionButtons.forEach((button) => {
             if (!button) return;
-            const shouldDisable = isSubmitting && button.id !== "summary-followup-button";
+            const shouldDisable = isSubmitting;
             button.disabled = shouldDisable;
             button.classList.toggle("is-disabled", shouldDisable);
             button.setAttribute("aria-busy", isSubmitting ? "true" : "false");
 
-            if (isSubmitting) {
+                if (isSubmitting) {
                 if (!button.dataset.defaultHtml) {
                     button.dataset.defaultHtml = button.innerHTML;
                 }
-                const icon = button.id === "summary-followup-button" ? "fa-solid fa-rotate" : "fa-solid fa-spinner fa-spin";
+                const icon = "fa-solid fa-spinner fa-spin";
                 button.innerHTML = `<i class="${icon}"></i> ${pendingLabel}`;
             } else if (button.dataset.defaultHtml) {
                 button.innerHTML = button.dataset.defaultHtml;
@@ -512,7 +511,6 @@
 
     function applyModeState(mode, report = currentReportModalRecord) {
         const scanButton = document.getElementById("report-scan-submit-btn");
-        const farmerButton = document.getElementById("summary-followup-button");
         const agriButton = document.getElementById("report-agri-submit-btn");
         const cancelButton = document.getElementById("report-modal-cancel-btn");
         const notesInput = document.getElementById("field-notes-capture");
@@ -527,33 +525,20 @@
         const assessmentAlreadyIssued = ["assessment_issued", "recommendation_issued", "waiting_for_agriculturist_confirmation", "waiting_agriculturist_confirmation", "awaiting_confirmed_schedule", "visit_requested", "visit_scheduled", "visit_completed", "final_remarks_issued", "resolved", "closed"].includes(statusKey) || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
 
         setDisplay(scanButton, mode === "scan", "flex");
-        setDisplay(farmerButton, false, "flex");
-        setDisplay(agriButton, mode === "agriculturist" && !assessmentAlreadyIssued && !isReviewed, "flex");
+        // Hide follow-up/farmer button (removed from UI)
+        // Show agriculturist submit only when in agriculturist mode and no recommendation/assessment has been issued
+        setDisplay(agriButton, mode === "agriculturist" && !assessmentAlreadyIssued, "flex");
         setDisplay(cancelButton, true, "inline-flex");
 
         scanOnlyNodes.forEach((node) => setDisplay(node, mode === "scan", "block"));
         readonlyOnlyNodes.forEach((node) => setDisplay(node, mode !== "scan", "block"));
 
-        if (farmerButton) {
-            const canFollowUp = mode === "farmer" && isReviewed;
-            farmerButton.disabled = !canFollowUp;
-            farmerButton.classList.toggle("is-disabled", !canFollowUp);
-            farmerButton.style.pointerEvents = canFollowUp ? "auto" : "none";
-            farmerButton.style.backgroundColor = canFollowUp ? "" : "#cbd5e1";
-            farmerButton.style.color = canFollowUp ? "" : "#475569";
-            farmerButton.style.borderColor = canFollowUp ? "" : "#94a3b8";
-            farmerButton.setAttribute("aria-disabled", String(!canFollowUp));
-            farmerButton.title = canFollowUp ? "Proceed to follow up" : "Awaiting expert recommendation";
-            farmerButton.innerHTML = canFollowUp
-                ? '<i class="fa-solid fa-rotate"></i> Update Status'
-                : '<i class="fa-solid fa-lock"></i> Awaiting Recommendation';
-        }
+        // The follow-up control has been removed from the modal UI. Follow-up flows are handled
+        // via the feedback/workflow cards rendered by `renderWorkflowActions` when appropriate.
 
         // Agriculturist submit button state: disable when assessment already issued or report reviewed
         if (agriButton) {
-            const statusKey = getStatusKey(report?.status || "");
-            const assessmentAlreadyIssued = statusKey === "assessment_issued";
-            const disableAgri = assessmentAlreadyIssued || isReviewed;
+            const disableAgri = assessmentAlreadyIssued;
             agriButton.disabled = disableAgri;
             agriButton.classList.toggle("is-disabled", disableAgri);
             agriButton.setAttribute("aria-disabled", String(disableAgri));
@@ -573,8 +558,7 @@
         }
 
         if (expertInput) {
-            const statusKey = getStatusKey(report?.status || "");
-            const allowExpertInput = mode === "agriculturist" && !isReviewed && statusKey !== "assessment_issued";
+            const allowExpertInput = mode === "agriculturist" && !assessmentAlreadyIssued;
             setDisplay(expertInput, allowExpertInput, "block");
         }
 
@@ -873,6 +857,7 @@
         const actions = [];
         const discussionStatuses = ["awaiting_confirmed_schedule", "visit_requested", "visit_scheduled"];
         const normalizedStatus = getStatusKey(report?.status || "");
+        const recommendationIssued = isRecommendationIssuedStatus(report?.status || "");
         const isVisitDiscussionState = discussionStatuses.includes(normalizedStatus);
 
         if (mode === "farmer") {
@@ -1021,7 +1006,8 @@
                 }
             }
         } else if (mode === "farmer") {
-            if (normalizedStatus === "assessment_issued") {
+            // Show farmer feedback card when an assessment or recommendation has been issued.
+            if (recommendationIssued) {
                 actions.push({
                     label: "Submit Feedback",
                     icon: "fa-solid fa-comments",
@@ -1415,7 +1401,7 @@
             }
             formData.append("final_remarks", detail);
             if (additionalNotes) {
-                formData.append("additional_notes", additionalNotes);
+                formData.append("feedback", additionalNotes);
             }
             try {
                 const response = await fetch("/agriculturist/submit-final-remarks", { method: "POST", body: formData });
@@ -1571,6 +1557,8 @@
         currentReportModalRecord = normalizeReportData({ ...reportData, mode: currentReportModalMode });
 
         const report = currentReportModalRecord;
+        // Debug: log status and expert recommendations to help trace visibility issues
+        try { console.debug("[report_modal] opening report", { id: report.id, status: report.status, expertRecommendations: report.expertRecommendations }); } catch (e) { /* noop */ }
         await loadVisitDiscussion(report);
 
         const pestTitle = document.getElementById("report-pest-title");

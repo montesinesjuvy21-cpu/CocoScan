@@ -8,21 +8,26 @@ from app.report_storage import (
     is_resolved_report_status,
     is_reviewed_report_status,
     normalize_report_status,
+    resolve_farmer_notes,
     resolve_field_notes,
     resolve_report_image_url,
 )
 
 
 class ReportStorageTests(unittest.TestCase):
-    def test_resolve_field_notes_prefers_field_notes(self):
-        form_data = {"field_notes": "Leaf damage observed", "location_notes": "Nearby orchard"}
+    def test_resolve_farmer_notes_prefers_farmer_notes(self):
+        form_data = {"farmer_notes": "Leaf damage observed", "location_notes": "Nearby orchard"}
+        self.assertEqual(resolve_farmer_notes(form_data), "Leaf damage observed")
+
+    def test_resolve_field_notes_alias_still_works(self):
+        form_data = {"field_notes": "Leaf damage observed"}
         self.assertEqual(resolve_field_notes(form_data), "Leaf damage observed")
 
     def test_build_report_payload_includes_user_id_and_timestamps(self):
         payload = build_report_payload(
             user_id="user-123",
             pest_type="Brontispa",
-            field_notes="Leaf damage observed",
+            farmer_notes="Leaf damage observed",
             confidence="92.5",
             latitude="14.1",
             longitude="121.3",
@@ -36,7 +41,7 @@ class ReportStorageTests(unittest.TestCase):
         )
 
         self.assertEqual(payload["user_id"], "user-123")
-        self.assertEqual(payload["field_notes"], "Leaf damage observed")
+        self.assertEqual(payload["farmer_notes"], "Leaf damage observed")
         self.assertEqual(payload["created_at"], "2026-07-08T10:00:00+00:00")
         self.assertEqual(payload["submitted_at"], "2026-07-08T10:00:00+00:00")
         self.assertEqual(payload["status"], "Under Review")

@@ -1247,7 +1247,7 @@
 
             const formData = new FormData();
             formData.append('pest_type', compiledPest);
-            formData.append('field_notes', additionalNotes);
+            formData.append('farmer_notes', additionalNotes);
             formData.append('location_notes', additionalNotes);
             formData.append('confidence', predictionData.pest_confidence || 0);
             formData.append('gps_latitude', globalPrimaryGPS?.latitude || '');
@@ -1333,7 +1333,7 @@
                 status: isOfflineSubmit ? 'offline-draft' : 'draft',
                 pest: compiledPest,
                 confidence: compiledConfidence,
-                field_notes: additionalNotes,
+                farmer_notes: additionalNotes,
                 recommendations: Array.isArray(window.currentPrediction?.recommendations) ? window.currentPrediction.recommendations : [],
                 primary_image_name: globalActiveImageFile?.name || 'camera_capture.jpg',
                 primary_image_data: globalActiveImagePayload,
@@ -1483,14 +1483,14 @@
                 recommendations: draft.recommendations || [],
                 confidence: draft.confidence || (draft.confidence_value ? `${draft.confidence_value}%` : '0%'),
                 timestamp: formatTimestampInManila(draft.photo_taken_at || new Date()),
-                notes: draft.field_notes || '',
+                notes: draft.farmer_notes || draft.field_notes || '',
                 primary_image: draft.primary_image_data || defaultImages[draft.pest] || defaultImages['Rhinoceros Beetle'],
                 gps: draft.gps || null,
                 additional_images: (draft.supporting_images || []).map((item) => item.dataUrl).filter(Boolean),
                 status: draft.status || 'Draft'
             };
 
-            document.getElementById('field-notes-capture').value = draft.field_notes || '';
+            document.getElementById('field-notes-capture').value = draft.farmer_notes || draft.field_notes || '';
             if (typeof window.openReportModal === 'function') {
                 window.openReportModal(window.currentPrediction, 'scan');
             } else {
