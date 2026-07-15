@@ -10,14 +10,20 @@
                 width: 100%;
                 box-sizing: border-box;
                 height: 44px;
+                line-height: 44px;
                 padding: 6px 10px;
                 border-radius: 10px;
                 font-size: 0.95rem;
                 border: 1px solid #e6eaf0;
                 background: #ffffff;
+                -webkit-appearance: none;
+                appearance: none;
+                vertical-align: middle;
             }
             /* ensure date/time controls align visually when placed in grid columns */
             .farmer-schedule-row .schedule-input { display: block; }
+            .farmer-schedule-row { box-sizing: border-box; box-shadow: 0 1px 2px rgba(16,24,40,0.04); }
+            .farmer-schedule-row .remove-schedule-btn { width: 100%; justify-self: stretch; margin-top: 8px; }
         `;
         const style = document.createElement('style');
         style.id = 'schedule-input-styles';
@@ -825,11 +831,12 @@
         row.style.display = 'grid';
         row.style.gridTemplateColumns = '1fr';
         row.style.gap = '12px';
-        row.style.padding = '12px';
+        row.style.padding = '14px';
+        row.style.marginBottom = '14px';
         row.style.borderRadius = '16px';
         row.style.backgroundColor = '#fff';
         row.innerHTML = `
-            <div style="display:grid; gap:10px;">
+            <div style="display:grid; gap:12px;">
                 <strong style="font-size:0.95rem; color:#102a43;">Preferred Schedule #${idx}</strong>
                 <label style="display:grid; gap:4px; font-size:0.9rem; color:#334155;">
                     <span style="font-weight:500;">Date</span>
@@ -841,7 +848,7 @@
                     <input type="time" class="farmer-schedule-time schedule-input" value="${escapeHtml(timeVal)}">
                 </label>
             </div>
-            <button type="button" class="btn-control cancel-secondary remove-schedule-btn" style="min-height:36px; padding:8px 10px; white-space:nowrap; justify-self:start;">🗑 Remove</button>
+            <button type="button" class="btn-control cancel-secondary remove-schedule-btn" style="min-height:36px; padding:10px 12px; white-space:nowrap; width:100%; margin-top:8px;">Remove</button>
         `;
         container.appendChild(row);
         row.querySelector('.remove-schedule-btn').addEventListener('click', () => { row.remove(); });
