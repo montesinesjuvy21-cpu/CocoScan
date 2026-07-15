@@ -668,9 +668,13 @@
             if (!response.ok || !data.success) {
                 return;
             }
-            report.visitChats = Array.isArray(data.messages) ? data.messages : [];
+            const visitMessages = Array.isArray(data.visit_chats) ? data.visit_chats : (Array.isArray(data.messages) ? data.messages : []);
+            const visitSchedules = Array.isArray(data.visit_schedules) ? data.visit_schedules : [];
+            report.visitChats = visitMessages;
+            report.visitSchedules = visitSchedules;
             report.visitScheduleStamp = data.schedule_stamp || "";
             report.visitArchived = Boolean(data.is_archived);
+            report.visitHasMessages = Boolean(visitMessages.length);
             report.status = data.status || report.status;
             if (report.status && typeof report.status === "string") {
                 report.status = report.status;
@@ -692,9 +696,16 @@
         const isArchived = Boolean(report?.visitArchived) || getStatusKey(report?.status || "") === "visit_scheduled";
         const isAgriculturist = mode === "agriculturist";
         const chats = Array.isArray(report?.visitChats) ? report.visitChats : [];
+        const shouldRenderDiscussionShell = isAgriculturist || chats.length > 0 || Boolean(report?.visitScheduleStamp) || isArchived;
         const statusLabel = getWorkflowStatusDisplayLabel(report?.status || "");
         const statusText = isArchived ? "Visit Scheduled" : statusLabel;
         const messagePlaceholder = isAgriculturist ? "Type a message..." : "Type a message to reply...";
+
+        if (!shouldRenderDiscussionShell) {
+            feedbackContainer.innerHTML = "";
+            setDisplay(feedbackCard, false, "block");
+            return;
+        }
 
         feedbackContainer.innerHTML = `
             <div style="display:grid; gap:14px; padding:6px 0;">

@@ -173,15 +173,10 @@ def _validate_time_range(start_time, end_time):
     return normalized_start, normalized_end
 
 
-def _fetch_visit_workflow_payload(report_id):
-    report_response = supabase.table("reports").select("id, status, user_id, reviewed_by_id, visit_request_reason, visit_requested_at, visit_summary, visit_completed_at, final_remarks").eq("id", report_id).execute()
-    report_row = (getattr(report_response, "data", None) or [{}])[0] if getattr(report_response, "data", None) else {}
-
-    chats_response = supabase.table("visit_chats").select("id, sender_id, message, created_at").eq("report_id", report_id).order("created_at", desc=False).execute()
-    chat_rows = getattr(chats_response, "data", None) or []
-
-    schedules_response = supabase.table("visit_schedules").select("id, agriculturist_id, confirmed_date, start_time, end_time, created_at").eq("report_id", report_id).order("created_at", desc=False).execute()
-    schedule_rows = getattr(schedules_response, "data", None) or []
+def _build_visit_workflow_payload(report_row=None, chat_rows=None, schedule_rows=None):
+    report_row = dict(report_row or {})
+    chat_rows = list(chat_rows or [])
+    schedule_rows = list(schedule_rows or [])
 
     messages = []
     for chat_row in chat_rows:
@@ -209,9 +204,26 @@ def _fetch_visit_workflow_payload(report_id):
     return {
         "report": report_row,
         "messages": messages,
+        "visit_chats": messages,
+        "schedules": schedule_rows,
+        "visit_schedules": schedule_rows,
         "schedule": latest_schedule,
         "schedule_stamp": schedule_stamp,
+        "has_messages": bool(messages),
     }
+
+
+def _fetch_visit_workflow_payload(report_id):
+    report_response = supabase.table("reports").select("id, status, user_id, reviewed_by_id, visit_request_reason, visit_requested_at, visit_summary, visit_completed_at, final_remarks").eq("id", report_id).execute()
+    report_row = (getattr(report_response, "data", None) or [{}])[0] if getattr(report_response, "data", None) else {}
+
+    chats_response = supabase.table("visit_chats").select("id, sender_id, message, created_at").eq("report_id", report_id).order("created_at", desc=False).execute()
+    chat_rows = getattr(chats_response, "data", None) or []
+
+    schedules_response = supabase.table("visit_schedules").select("id, agriculturist_id, confirmed_date, start_time, end_time, created_at").eq("report_id", report_id).order("created_at", desc=False).execute()
+    schedule_rows = getattr(schedules_response, "data", None) or []
+
+    return _build_visit_workflow_payload(report_row, chat_rows, schedule_rows)
 
 
 def _update_report_workflow(report_id, status, *, note=None, extra_updates=None):
@@ -1673,9 +1685,12 @@ def get_visit_discussion(report_id):
     return jsonify({
         'success': True,
         'messages': payload.get('messages', []),
+        'visit_chats': payload.get('visit_chats', payload.get('messages', [])),
+        'visit_schedules': payload.get('visit_schedules', []),
         'schedule_stamp': payload.get('schedule_stamp', ''),
         'status': report_row.get('status') or '',
         'is_archived': is_archived,
+        'has_messages': payload.get('has_messages', False),
     })
 
 
