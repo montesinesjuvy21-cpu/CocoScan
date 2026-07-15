@@ -146,6 +146,8 @@
             farmerFeedbackReason: feedbackData.reason,
             farmerFeedbackConfirmation: feedbackData.confirmation,
             farmerSchedules: feedbackData.schedules,
+            availabilitySlots: normalizeAvailabilitySlots(reportData.availability_slots || reportData.availability || reportData.availabilitySlots || reportData.farmer_availability || feedbackData.schedules?.map((item) => item.date ? `${item.date} ${item.time || "Morning"}`.trim() : "") || []),
+            agriBookedSchedules: normalizeAvailabilitySlots(reportData.agri_booked_schedules || reportData.agri_booked_slots || reportData.booked_schedules || []),
             weather: reportData.weather || {},
         };
     }
@@ -162,6 +164,15 @@
         if (/farmer requested a visit/i.test(raw)) {
             const reasonMatch = raw.match(/Reason:\s*([^\.]+)\./i);
             feedback.reason = reasonMatch ? reasonMatch[1].trim() : "";
+
+            const availabilityMatch = raw.match(/Availability:\s*\[(.*?)\]/i);
+            if (availabilityMatch) {
+                const availabilitySlots = availabilityMatch[1]
+                    .split(",")
+                    .map((slot) => String(slot || "").trim())
+                    .filter(Boolean);
+                feedback.schedules = availabilitySlots.map((slot) => ({ date: slot, time: "", display: slot }));
+            }
 
             const optionRegex = /Option\s*\d+:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})\s*at\s*([0-9]{2}:[0-9]{2})\./gi;
             let match;
@@ -184,6 +195,91 @@
         return feedback;
     }
 
+    const TIME_WINDOW_DEFINITIONS = {
+        morning: { label: "Morning", shortLabel: "Morning", range: "8:00 AM - 12:00 PM" },
+        afternoon: { label: "Afternoon", shortLabel: "Afternoon", range: "1:00 PM - 5:00 PM" },
+    };
+
+    function normalizeAvailabilitySlots(value) {
+        if (Array.isArray(value)) {
+            return value
+                .map((item) => {
+                    if (typeof item === "string") return item.trim();
+                    if (item && typeof item === "object") {
+                        const date = item.date || item.day || "";
+                        const windowName = item.window || item.timeWindow || item.time || item.windowKey || "";
+                        if (date) {
+                            return windowName ? `${date} ${String(windowName)}`.trim() : date;
+                        }
+                    }
+                    return "";
+                })
+                .filter(Boolean);
+        }
+
+        if (typeof value === "string") {
+            const trimmed = value.trim();
+            if (!trimmed) return [];
+            if (trimmed.startsWith("[")) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    return normalizeAvailabilitySlots(parsed);
+                } catch (e) {
+                    return [];
+                }
+            }
+            return trimmed
+                .split(/,|\n|;/)
+                .map((slot) => slot.trim())
+                .filter(Boolean);
+        }
+
+        return [];
+    }
+
+    function parseAvailabilitySlot(slot) {
+        const cleaned = String(slot || "").trim();
+        if (!cleaned) return null;
+        const match = cleaned.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/i);
+        if (!match) return { date: cleaned, windowKey: "morning" };
+        const [, date, windowValue] = match;
+        const lowerValue = String(windowValue).trim().toLowerCase();
+        if (lowerValue.includes("afternoon")) return { date, windowKey: "afternoon", windowLabel: "Afternoon" };
+        if (lowerValue.includes("morning")) return { date, windowKey: "morning", windowLabel: "Morning" };
+        return { date, windowKey: "morning", windowLabel: windowValue };
+    }
+
+    function buildAvailabilitySlot(dateValue, windowKey) {
+        const normalizedWindow = TIME_WINDOW_DEFINITIONS[windowKey] ? windowKey : "morning";
+        return `${dateValue} ${TIME_WINDOW_DEFINITIONS[normalizedWindow].label}`;
+    }
+
+    function formatAvailabilitySlotLabel(slot) {
+        const parsed = parseAvailabilitySlot(slot);
+        if (!parsed) return String(slot || "");
+        try {
+            const formatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
+            const dateValue = new Date(`${parsed.date}T12:00:00`);
+            return `${formatter.format(dateValue)} - ${parsed.windowLabel || TIME_WINDOW_DEFINITIONS[parsed.windowKey]?.label || "Morning"}`;
+        } catch (e) {
+            return String(slot || "");
+        }
+    }
+
+    function getNextAvailabilityDates(count = 5) {
+        const dates = [];
+        const base = new Date();
+        for (let index = 0; index < count; index += 1) {
+            const current = new Date(base);
+            current.setDate(base.getDate() + index);
+            const year = current.getFullYear();
+            const month = String(current.getMonth() + 1).padStart(2, "0");
+            const day = String(current.getDate()).padStart(2, "0");
+            dates.push(`${year}-${month}-${day}`);
+        }
+        return dates;
+    }
+
     function getStatusKey(status) {
         return String(status || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
     }
@@ -198,6 +294,7 @@
         const labels = {
             "under_review": "Under Review",
             "assessment_issued": "Assessment Issued",
+            "awaiting_confirmed_schedule": "Awaiting Confirmed Schedule",
             "visit_requested": "Visit Requested",
             "waiting_for_agriculturist_confirmation": "Waiting for Agriculturist Confirmation",
             "waiting_agriculturist_confirmation": "Waiting for Agriculturist Confirmation",
@@ -216,6 +313,7 @@
         const palette = {
             "under_review": { backgroundColor: "#fef3c7", color: "#92400e" },
             "assessment_issued": { backgroundColor: "#ecfdf5", color: "#065f46" },
+            "awaiting_confirmed_schedule": { backgroundColor: "#eff6ff", color: "#1d4ed8" },
             "visit_requested": { backgroundColor: "#fdf2f8", color: "#be185d" },
             "waiting_for_agriculturist_confirmation": { backgroundColor: "#eff6ff", color: "#1d4ed8" },
             "waiting_agriculturist_confirmation": { backgroundColor: "#eff6ff", color: "#1d4ed8" },
@@ -426,7 +524,7 @@
         const isReviewed = isRecommendationIssuedStatus(report?.status || "");
 
         const statusKey = getStatusKey(report?.status || "");
-        const assessmentAlreadyIssued = ["assessment_issued", "recommendation_issued", "waiting_for_agriculturist_confirmation", "waiting_agriculturist_confirmation", "visit_requested", "visit_scheduled", "visit_completed", "final_remarks_issued", "resolved", "closed"].includes(statusKey) || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
+        const assessmentAlreadyIssued = ["assessment_issued", "recommendation_issued", "waiting_for_agriculturist_confirmation", "waiting_agriculturist_confirmation", "awaiting_confirmed_schedule", "visit_requested", "visit_scheduled", "visit_completed", "final_remarks_issued", "resolved", "closed"].includes(statusKey) || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
 
         setDisplay(scanButton, mode === "scan", "flex");
         setDisplay(farmerButton, false, "flex");
@@ -548,6 +646,208 @@
         return submitExpertAssessment();
     };
 
+    function formatVisitChatTimestamp(value) {
+        if (!value) return "";
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return String(value);
+        return new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Manila",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+        }).format(parsed);
+    }
+
+    async function loadVisitDiscussion(report) {
+        if (!report?.id) return;
+        try {
+            const response = await fetch(`/reports/${report.id}/visit-discussion`);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                return;
+            }
+            report.visitChats = Array.isArray(data.messages) ? data.messages : [];
+            report.visitScheduleStamp = data.schedule_stamp || "";
+            report.visitArchived = Boolean(data.is_archived);
+            report.status = data.status || report.status;
+            if (report.status && typeof report.status === "string") {
+                report.status = report.status;
+            }
+        } catch (error) {
+            console.warn("Unable to load visit discussion", error);
+        }
+    }
+
+    function renderVisitDiscussionCard(mode, report) {
+        const workflowCard = document.getElementById("workflow-actions-card");
+        const workflowInput = document.getElementById("workflow-detail-input");
+        const feedbackContainer = document.getElementById("report-farmer-feedback");
+        const feedbackCard = document.getElementById("report-farmer-feedback-card");
+        if (!feedbackContainer || !feedbackCard) {
+            return;
+        }
+
+        const isArchived = Boolean(report?.visitArchived) || getStatusKey(report?.status || "") === "visit_scheduled";
+        const isAgriculturist = mode === "agriculturist";
+        const chats = Array.isArray(report?.visitChats) ? report.visitChats : [];
+        const statusLabel = getWorkflowStatusDisplayLabel(report?.status || "");
+        const statusText = isArchived ? "Visit Scheduled" : statusLabel;
+        const messagePlaceholder = isAgriculturist ? "Type a message..." : "Type a message to reply...";
+
+        feedbackContainer.innerHTML = `
+            <div style="display:grid; gap:14px; padding:6px 0;">
+                <div style="display:grid; gap:8px;">
+                    <div style="font-size:0.95rem; font-weight:700; color:#102a43;">Visit Request Discussion</div>
+                    <div style="display:grid; gap:6px; padding:12px 14px; border:1px solid #e2e8f0; border-radius:14px; background:#f8fafc;">
+                        ${chats.length ? chats.map((chat) => `
+                            <div style="display:grid; gap:4px; padding:8px 10px; border-radius:12px; background:#fff; border:1px solid #e2e8f0;">
+                                <div style="display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <strong style="font-size:0.9rem; color:#0f172a;">${escapeHtml(chat.sender_label || "Farmer")}</strong>
+                                    <span style="font-size:0.77rem; color:#64748b;">${escapeHtml(formatVisitChatTimestamp(chat.created_at) || "Just now")}</span>
+                                </div>
+                                <div style="font-size:0.9rem; color:#334155; line-height:1.55;">${escapeHtml(chat.message || "")}</div>
+                            </div>
+                        `).join("") : '<div style="font-size:0.9rem; color:#64748b;">No discussion messages yet.</div>'}
+                    </div>
+                    ${report?.visitScheduleStamp ? `<div style="padding:12px 14px; border-radius:12px; background:#ecfdf5; color:#065f46; font-size:0.92rem; font-weight:600;">${escapeHtml(report.visitScheduleStamp)}</div>` : ""}
+                </div>
+                ${isArchived ? `<div style="padding:12px 14px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; color:#475569; font-size:0.9rem;">The visit schedule is locked and this conversation is now archived.</div>` : `
+                    <div style="display:grid; gap:10px;">
+                        <textarea id="visit-discussion-input" class="notes-input-box" placeholder="${escapeHtml(messagePlaceholder)}" style="min-height:90px;"></textarea>
+                        <div style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+                            <button type="button" id="visit-discussion-send-btn" class="btn-control submit-primary">Send</button>
+                        </div>
+                    </div>
+                `}
+                <div style="border-top:1px solid #e2e8f0; padding-top:10px; display:grid; gap:10px;">
+                    <div style="font-size:0.95rem; font-weight:700; color:#102a43;">${isAgriculturist ? "Scheduling Action" : "Schedule Status"}</div>
+                    <div style="font-size:0.92rem; color:#475569;">Status: ${escapeHtml(statusText)}</div>
+                    ${isAgriculturist && !isArchived ? `<button type="button" id="confirm-visit-schedule-btn" class="btn-control submit-primary" style="justify-self:start;">Confirm Visit Schedule</button>` : ""}
+                    ${!isAgriculturist && !isArchived ? `<div style="font-size:0.88rem; color:#64748b;">The agriculturist will lock the date once you agree on a time.</div>` : ""}
+                </div>
+            </div>`;
+
+        const sendButton = feedbackContainer.querySelector('#visit-discussion-send-btn');
+        if (sendButton) {
+            sendButton.addEventListener('click', async () => {
+                const message = feedbackContainer.querySelector('#visit-discussion-input')?.value?.trim() || "";
+                if (!message) {
+                    alert("Please type a message before sending.");
+                    return;
+                }
+                try {
+                    const response = await fetch(`/reports/${report.id}/visit-chat`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message }),
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.success) {
+                        alert(data.message || "The message could not be saved.");
+                        return;
+                    }
+                    await loadVisitDiscussion(report);
+                    renderWorkflowActions(currentReportModalMode, report);
+                } catch (error) {
+                    alert("The message could not be sent right now.");
+                }
+            });
+        }
+
+        const confirmButton = feedbackContainer.querySelector('#confirm-visit-schedule-btn');
+        if (confirmButton) {
+            confirmButton.addEventListener('click', () => openFinalizeVisitScheduleModal(report));
+        }
+
+        if (workflowInput) {
+            workflowInput.value = "";
+            setDisplay(workflowInput, false);
+        }
+        if (workflowCard) {
+            setDisplay(workflowCard, false, "block");
+        }
+        setDisplay(feedbackCard, true, "block");
+    }
+
+    function openFinalizeVisitScheduleModal(report) {
+        const existingModal = document.getElementById("visit-schedule-mini-modal");
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modal = document.createElement("div");
+        modal.id = "visit-schedule-mini-modal";
+        modal.style.position = "fixed";
+        modal.style.inset = "0";
+        modal.style.background = "rgba(15, 23, 42, 0.48)";
+        modal.style.display = "flex";
+        modal.style.alignItems = "center";
+        modal.style.justifyContent = "center";
+        modal.style.padding = "20px";
+        modal.style.zIndex = "4000";
+        modal.innerHTML = `
+            <div style="width:min(100%, 430px); background:#fff; border-radius:18px; box-shadow:0 20px 50px rgba(15,23,42,0.22); padding:22px; display:grid; gap:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                    <div style="font-size:1rem; font-weight:700; color:#102a43;">Finalize Visit Schedule</div>
+                    <button type="button" id="visit-schedule-modal-close" class="btn-control cancel-secondary" style="padding:8px 12px;">Close</button>
+                </div>
+                <div style="display:grid; gap:10px;">
+                    <label style="display:grid; gap:6px; font-size:0.9rem; color:#334155;">
+                        <span style="font-weight:600;">Select the agreed date</span>
+                        <input id="visit-confirmed-date" type="date" class="schedule-input">
+                    </label>
+                    <label style="display:grid; gap:6px; font-size:0.9rem; color:#334155;">
+                        <span style="font-weight:600;">Start Time</span>
+                        <input id="visit-start-time" type="time" class="schedule-input">
+                    </label>
+                    <label style="display:grid; gap:6px; font-size:0.9rem; color:#334155;">
+                        <span style="font-weight:600;">End Time</span>
+                        <input id="visit-end-time" type="time" class="schedule-input">
+                    </label>
+                </div>
+                <button type="button" id="visit-schedule-save-btn" class="btn-control submit-primary">Save Schedule</button>
+            </div>`;
+        document.body.appendChild(modal);
+
+        modal.querySelector('#visit-schedule-modal-close')?.addEventListener('click', () => modal.remove());
+        modal.querySelector('#visit-schedule-save-btn')?.addEventListener('click', async () => {
+            const confirmedDate = modal.querySelector('#visit-confirmed-date')?.value || "";
+            const startTime = modal.querySelector('#visit-start-time')?.value || "";
+            const endTime = modal.querySelector('#visit-end-time')?.value || "";
+            if (!confirmedDate || !startTime || !endTime) {
+                alert("Please enter the confirmed date and visit window.");
+                return;
+            }
+            try {
+                const response = await fetch("/agriculturist/finalize-visit-schedule", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ request_id: report?.id, confirmed_date: confirmedDate, start_time: startTime, end_time: endTime, status: "Visit Scheduled" }),
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The schedule could not be finalized.");
+                    return;
+                }
+                report.status = "Visit Scheduled";
+                report.visitArchived = true;
+                report.visitScheduleStamp = data.schedule_stamp || "";
+                await loadVisitDiscussion(report);
+                applyStatusStyle(report);
+                renderWorkflowActions(currentReportModalMode, report);
+                if (typeof window.renderReportsGrid === "function") {
+                    try { window.renderReportsGrid(); } catch (e) { console.debug(e); }
+                }
+                modal.remove();
+                alert(data.message || "The visit schedule has been finalized.");
+            } catch (error) {
+                alert("The schedule could not be finalized right now.");
+            }
+        });
+    }
+
     function renderWorkflowActions(mode, report = currentReportModalRecord) {
         const workflowCard = document.getElementById("workflow-actions-card");
         const workflowHelp = document.getElementById("workflow-actions-help");
@@ -559,7 +859,6 @@
             return;
         }
 
-        const normalizedStatus = getStatusKey(report?.status || "");
         workflowButtons.innerHTML = "";
         currentWorkflowDefaultSubmitAction = null;
         if (workflowFormFields) {
@@ -572,6 +871,10 @@
         }
 
         const actions = [];
+        const discussionStatuses = ["awaiting_confirmed_schedule", "visit_requested", "visit_scheduled"];
+        const normalizedStatus = getStatusKey(report?.status || "");
+        const isVisitDiscussionState = discussionStatuses.includes(normalizedStatus);
+
         if (mode === "farmer") {
             setDisplay(workflowCard, false);
         }
@@ -580,60 +883,95 @@
             const feedbackCard = document.getElementById('report-farmer-feedback-card');
             if (feedbackCard) setDisplay(feedbackCard, false, 'block');
         }
+
+        if (isVisitDiscussionState) {
+            renderVisitDiscussionCard(mode, report);
+            return;
+        }
+
         if (mode === "agriculturist") {
             // Agriculturist uses the report-expert-card for assessment submission in pending view.
             // Do not create a workflow action for initial assessment here to avoid duplicating UI.
             if (normalizedStatus === "visit_requested") {
-                actions.push({
-                    label: Array.isArray(report.farmerSchedules) && report.farmerSchedules.length ? "Confirm Selected Schedule" : "Accept Request",
-                    icon: "fa-solid fa-calendar-check",
-                    action: "accept-visit-request",
-                    help: "Confirm one of the farmer's preferred schedules or choose a custom visit date/time.",
-                });
-                actions.push({
-                    label: "Reject Request",
-                    icon: "fa-solid fa-ban",
-                    action: "reject-visit-request",
-                    help: "Reject the visit request and explain why.",
-                });
                 if (workflowFormFields) {
-                    if (Array.isArray(report.farmerSchedules) && report.farmerSchedules.length) {
-                        workflowFormFields.innerHTML = `
-                        <div style="display:grid; gap:10px;">
-                            <p style="margin:0; font-weight:600; color:#334155;">Or pick a custom schedule instead</p>
-                            <div style="display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
-                                    <div style="display:grid; gap:6px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label><input id="visit-review-date" type="date" class="schedule-input"></div>
-                                    <div style="display:grid; gap:6px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label><input id="visit-review-time" type="time" class="schedule-input"></div>
-                                </div>
-                        </div>`;
-                    } else {
-                        workflowFormFields.innerHTML = `
-                        <div style="display:grid; gap:10px;">
-                            <label style="font-size:0.9rem; font-weight:600; color:#334155;">Decision</label>
-                            <select id="visit-review-decision" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
-                                <option value="accept">Accept request</option>
-                                <option value="reject">Reject request</option>
-                            </select>
-                                <div style="display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
-                                <div style="display:grid; gap:6px;">
-                                    <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label>
-                                    <input id="visit-review-date" type="date" class="schedule-input">
-                                </div>
-                                <div style="display:grid; gap:6px;">
-                                    <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label>
-                                    <input id="visit-review-time" type="time" class="schedule-input">
-                                </div>
-                            </div>
-                        </div>`;
-                    }
+                    workflowFormFields.innerHTML = `
+                    <div style="display:grid; gap:10px;">
+                        <label style="font-size:0.9rem; font-weight:600; color:#334155;">Decision</label>
+                        <select id="visit-review-decision" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
+                            <option value="accept">Accept request</option>
+                            <option value="reject">Reject request</option>
+                        </select>
+                    </div>`;
                 }
                 if (feedbackContainer) {
-                    const summaryMessage = report.farmerFeedbackReason
-                        ? `<p style="margin:0; font-size:0.95rem; color:#334155;"><strong>Farmer request reason:</strong> ${escapeHtml(report.farmerFeedbackReason)}</p>`
-                        : `<p style="margin:0; font-size:0.95rem; color:#334155;">The farmer has requested a visit.</p>`;
+                    const availabilityOptions = normalizeAvailabilitySlots(report.availabilitySlots || report.farmerSchedules || []);
+                    const bookedSchedules = normalizeAvailabilitySlots(report.agriBookedSchedules || []);
+                    const optionMarkup = availabilityOptions.length
+                        ? availabilityOptions.map((slot) => {
+                            const parsed = parseAvailabilitySlot(slot);
+                            const conflict = bookedSchedules.some((candidate) => {
+                                const parsedCandidate = parseAvailabilitySlot(candidate);
+                                return parsedCandidate?.date === parsed?.date && parsedCandidate?.windowKey === parsed?.windowKey;
+                            });
+                            const statusText = conflict ? '⚠️ You have a conflict' : '🟢 Both of you are free!';
+                            return `
+                                <label style="display:grid; gap:6px; padding:10px 12px; border:1px solid ${conflict ? '#f59e0b' : '#cbd5e1'}; border-radius:12px; background:#fff;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <input type="radio" name="agri-availability-choice" value="${escapeHtml(slot)}" ${conflict ? '' : 'checked'}>
+                                        <span style="font-weight:600; color:#0f172a;">${escapeHtml(formatAvailabilitySlotLabel(slot))}</span>
+                                    </div>
+                                    <div style="font-size:0.82rem; color:${conflict ? '#b45309' : '#065f46'}; padding-left:24px;">${escapeHtml(statusText)}</div>
+                                </label>`;
+                        }).join("")
+                        : `<p style="margin:0; font-size:0.95rem; color:#64748b;">No availability was submitted yet.</p>`;
+
                     feedbackContainer.innerHTML = `
-                            <p style="font-size:0.92rem; color:#334155; margin:0 0 10px;">Farmer feedback has been submitted and is ready for review.</p>
-                            ${summaryMessage}`;
+                        <div style="display:grid; gap:14px; padding:4px 0;">
+                            <div style="border:1px solid #e2e8f0; border-radius:14px; padding:14px; background:#f8fafc; display:grid; gap:10px;">
+                                <div style="font-size:0.95rem; font-weight:700; color:#102a43;">Farmer Feedback Card</div>
+                                <div style="font-size:0.9rem; color:#334155;">Farmer's Available Schedules</div>
+                                <div style="display:grid; gap:10px;">${optionMarkup}</div>
+                            </div>
+                            <div style="display:grid; gap:10px;">
+                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Does any of these schedules work?</label>
+                                <select id="agri-schedule-decision" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
+                                    <option value="yes">Yes</option>
+                                    <option value="no">No</option>
+                                </select>
+                                <div id="agri-proposed-schedule" style="display:none; display:grid; gap:10px;">
+                                    <label style="display:grid; gap:6px; font-size:0.9rem; color:#334155;">
+                                        <span style="font-weight:600;">Proposed date</span>
+                                        <input id="agri-proposed-date" type="date" class="schedule-input">
+                                    </label>
+                                    <label style="display:grid; gap:6px; font-size:0.9rem; color:#334155;">
+                                        <span style="font-weight:600;">Time window</span>
+                                        <select id="agri-proposed-window" class="schedule-input" style="height:44px;">
+                                            <option value="morning">Morning (8:00 AM - 12:00 PM)</option>
+                                            <option value="afternoon">Afternoon (1:00 PM - 5:00 PM)</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                    <button type="button" id="agri-confirm-schedule-btn" class="btn-control submit-primary">Confirm Selected Schedule</button>
+                                    <button type="button" id="agri-propose-schedule-btn" class="btn-control cancel-secondary">Propose Schedule</button>
+                                </div>
+                            </div>
+                            <div style="font-size:0.9rem; color:#64748b;">Status: Awaiting for Farmer Conf.</div>
+                        </div>`;
+                    const decisionSelect = feedbackContainer.querySelector('#agri-schedule-decision');
+                    const proposedScheduleBlock = feedbackContainer.querySelector('#agri-proposed-schedule');
+                    const confirmButton = feedbackContainer.querySelector('#agri-confirm-schedule-btn');
+                    const proposeButton = feedbackContainer.querySelector('#agri-propose-schedule-btn');
+                    const refreshDecisionView = () => {
+                        const isNo = decisionSelect?.value === 'no';
+                        setDisplay(proposedScheduleBlock, isNo, 'grid');
+                        if (confirmButton) confirmButton.style.display = isNo ? 'none' : 'inline-flex';
+                        if (proposeButton) proposeButton.style.display = isNo ? 'inline-flex' : 'inline-flex';
+                    };
+                    decisionSelect?.addEventListener('change', refreshDecisionView);
+                    confirmButton?.addEventListener('click', () => submitWorkflowAction('confirm-selected-schedule'));
+                    proposeButton?.addEventListener('click', () => submitWorkflowAction('propose-selected-schedule'));
+                    refreshDecisionView();
                     const feedbackCard = document.getElementById('report-farmer-feedback-card');
                     if (feedbackCard) setDisplay(feedbackCard, true, 'block');
                 }
@@ -695,61 +1033,43 @@
                 }
                 if (feedbackContainer) {
                     feedbackContainer.innerHTML = `
-                        <div style="display:grid; gap:18px; padding:8px 0;">
-                           <p style="font-size:0.92rem; color:#334155; margin:0; line-height:1.55;">
-                                Did the initial recommendation and expert assessment resolve your issue?<br>
-                                <em style="font-size:0.72rem; color:#64748b;">
-                                    If not, you can request an on-site visit and provide your preferred schedule.
-                                </em>
-                            </p>
-                            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:0;">
-                                <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#102a43;">
-                                    <input type="radio" name="farmer-feedback-choice" value="resolved" checked style="accent-color:#059669;"> Yes
-                                </label>
-                                <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#102a43;">
-                                    <input type="radio" name="farmer-feedback-choice" value="needs-assistance" style="accent-color:#be185d;"> No
-                                </label>
-                            </div>
-                            <div id="farmer-visit-request-details" style="display:none; display:grid; gap:16px; padding-top:10px;">
-                                <div style="display:grid; gap:10px;">
-                                    <strong style="font-size:0.95rem;">Choose up to 3 preferred schedules</strong>
-                                    <button type="button" id="farmer-add-schedule-btn" class="btn-control submit-primary" style="min-height:42px; padding:10px 14px; justify-self:start;">+ Add Schedule</button>
+                        <div style="display:grid; gap:14px; padding:6px 0;">
+                            <div style="display:grid; gap:8px;">
+                                <p style="font-size:0.92rem; color:#334155; margin:0; line-height:1.55;">
+                                    Did the initial recommendation and expert assessment resolve your issue?<br>
+                                    <em style="font-size:0.72rem; color:#64748b;">If not, you can request an on-site visit and continue the workflow.</em>
+                                </p>
+                                <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:0;">
+                                    <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#102a43;">
+                                        <input type="radio" name="farmer-feedback-choice" value="resolved" checked style="accent-color:#059669;"> Yes
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#102a43;">
+                                        <input type="radio" name="farmer-feedback-choice" value="needs-assistance" style="accent-color:#be185d;"> No
+                                    </label>
                                 </div>
-                                <div style="display:grid; gap:8px;">
-                                    <label style="font-size:0.9rem; font-weight:600; color:#334155; margin-bottom:6px;">Reason for requesting a visit</label>
-                                    <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:110px; width:100%; box-sizing:border-box; padding:14px 16px;"></textarea>
-                                </div>
-                                <div id="farmer-schedules-list" style="display:grid; gap:16px;"></div>
                             </div>
-                            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
+                            <div id="farmer-visit-reason-section" style="display:none; display:grid; gap:8px;">
+                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Reason for requesting a visit</label>
+                                <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:110px; width:100%; box-sizing:border-box; padding:14px 16px;"></textarea>
+                            </div>
+                            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
                                 <button id="farmer-submit-feedback-btn" class="btn-control submit-primary" type="button">Submit Request</button>
                             </div>
                         </div>`;
-                    // Attach add schedule behavior and initialize one row
-                    const schedulesList = document.getElementById('farmer-schedules-list');
-                    const addBtn = document.getElementById('farmer-add-schedule-btn');
-                    if (schedulesList && addBtn) {
-                        addBtn.addEventListener('click', (ev) => {
-                            addFarmerScheduleRow(schedulesList);
-                        });
-                        // start with one schedule row
-                        addFarmerScheduleRow(schedulesList);
-                    }
-                    // Wire submit button to trigger the workflow action click
-                    const submitFeedbackBtn = document.getElementById('farmer-submit-feedback-btn');
+                    const feedbackRadios = feedbackContainer.querySelectorAll("input[name='farmer-feedback-choice']");
+                    const reasonSection = feedbackContainer.querySelector("#farmer-visit-reason-section");
+                    const refreshReasonDisplay = () => {
+                        const selectedValue = Array.from(feedbackRadios).find((input) => input.checked)?.value || "resolved";
+                        if (reasonSection) {
+                            setDisplay(reasonSection, selectedValue === 'needs-assistance', 'grid');
+                        }
+                    };
+                    feedbackRadios.forEach((input) => input.addEventListener('change', refreshReasonDisplay));
+                    refreshReasonDisplay();
+                    const submitFeedbackBtn = feedbackContainer.querySelector('#farmer-submit-feedback-btn');
                     if (submitFeedbackBtn) {
                         submitFeedbackBtn.addEventListener('click', () => submitWorkflowAction('farmer-feedback'));
                     }
-                    const feedbackRadios = feedbackContainer.querySelectorAll("input[name='farmer-feedback-choice']");
-                    const requestDetails = feedbackContainer.querySelector("#farmer-visit-request-details");
-                    const refreshFeedbackDetails = () => {
-                        const selectedValue = Array.from(feedbackRadios).find((input) => input.checked)?.value || "resolved";
-                        if (requestDetails) {
-                            setDisplay(requestDetails, selectedValue === 'needs-assistance', 'grid');
-                        }
-                    };
-                    feedbackRadios.forEach((input) => input.addEventListener('change', refreshFeedbackDetails));
-                    refreshFeedbackDetails();
                     const feedbackCard = document.getElementById('report-farmer-feedback-card');
                     if (feedbackCard) setDisplay(feedbackCard, true, 'block');
                 }
@@ -914,28 +1234,19 @@
 
         if (actionName === "farmer-feedback") {
             const feedbackChoice = document.querySelector("input[name='farmer-feedback-choice']:checked")?.value || "resolved";
-            formData.append("confirmation", feedbackChoice === "resolved" ? "resolved" : "needs-assistance");
-            if (feedbackChoice !== "resolved") {
+            formData.append("confirmation", feedbackChoice);
+            if (feedbackChoice === "resolved") {
+                formData.append("reason", "");
+                report.farmerFeedbackConfirmation = "resolved";
+            } else {
                 const reason = document.getElementById("farmer-visit-reason")?.value?.trim() || "";
-                const schedulesList = document.getElementById('farmer-schedules-list');
-                const schedules = collectFarmerSchedules(schedulesList);
-                if (!reason || schedules.length === 0) {
-                    alert("Please provide a reason and at least one preferred date/time option before submitting.");
+                if (!reason) {
+                    alert("Please provide a reason before submitting the visit request.");
                     return;
                 }
                 formData.append("reason", reason);
-                schedules.forEach((s, idx) => {
-                    formData.append(`preferred_date_${idx+1}`, s.date);
-                    formData.append(`preferred_time_${idx+1}`, s.time || "");
-                });
-                // keep the schedules and reason locally so agriculturists can see them immediately
-                report.farmerSchedules = schedules.map(s => ({ date: s.date, time: s.time, display: s.display }));
                 report.farmerFeedbackReason = reason;
                 report.farmerFeedbackConfirmation = "needs-assistance";
-            } else {
-                report.farmerSchedules = [];
-                report.farmerFeedbackReason = "";
-                report.farmerFeedbackConfirmation = "resolved";
             }
             try {
                 const response = await fetch("/farmer/submit-assessment-feedback", { method: "POST", body: formData });
@@ -944,15 +1255,75 @@
                     alert(data.message || "The feedback could not be saved.");
                     return;
                 }
-                report.status = feedbackChoice === "resolved" ? "resolved" : "visit_requested";
+                report.status = feedbackChoice === "resolved" ? "resolved" : "Awaiting Confirmed Schedule";
+                if (feedbackChoice !== "resolved") {
+                    report.visitArchived = false;
+                    report.visitScheduleStamp = "";
+                }
                 applyStatusStyle(report);
                 if (typeof window.renderReportsGrid === "function") {
                     try { window.renderReportsGrid(); } catch (e) { console.debug(e); }
+                }
+                if (feedbackChoice !== "resolved") {
+                    await loadVisitDiscussion(report);
                 }
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "Feedback saved.");
             } catch (error) {
                 alert("The feedback could not be saved right now.");
+            }
+            return;
+        }
+
+        if (actionName === "confirm-selected-schedule") {
+            const selectedSlot = document.querySelector("input[name='agri-availability-choice']:checked")?.value;
+            const parsed = parseAvailabilitySlot(selectedSlot);
+            formData.append("decision", "accept");
+            if (parsed?.date) {
+                formData.append("preferred_date", parsed.date);
+                formData.append("preferred_time", parsed.windowLabel || TIME_WINDOW_DEFINITIONS[parsed.windowKey]?.label || "Morning");
+            }
+            try {
+                const response = await fetch("/agriculturist/review-visit-request", { method: "POST", body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The selected schedule could not be saved.");
+                    return;
+                }
+                report.status = "visit_scheduled";
+                applyStatusStyle(report);
+                renderWorkflowActions(currentReportModalMode, report);
+                alert(data.message || "Visit scheduled successfully.");
+            } catch (error) {
+                alert("The selected schedule could not be saved right now.");
+            }
+            return;
+        }
+
+        if (actionName === "propose-selected-schedule") {
+            const proposedDate = document.getElementById("agri-proposed-date")?.value || "";
+            const proposedWindow = document.getElementById("agri-proposed-window")?.value || "morning";
+            const preferredTime = TIME_WINDOW_DEFINITIONS[proposedWindow]?.label || "Morning";
+            formData.append("decision", "accept");
+            if (!proposedDate) {
+                alert("Please select a proposed date before continuing.");
+                return;
+            }
+            formData.append("preferred_date", proposedDate);
+            formData.append("preferred_time", preferredTime);
+            try {
+                const response = await fetch("/agriculturist/review-visit-request", { method: "POST", body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The proposed schedule could not be saved.");
+                    return;
+                }
+                report.status = "visit_scheduled";
+                applyStatusStyle(report);
+                renderWorkflowActions(currentReportModalMode, report);
+                alert(data.message || "Visit scheduled successfully.");
+            } catch (error) {
+                alert("The proposed schedule could not be saved right now.");
             }
             return;
         }
@@ -1190,7 +1561,7 @@
         if (rainfallNode) rainfallNode.textContent = weather?.is_down ? "Weather data unavailable" : `Rainfall: ${weatherLine(weather?.rainfall, weather?.rainfall === "--" ? "" : " mm")}`;
     }
 
-    function openReportModal(reportData = {}, mode = "farmer") {
+    async function openReportModal(reportData = {}, mode = "farmer") {
         const modalRoot = getModalRoot();
         if (!modalRoot) {
             return;
@@ -1200,6 +1571,7 @@
         currentReportModalRecord = normalizeReportData({ ...reportData, mode: currentReportModalMode });
 
         const report = currentReportModalRecord;
+        await loadVisitDiscussion(report);
 
         const pestTitle = document.getElementById("report-pest-title");
         const confidenceNode = document.getElementById("report-confidence");
@@ -1265,7 +1637,7 @@
 
         // Expert card visibility and input controls depend on existing assessment state
         const statusKey = getStatusKey(report?.status || "");
-        const assessmentAlreadyIssued = ["assessment_issued", "recommendation_issued", "waiting_for_agriculturist_confirmation", "waiting_agriculturist_confirmation", "visit_requested", "visit_scheduled", "visit_completed", "final_remarks_issued", "resolved", "closed"].includes(statusKey) || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
+        const assessmentAlreadyIssued = ["assessment_issued", "recommendation_issued", "waiting_for_agriculturist_confirmation", "waiting_agriculturist_confirmation", "awaiting_confirmed_schedule", "visit_requested", "visit_scheduled", "visit_completed", "final_remarks_issued", "resolved", "closed"].includes(statusKey) || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
         if (expertCard) {
             setDisplay(expertCard, true, "flex");
             const expertInput = document.getElementById("expert-notes-input");

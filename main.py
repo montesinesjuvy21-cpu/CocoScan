@@ -47,6 +47,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def _normalize_availability_slots(value):
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if not cleaned:
+            return []
+        if cleaned.startswith("["):
+            try:
+                parsed = json.loads(cleaned)
+                return _normalize_availability_slots(parsed)
+            except Exception:
+                return []
+        return [item.strip() for item in re.split(r',|;|\n', cleaned) if item.strip()]
+    return []
+
+
 # Load environment configuration variables
 load_dotenv()
 
@@ -92,6 +112,106 @@ def _append_status_note(existing_notes, note_text):
     if not cleaned_existing:
         return cleaned_note
     return f"{cleaned_existing}\n\n{cleaned_note}"
+
+
+def _coerce_time_to_hhmmss(value):
+    if value is None:
+        return ""
+
+    if isinstance(value, datetime):
+        return value.strftime("%H:%M:%S")
+
+    cleaned = str(value or "").strip()
+    if not cleaned:
+        return ""
+
+    for fmt in ("%H:%M:%S", "%H:%M", "%I:%M %p", "%I:%M:%S %p"):
+        try:
+            return datetime.strptime(cleaned.upper(), fmt).strftime("%H:%M:%S")
+        except ValueError:
+            continue
+
+    return ""
+
+
+def _format_time_label(value):
+    normalized = _coerce_time_to_hhmmss(value)
+    if not normalized:
+        return ""
+
+    parsed = datetime.strptime(normalized, "%H:%M:%S")
+    suffix = parsed.strftime("%p").upper()
+    hour = parsed.hour % 12 or 12
+    return f"{hour}:{parsed.minute:02d} {suffix}"
+
+
+def _format_confirmed_schedule_label(confirmed_date, start_time, end_time):
+    try:
+        parsed_date = datetime.strptime(str(confirmed_date or ""), "%Y-%m-%d")
+    except ValueError:
+        return ""
+
+    start_label = _format_time_label(start_time)
+    end_label = _format_time_label(end_time)
+    if not start_label or not end_label:
+        return ""
+
+    return f"Confirmed: {parsed_date.strftime('%B %d, %Y')}, from {start_label} to {end_label}"
+
+
+def _validate_time_range(start_time, end_time):
+    normalized_start = _coerce_time_to_hhmmss(start_time)
+    normalized_end = _coerce_time_to_hhmmss(end_time)
+    if not normalized_start or not normalized_end:
+        raise ValueError("Please provide both start and end times.")
+
+    start_dt = datetime.strptime(normalized_start, "%H:%M:%S")
+    end_dt = datetime.strptime(normalized_end, "%H:%M:%S")
+    if end_dt <= start_dt:
+        raise ValueError("End time must be after start time.")
+
+    return normalized_start, normalized_end
+
+
+def _fetch_visit_workflow_payload(report_id):
+    report_response = supabase.table("reports").select("id, status, user_id, reviewed_by_id, visit_request_reason, visit_requested_at, visit_summary, visit_completed_at, final_remarks").eq("id", report_id).execute()
+    report_row = (getattr(report_response, "data", None) or [{}])[0] if getattr(report_response, "data", None) else {}
+
+    chats_response = supabase.table("visit_chats").select("id, sender_id, message, created_at").eq("report_id", report_id).order("created_at", desc=False).execute()
+    chat_rows = getattr(chats_response, "data", None) or []
+
+    schedules_response = supabase.table("visit_schedules").select("id, agriculturist_id, confirmed_date, start_time, end_time, created_at").eq("report_id", report_id).order("created_at", desc=False).execute()
+    schedule_rows = getattr(schedules_response, "data", None) or []
+
+    messages = []
+    for chat_row in chat_rows:
+        sender_id = chat_row.get("sender_id")
+        sender_label = "Farmer"
+        if sender_id and report_row.get("reviewed_by_id") and int(sender_id) == int(report_row.get("reviewed_by_id")):
+            sender_label = "Agriculturist"
+        elif sender_id and report_row.get("user_id") and int(sender_id) == int(report_row.get("user_id")):
+            sender_label = "Farmer"
+        else:
+            sender_label = "Agriculturist" if sender_id and report_row.get("reviewed_by_id") else "Farmer"
+        messages.append({
+            "id": chat_row.get("id"),
+            "sender_id": sender_id,
+            "sender_label": sender_label,
+            "message": chat_row.get("message") or "",
+            "created_at": chat_row.get("created_at"),
+        })
+
+    latest_schedule = schedule_rows[-1] if schedule_rows else None
+    schedule_stamp = ""
+    if latest_schedule:
+        schedule_stamp = _format_confirmed_schedule_label(latest_schedule.get("confirmed_date"), latest_schedule.get("start_time"), latest_schedule.get("end_time"))
+
+    return {
+        "report": report_row,
+        "messages": messages,
+        "schedule": latest_schedule,
+        "schedule_stamp": schedule_stamp,
+    }
 
 
 def _update_report_workflow(report_id, status, *, note=None, extra_updates=None):
@@ -1485,7 +1605,7 @@ def agriculturist_submit_assessment():
 
 @app.route('/farmer/submit-assessment-feedback', methods=['POST'])
 def farmer_submit_assessment_feedback():
-    """Let the farmer confirm whether the assessment resolved the issue."""
+    """Let the farmer confirm whether the assessment resolved the issue or request a visit."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
 
@@ -1498,17 +1618,6 @@ def farmer_submit_assessment_feedback():
         confirmation = str(payload.get('confirmation') or request.form.get('confirmation') or '').strip().lower()
         reason = (payload.get('reason') or request.form.get('reason') or '').strip()
 
-        preferred_dates = [
-            str(payload.get('preferred_date_1') or request.form.get('preferred_date_1') or '').strip(),
-            str(payload.get('preferred_date_2') or request.form.get('preferred_date_2') or '').strip(),
-            str(payload.get('preferred_date_3') or request.form.get('preferred_date_3') or '').strip(),
-        ]
-        preferred_times = [
-            str(payload.get('preferred_time_1') or request.form.get('preferred_time_1') or '').strip(),
-            str(payload.get('preferred_time_2') or request.form.get('preferred_time_2') or '').strip(),
-            str(payload.get('preferred_time_3') or request.form.get('preferred_time_3') or '').strip(),
-        ]
-
         if not report_id:
             return jsonify({'success': False, 'message': 'Missing report reference'}), 400
 
@@ -1516,14 +1625,30 @@ def farmer_submit_assessment_feedback():
             note = "Farmer confirmed the assessment resolved the issue."
             update_response = _update_report_workflow(report_id, 'resolved', note=note)
         else:
-            if not reason or any(not d for d in preferred_dates) or any(not t for t in preferred_times):
-                return jsonify({'success': False, 'message': 'Please fill out the visit request details and provide three date/time options.'}), 400
+            if not reason:
+                return jsonify({'success': False, 'message': 'Please provide a reason for requesting the visit.'}), 400
 
-            note_lines = [f"Farmer requested a visit. Reason: {reason}."]
-            for idx, (day, time) in enumerate(zip(preferred_dates, preferred_times), start=1):
-                note_lines.append(f"Option {idx}: {day} at {time}.")
-            note = " ".join(note_lines)
-            update_response = _update_report_workflow(report_id, 'visit_requested', note=note)
+            note = f"Farmer requested a visit. Reason: {reason}"
+            update_response = _update_report_workflow(
+                report_id,
+                'Awaiting Confirmed Schedule',
+                note=note,
+                extra_updates={
+                    'visit_request_reason': reason,
+                    'visit_requested_at': datetime.now(UTC).isoformat(),
+                },
+            )
+            if getattr(update_response, 'error', None):
+                logger.error(f"Assessment feedback update failed: {update_response.error}")
+                return jsonify({'success': False, 'message': 'The feedback could not be saved.'}), 500
+
+            chat_insert_response = supabase.table('visit_chats').insert({
+                'report_id': report_id,
+                'sender_id': user_id,
+                'message': f"Visit request submitted. Reason: {reason}",
+            }).execute()
+            if getattr(chat_insert_response, 'error', None):
+                logger.warning(f"Visit chat insert failed: {chat_insert_response.error}")
 
         if getattr(update_response, 'error', None):
             logger.error(f"Assessment feedback update failed: {update_response.error}")
@@ -1533,6 +1658,128 @@ def farmer_submit_assessment_feedback():
     except Exception as e:
         logger.error(f"Error saving assessment feedback: {str(e)}")
         return jsonify({'success': False, 'message': 'The feedback could not be saved.'}), 500
+
+
+@app.route('/reports/<int:report_id>/visit-discussion', methods=['GET'])
+def get_visit_discussion(report_id):
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    if not user_id or user_role not in {'farmer', 'agri_expert'}:
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    payload = _fetch_visit_workflow_payload(report_id)
+    report_row = payload.get('report') or {}
+    is_archived = str(report_row.get('status') or '').strip().lower() == 'visit scheduled'
+    return jsonify({
+        'success': True,
+        'messages': payload.get('messages', []),
+        'schedule_stamp': payload.get('schedule_stamp', ''),
+        'status': report_row.get('status') or '',
+        'is_archived': is_archived,
+    })
+
+
+@app.route('/reports/<int:report_id>/visit-chat', methods=['POST'])
+def save_visit_chat(report_id):
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    if not user_id or user_role not in {'farmer', 'agri_expert'}:
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        message = str(payload.get('message') or request.form.get('message') or '').strip()
+        if not message:
+            return jsonify({'success': False, 'message': 'A message is required.'}), 400
+
+        report_payload = _fetch_visit_workflow_payload(report_id)
+        current_status = str(report_payload.get('report', {}).get('status') or '').strip()
+        if current_status.lower() == 'visit scheduled':
+            return jsonify({'success': False, 'message': 'The visit discussion is archived.'}), 400
+
+        insert_response = supabase.table('visit_chats').insert({
+            'report_id': report_id,
+            'sender_id': user_id,
+            'message': message,
+        }).execute()
+        if getattr(insert_response, 'error', None):
+            logger.error(f"Visit chat insert failed: {insert_response.error}")
+            return jsonify({'success': False, 'message': 'The message could not be saved.'}), 500
+
+        _update_report_workflow(report_id, 'Awaiting Confirmed Schedule')
+        return jsonify({'success': True, 'message': 'Message sent.'})
+    except Exception as e:
+        logger.error(f"Error saving visit chat: {str(e)}")
+        return jsonify({'success': False, 'message': 'The message could not be saved.'}), 500
+
+
+@app.route('/agriculturist/finalize-visit-schedule', methods=['POST'])
+def agriculturist_finalize_visit_schedule():
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role != 'agri_expert':
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        report_id = payload.get('request_id') or payload.get('report_id') or request.form.get('request_id') or request.form.get('report_id')
+        confirmed_date = str(payload.get('confirmed_date') or request.form.get('confirmed_date') or '').strip()
+        start_time = str(payload.get('start_time') or request.form.get('start_time') or '').strip()
+        end_time = str(payload.get('end_time') or request.form.get('end_time') or '').strip()
+        requested_status = str(payload.get('status') or request.form.get('status') or 'Visit Scheduled').strip() or 'Visit Scheduled'
+
+        if not report_id:
+            return jsonify({'success': False, 'message': 'Missing report reference'}), 400
+        if not confirmed_date:
+            return jsonify({'success': False, 'message': 'Please select a confirmed date.'}), 400
+
+        normalized_start, normalized_end = _validate_time_range(start_time, end_time)
+        schedule_label = _format_confirmed_schedule_label(confirmed_date, normalized_start, normalized_end)
+        schedule_message = f"Visit confirmed for {confirmed_date} from {normalized_start} to {normalized_end}."
+
+        schedule_insert_response = supabase.table('visit_schedules').insert({
+            'report_id': report_id,
+            'agriculturist_id': user_id,
+            'confirmed_date': confirmed_date,
+            'start_time': normalized_start,
+            'end_time': normalized_end,
+        }).execute()
+        if getattr(schedule_insert_response, 'error', None):
+            logger.error(f"Visit schedule insert failed: {schedule_insert_response.error}")
+            return jsonify({'success': False, 'message': 'The visit schedule could not be saved.'}), 500
+
+        chat_insert_response = supabase.table('visit_chats').insert({
+            'report_id': report_id,
+            'sender_id': user_id,
+            'message': schedule_message,
+        }).execute()
+        if getattr(chat_insert_response, 'error', None):
+            logger.warning(f"Visit schedule chat insert failed: {chat_insert_response.error}")
+
+        update_response = _update_report_workflow(
+            report_id,
+            requested_status,
+            note=f"Visit scheduled. {schedule_label}",
+            extra_updates={
+                'visit_summary': schedule_label,
+                'visit_completed_at': datetime.now(UTC).isoformat(),
+            },
+        )
+        if getattr(update_response, 'error', None):
+            logger.error(f"Schedule update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The visit schedule could not be finalized.'}), 500
+
+        return jsonify({
+            'success': True,
+            'message': 'The visit schedule has been finalized.',
+            'schedule_stamp': schedule_label,
+        })
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error saving visit schedule: {str(e)}")
+        return jsonify({'success': False, 'message': 'The visit schedule could not be saved.'}), 500
 
 
 @app.route('/agriculturist/review-visit-request', methods=['POST'])
