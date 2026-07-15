@@ -2,6 +2,29 @@
     const SUPABASE_REPORT_IMAGE_BASE_URL =
         "https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/";
 
+    // Inject compact schedule input styles once so templates don't need edits
+    (function injectScheduleInputStyles() {
+        if (typeof document === 'undefined' || document.getElementById('schedule-input-styles')) return;
+        const css = `
+            .schedule-input {
+                width: 100%;
+                box-sizing: border-box;
+                height: 44px;
+                padding: 6px 10px;
+                border-radius: 10px;
+                font-size: 0.95rem;
+                border: 1px solid #e6eaf0;
+                background: #ffffff;
+            }
+            /* ensure date/time controls align visually when placed in grid columns */
+            .farmer-schedule-row .schedule-input { display: block; }
+        `;
+        const style = document.createElement('style');
+        style.id = 'schedule-input-styles';
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
+    })();
+
     let currentReportModalRecord = null;
     let currentReportModalMode = "farmer";
     let activeReportModalSubmissionController = null;
@@ -93,6 +116,8 @@
         const gps = reportData.gps || {};
         const primaryImage = reportData.primary_image || reportData.img || reportData.image_url || reportData.image || "";
         const additionalImages = normalizeList(reportData.additional_images || reportData.supporting_images);
+        const notes = reportData.notes || reportData.field_notes || reportData.farmer_notes || "";
+        const feedbackData = extractFarmerFeedback(notes, reportData.status);
 
         return {
             id: reportData.id ?? null,
@@ -102,7 +127,7 @@
             status: String(reportData.status || reportData.current_status || "").trim() || (currentReportModalMode === "scan" ? "Ready to Submit" : "Pending"),
             timestamp: reportData.timestamp || reportData.created_at || reportData.submitted_at || reportData.photo_taken_at || "",
             farmer: reportData.farmer || reportData.farmer_name || "Farmer",
-            notes: reportData.notes || reportData.field_notes || reportData.farmer_notes || "",
+            notes,
             locationText: reportData.location_text || reportData.full_location || reportData.location || "No location logged",
             latitude: gps.latitude ?? reportData.latitude ?? "",
             longitude: gps.longitude ?? reportData.longitude ?? "",
@@ -112,8 +137,45 @@
             additionalImages,
             initialRecommendations: normalizeList(reportData.initial_recommendations || reportData.recommendations),
             expertRecommendations: normalizeList(reportData.expert_recommendations || reportData.expert_recommendation),
+            farmerFeedbackReason: feedbackData.reason,
+            farmerFeedbackConfirmation: feedbackData.confirmation,
+            farmerSchedules: feedbackData.schedules,
             weather: reportData.weather || {},
         };
+    }
+
+    function extractFarmerFeedback(notes = "", status = "") {
+        const raw = String(notes || "").trim();
+        const feedback = { reason: "", confirmation: "", schedules: [] };
+
+        if (/Farmer confirmed the assessment resolved/i.test(raw) || /confirmed the assessment resolved/i.test(raw)) {
+            feedback.confirmation = "resolved";
+            return feedback;
+        }
+
+        if (/farmer requested a visit/i.test(raw)) {
+            const reasonMatch = raw.match(/Reason:\s*([^\.]+)\./i);
+            feedback.reason = reasonMatch ? reasonMatch[1].trim() : "";
+
+            const optionRegex = /Option\s*\d+:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})\s*at\s*([0-9]{2}:[0-9]{2})\./gi;
+            let match;
+            while ((match = optionRegex.exec(raw)) !== null) {
+                const date = match[1];
+                const time = match[2];
+                let display = `${date} ${time}`;
+                try {
+                    const dt = new Date(`${date}T${time}`);
+                    if (!Number.isNaN(dt.getTime())) {
+                        display = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dt) + ' • ' + new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(dt);
+                    }
+                } catch (e) {
+                    // keep fallback
+                }
+                feedback.schedules.push({ date, time, display });
+            }
+        }
+
+        return feedback;
     }
 
     function getStatusKey(status) {
@@ -504,6 +566,9 @@
         }
 
         const actions = [];
+        if (mode === "farmer") {
+            setDisplay(workflowCard, false);
+        }
         if (feedbackContainer) {
             feedbackContainer.innerHTML = "";
             const feedbackCard = document.getElementById('report-farmer-feedback-card');
@@ -514,10 +579,10 @@
             // Do not create a workflow action for initial assessment here to avoid duplicating UI.
             if (normalizedStatus === "visit_requested") {
                 actions.push({
-                    label: "Accept Request",
+                    label: Array.isArray(report.farmerSchedules) && report.farmerSchedules.length ? "Confirm Selected Schedule" : "Accept Request",
                     icon: "fa-solid fa-calendar-check",
                     action: "accept-visit-request",
-                    help: "Accept the visit request and confirm the visit schedule.",
+                    help: "Confirm one of the farmer's preferred schedules or choose a custom visit date/time.",
                 });
                 actions.push({
                     label: "Reject Request",
@@ -526,40 +591,45 @@
                     help: "Reject the visit request and explain why.",
                 });
                 if (workflowFormFields) {
-                    // If the farmer provided preferred schedules, render them for selection
                     if (Array.isArray(report.farmerSchedules) && report.farmerSchedules.length) {
-                        let listHtml = '<div style="display:grid; gap:10px;">';
-                        listHtml += '<p style="margin:0; font-weight:600; color:#334155;">Farmer\'s Preferred Schedules</p>';
-                        report.farmerSchedules.forEach((s, idx) => {
-                            listHtml += `<label style="display:flex; align-items:center; gap:10px; font-size:0.95rem;">` +
-                                `<input type="radio" name="agri-selected-schedule" value="${idx}" style="accent-color:#1d4ed8;"> ${escapeHtml(s.display)}</label>`;
-                        });
-                        listHtml += '<div style="margin-top:8px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Or pick a custom schedule</label></div>';
-                        listHtml += `<div style="display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">`;
-                        listHtml += `<div style="display:grid; gap:6px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label><input id="visit-review-date" type="date" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;"></div>`;
-                        listHtml += `<div style="display:grid; gap:6px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label><input id="visit-review-time" type="time" class="notes-input-box" style="padding:10px 12px; width:100%; box-sizing:border-box;"></div>`;
-                        listHtml += `</div></div>`;
-                        workflowFormFields.innerHTML = listHtml;
+                        workflowFormFields.innerHTML = `
+                        <div style="display:grid; gap:10px;">
+                            <p style="margin:0; font-weight:600; color:#334155;">Or pick a custom schedule instead</p>
+                            <div style="display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
+                                    <div style="display:grid; gap:6px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label><input id="visit-review-date" type="date" class="schedule-input"></div>
+                                    <div style="display:grid; gap:6px;"><label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label><input id="visit-review-time" type="time" class="schedule-input"></div>
+                                </div>
+                        </div>`;
                     } else {
                         workflowFormFields.innerHTML = `
                         <div style="display:grid; gap:10px;">
                             <label style="font-size:0.9rem; font-weight:600; color:#334155;">Decision</label>
-                            <select id="visit-review-decision" class="notes-input-box" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
+                            <select id="visit-review-decision" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
                                 <option value="accept">Accept request</option>
                                 <option value="reject">Reject request</option>
                             </select>
-                            <div style="display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
+                                <div style="display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
                                 <div style="display:grid; gap:6px;">
                                     <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred date</label>
-                                    <input id="visit-review-date" type="date" class="notes-input-box" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
+                                    <input id="visit-review-date" type="date" class="schedule-input">
                                 </div>
                                 <div style="display:grid; gap:6px;">
                                     <label style="font-size:0.9rem; font-weight:600; color:#334155;">Preferred time</label>
-                                    <input id="visit-review-time" type="time" class="notes-input-box" style="min-height:auto; padding:10px 12px; width:100%; box-sizing:border-box;">
+                                    <input id="visit-review-time" type="time" class="schedule-input">
                                 </div>
                             </div>
                         </div>`;
                     }
+                }
+                if (feedbackContainer) {
+                    const summaryMessage = report.farmerFeedbackReason
+                        ? `<p style="margin:0; font-size:0.95rem; color:#334155;"><strong>Farmer request reason:</strong> ${escapeHtml(report.farmerFeedbackReason)}</p>`
+                        : `<p style="margin:0; font-size:0.95rem; color:#334155;">The farmer has requested a visit.</p>`;
+                    feedbackContainer.innerHTML = `
+                            <p style="font-size:0.92rem; color:#334155; margin:0 0 10px;">Farmer feedback has been submitted and is ready for review.</p>
+                            ${summaryMessage}`;
+                    const feedbackCard = document.getElementById('report-farmer-feedback-card');
+                    if (feedbackCard) setDisplay(feedbackCard, true, 'block');
                 }
             } else if (normalizedStatus === "visit_scheduled") {
                 actions.push({
@@ -575,7 +645,7 @@
                     workflowFormFields.innerHTML = `
                         <div style="display:grid; gap:10px;">
                             <label style="font-size:0.9rem; font-weight:600; color:#334155;">Visit images</label>
-                            <input id="workflow-visit-images" type="file" accept="image/*" multiple class="notes-input-box" style="min-height:auto; padding:12px 14px;">
+                            <input id="workflow-visit-images" type="file" accept="image/*" multiple style="min-height:auto; padding:12px 14px;">
                         </div>`;
                 }
             } else if (normalizedStatus === "visit_completed") {
@@ -619,9 +689,14 @@
                 }
                 if (feedbackContainer) {
                     feedbackContainer.innerHTML = `
-                        <div style="margin-top:10px; padding:12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; display:grid; gap:12px;">
-                            <p style="font-size:0.92rem; color:#334155; margin:0;">Did the expert assessment help your issue? Confirm the guidance or request a visit with preferred date/time options.</p>
-                            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                        <div style="display:grid; gap:18px; padding:8px 0;">
+                           <p style="font-size:0.92rem; color:#334155; margin:0; line-height:1.55;">
+                                Did the initial recommendation and expert assessment resolve your issue?<br>
+                                <em style="font-size:0.72rem; color:#64748b;">
+                                    If not, you can request an on-site visit and provide your preferred schedule.
+                                </em>
+                            </p>
+                            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:0;">
                                 <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#102a43;">
                                     <input type="radio" name="farmer-feedback-choice" value="resolved" checked style="accent-color:#059669;"> Yes
                                 </label>
@@ -629,18 +704,18 @@
                                     <input type="radio" name="farmer-feedback-choice" value="needs-assistance" style="accent-color:#be185d;"> No
                                 </label>
                             </div>
-                            <div id="farmer-visit-request-details" style="display:none; gap:12px;">
-                                <label style="font-size:0.9rem; font-weight:600; color:#334155;">Reason for requesting a visit</label>
-                                <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:90px; width:100%; box-sizing:border-box;"></textarea>
-                                <div style="display:grid; gap:8px;">
-                                    <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
-                                        <strong style="font-size:0.95rem;">Choose up to 3 preferred schedules</strong>
-                                        <button type="button" id="farmer-add-schedule-btn" class="btn-control submit-primary" style="min-height:36px; padding:6px 10px;">+ Add Schedule</button>
-                                    </div>
-                                    <div id="farmer-schedules-list" style="display:grid; gap:8px;"></div>
+                            <div id="farmer-visit-request-details" style="display:none; display:grid; gap:16px; padding-top:10px;">
+                                <div style="display:grid; gap:10px;">
+                                    <strong style="font-size:0.95rem;">Choose up to 3 preferred schedules</strong>
+                                    <button type="button" id="farmer-add-schedule-btn" class="btn-control submit-primary" style="min-height:42px; padding:10px 14px; justify-self:start;">+ Add Schedule</button>
                                 </div>
+                                <div style="display:grid; gap:8px;">
+                                    <label style="font-size:0.9rem; font-weight:600; color:#334155; margin-bottom:6px;">Reason for requesting a visit</label>
+                                    <textarea id="farmer-visit-reason" class="notes-input-box" placeholder="Describe why you still need assistance..." style="min-height:110px; width:100%; box-sizing:border-box; padding:14px 16px;"></textarea>
+                                </div>
+                                <div id="farmer-schedules-list" style="display:grid; gap:16px;"></div>
                             </div>
-                            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px;">
                                 <button id="farmer-submit-feedback-btn" class="btn-control submit-primary" type="button">Submit Request</button>
                             </div>
                         </div>`;
@@ -659,10 +734,46 @@
                     if (submitFeedbackBtn) {
                         submitFeedbackBtn.addEventListener('click', () => submitWorkflowAction('farmer-feedback'));
                     }
+                    const feedbackRadios = feedbackContainer.querySelectorAll("input[name='farmer-feedback-choice']");
+                    const requestDetails = feedbackContainer.querySelector("#farmer-visit-request-details");
+                    const refreshFeedbackDetails = () => {
+                        const selectedValue = Array.from(feedbackRadios).find((input) => input.checked)?.value || "resolved";
+                        if (requestDetails) {
+                            setDisplay(requestDetails, selectedValue === 'needs-assistance', 'grid');
+                        }
+                    };
+                    feedbackRadios.forEach((input) => input.addEventListener('change', refreshFeedbackDetails));
+                    refreshFeedbackDetails();
                     const feedbackCard = document.getElementById('report-farmer-feedback-card');
                     if (feedbackCard) setDisplay(feedbackCard, true, 'block');
                 }
+            } else if (normalizedStatus === "visit_requested" || normalizedStatus === "resolved") {
+                if (workflowInput) {
+                    setDisplay(workflowInput, false);
+                }
+                if (feedbackContainer) {
+                    const reasonDisplay = report.farmerFeedbackReason ? `<p style="margin:0; font-size:0.95rem; color:#334155;"><strong>Reason:</strong> ${escapeHtml(report.farmerFeedbackReason)}</p>` : "";
+                    const scheduleDisplay = Array.isArray(report.farmerSchedules) && report.farmerSchedules.length
+                        ? `<div style="display:grid; gap:6px; padding-top:8px;">${report.farmerSchedules.map(s => `<div style="font-size:0.95rem; color:#0f172a;">• ${escapeHtml(s.display)}</div>`).join("")}</div>`
+                        : "";
+                    const message = normalizedStatus === "visit_requested"
+                        ? `<p style="font-size:0.92rem; color:#334155; margin:0;">Your visit request was submitted successfully. The agriculturist will review your preferred schedules.</p>${reasonDisplay}${scheduleDisplay}`
+                        : `<p style="font-size:0.92rem; color:#334155; margin:0;">Thank you! You confirmed the assessment resolved your issue.</p>`;
+                    feedbackContainer.innerHTML = `
+                        <div style="margin-top:10px; padding:12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; display:grid; gap:12px;">
+                            ${message}
+                        </div>`;
+                    const feedbackCard = document.getElementById('report-farmer-feedback-card');
+                    if (feedbackCard) setDisplay(feedbackCard, true, 'block');
+                }
+            } else {
+                if (feedbackContainer) {
+                    feedbackContainer.innerHTML = "";
+                }
+                const feedbackCard = document.getElementById('report-farmer-feedback-card');
+                if (feedbackCard) setDisplay(feedbackCard, false, 'block');
             }
+            return;
         }
 
         if (workflowHelp) {
@@ -712,13 +823,25 @@
         const row = document.createElement('div');
         row.className = 'farmer-schedule-row';
         row.style.display = 'grid';
-        row.style.gridTemplateColumns = '1fr 1fr auto';
-        row.style.gap = '8px';
-        row.style.alignItems = 'center';
+        row.style.gridTemplateColumns = '1fr';
+        row.style.gap = '12px';
+        row.style.padding = '12px';
+        row.style.borderRadius = '16px';
+        row.style.backgroundColor = '#fff';
         row.innerHTML = `
-            <input type="date" class="notes-input-box farmer-schedule-date" value="${escapeHtml(dateVal)}" style="padding:8px 10px;">
-            <input type="time" class="notes-input-box farmer-schedule-time" value="${escapeHtml(timeVal)}" style="padding:8px 10px;">
-            <button type="button" class="btn-control cancel-secondary remove-schedule-btn" style="min-height:36px; padding:8px 10px;">Remove</button>
+            <div style="display:grid; gap:10px;">
+                <strong style="font-size:0.95rem; color:#102a43;">Preferred Schedule #${idx}</strong>
+                <label style="display:grid; gap:4px; font-size:0.9rem; color:#334155;">
+                    <span style="font-weight:500;">Date</span>
+                    <input type="date" class="farmer-schedule-date schedule-input" value="${escapeHtml(dateVal)}">
+                </label>
+
+                <label style="display:grid; gap:4px; font-size:0.9rem; color:#334155;">
+                    <span style="font-weight:500;">Time</span>
+                    <input type="time" class="farmer-schedule-time schedule-input" value="${escapeHtml(timeVal)}">
+                </label>
+            </div>
+            <button type="button" class="btn-control cancel-secondary remove-schedule-btn" style="min-height:36px; padding:8px 10px; white-space:nowrap; justify-self:start;">🗑 Remove</button>
         `;
         container.appendChild(row);
         row.querySelector('.remove-schedule-btn').addEventListener('click', () => { row.remove(); });
@@ -798,8 +921,14 @@
                     formData.append(`preferred_date_${idx+1}`, s.date);
                     formData.append(`preferred_time_${idx+1}`, s.time || "");
                 });
-                // keep the schedules locally so agriculturists can see them immediately
+                // keep the schedules and reason locally so agriculturists can see them immediately
                 report.farmerSchedules = schedules.map(s => ({ date: s.date, time: s.time, display: s.display }));
+                report.farmerFeedbackReason = reason;
+                report.farmerFeedbackConfirmation = "needs-assistance";
+            } else {
+                report.farmerSchedules = [];
+                report.farmerFeedbackReason = "";
+                report.farmerFeedbackConfirmation = "resolved";
             }
             try {
                 const response = await fetch("/farmer/submit-assessment-feedback", { method: "POST", body: formData });
