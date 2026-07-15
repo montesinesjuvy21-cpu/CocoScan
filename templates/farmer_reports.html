@@ -1052,7 +1052,7 @@
             const statuses = [
                 'Under Review',
                 'Assessment Issued',
-                'Waiting for Agriculturist Confirmation',
+                'Awaiting Confirmed Schedule',
                 'Visit Scheduled',
                 'Visit Completed',
                 'Resolved'
@@ -1278,7 +1278,8 @@
             const officialWorkflowStates = {
                 "under review": "under_review",
                 "assessment issued": "assessment_issued",
-                "waiting for agriculturist confirmation": "waiting_agriculturist_confirmation",
+                "waiting for agriculturist confirmation": "awaiting_confirmed_schedule",
+                "waiting for farmer confirmation": "awaiting_confirmed_schedule",
                 "visit requested": "visit_requested",
                 "visit scheduled": "visit_scheduled",
                 "visit completed": "visit_completed",
@@ -1294,8 +1295,10 @@
             const labels = {
                 "under_review": "Under Review",
                 "assessment_issued": "Assessment Issued",
+                "awaiting_confirmed_schedule": "Awaiting Confirmed Schedule",
+                "waiting_agriculturist_confirmation": "Awaiting Confirmed Schedule",
+                "waiting_farmer_confirmation": "Awaiting Confirmed Schedule",
                 "visit_requested": "Visit Requested",
-                "waiting_agriculturist_confirmation": "Waiting for Agriculturist Confirmation",
                 "visit_scheduled": "Visit Scheduled",
                 "visit_completed": "Visit Completed",
                 "final_remarks_issued": "Final Remarks Issued",
