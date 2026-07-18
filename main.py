@@ -105,6 +105,55 @@ def normalize_role(value) -> str:
     return str(value or "").strip().lower()
 
 
+def _resolve_app_user_id(session_data=None, *, lookup_user_id=None, lookup_email=None):
+    """Return the public users.id that should be persisted into foreign-keyed columns."""
+    active_session = session_data if session_data is not None else session
+    if active_session is None:
+        return None
+
+    candidate_id = active_session.get("user_id")
+    email = str(active_session.get("user_email") or active_session.get("email") or "").strip()
+
+    if candidate_id:
+        if lookup_user_id is not None:
+            if lookup_user_id(candidate_id):
+                return candidate_id
+        else:
+            try:
+                response = supabase.table("users").select("id").eq("id", candidate_id).limit(1).execute()
+                rows = getattr(response, "data", None) or []
+                if rows:
+                    return candidate_id
+            except Exception as exc:
+                logger.warning(f"Unable to verify session user id {candidate_id}: {exc}")
+
+    if email:
+        if lookup_email is not None:
+            resolved_id = lookup_email(email)
+            if resolved_id:
+                if hasattr(active_session, "__setitem__"):
+                    active_session["user_id"] = resolved_id
+                return resolved_id
+        else:
+            try:
+                response = supabase.table("users").select("id").eq("email", email).limit(1).execute()
+                rows = getattr(response, "data", None) or []
+                if rows:
+                    resolved_id = rows[0].get("id")
+                    if resolved_id:
+                        if hasattr(active_session, "__setitem__"):
+                            active_session["user_id"] = resolved_id
+                        return resolved_id
+            except Exception as exc:
+                logger.warning(f"Unable to resolve session user id from email {email}: {exc}")
+
+    return candidate_id
+
+
+def _get_current_app_user_id():
+    return _resolve_app_user_id(session)
+
+
 def _append_status_note(existing_notes, note_text):
     cleaned_existing = str(existing_notes or "").strip()
     cleaned_note = str(note_text or "").strip()
@@ -527,6 +576,7 @@ def login():
 
             session.clear()
             session['user_id'] = user_data['id']
+            session['user_email'] = email
             session['user_role'] = normalize_role(user_data.get('role'))
             session['user_name'] = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
             
@@ -1524,7 +1574,7 @@ def agriculturist_map():
 @app.route('/farmer/follow-up-report', methods=['POST'])
 def farmer_follow_up_report():
     """Reopen a previously reviewed report when the farmer submits a new update."""
-    user_id = session.get('user_id')
+    user_id = _get_current_app_user_id()
     user_role = normalize_role(session.get('user_role'))
 
     if not user_id or user_role != 'farmer':
@@ -1578,7 +1628,7 @@ def farmer_follow_up_report():
 @app.route('/agriculturist/submit-assessment', methods=['POST'])
 def agriculturist_submit_assessment():
     """Save the agriculturist assessment notes and advance the report to assessment issued."""
-    user_id = session.get('user_id')
+    user_id = _get_current_app_user_id()
     user_role = normalize_role(session.get('user_role'))
 
     if not user_id or user_role != 'agri_expert':
@@ -1620,7 +1670,7 @@ def agriculturist_submit_assessment():
 @app.route('/farmer/submit-assessment-feedback', methods=['POST'])
 def farmer_submit_assessment_feedback():
     """Let the farmer confirm whether the assessment resolved the issue or request a visit."""
-    user_id = session.get('user_id')
+    user_id = _get_current_app_user_id()
     user_role = normalize_role(session.get('user_role'))
 
     if not user_id or user_role != 'farmer':
@@ -1675,7 +1725,7 @@ def farmer_submit_assessment_feedback():
 
 @app.route('/reports/<int:report_id>/visit-discussion', methods=['GET'])
 def get_visit_discussion(report_id):
-    user_id = session.get('user_id')
+    user_id = _get_current_app_user_id()
     user_role = normalize_role(session.get('user_role'))
     if not user_id or user_role not in {'farmer', 'agri_expert'}:
         return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
@@ -1698,7 +1748,7 @@ def get_visit_discussion(report_id):
 
 @app.route('/reports/<int:report_id>/visit-chat', methods=['POST'])
 def save_visit_chat(report_id):
-    user_id = session.get('user_id')
+    user_id = _get_current_app_user_id()
     user_role = normalize_role(session.get('user_role'))
     if not user_id or user_role not in {'farmer', 'agri_expert'}:
         return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
@@ -1733,7 +1783,7 @@ def save_visit_chat(report_id):
 
 @app.route('/reports/<int:report_id>/request-reschedule', methods=['POST'])
 def request_visit_reschedule(report_id):
-    user_id = session.get('user_id')
+    user_id = _get_current_app_user_id()
     user_role = normalize_role(session.get('user_role'))
 
     if not user_id or user_role not in {'farmer', 'agri_expert'}:
@@ -1776,7 +1826,7 @@ def request_visit_reschedule(report_id):
 
 @app.route('/agriculturist/finalize-visit-schedule', methods=['POST'])
 def agriculturist_finalize_visit_schedule():
-    user_id = session.get('user_id')
+    user_id = _get_current_app_user_id()
     user_role = normalize_role(session.get('user_role'))
 
     if not user_id or user_role != 'agri_expert':
