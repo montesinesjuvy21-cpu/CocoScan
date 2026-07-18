@@ -1230,6 +1230,11 @@
         window.abortReportSubmission = abortReportSubmission;
 
         function submitReportPayload() {
+            const additionalNotes = document.getElementById('field-notes-capture').value.trim();
+            if (!additionalNotes) {
+                alert('Please provide your farmer notes before submitting the report.');
+                return;
+            }
             if (!navigator.onLine) {
                 if (confirm('No network connection detected. Save this scan as a draft instead?')) {
                     saveDraftToIndexedDB(true);

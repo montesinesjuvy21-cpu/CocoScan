@@ -717,9 +717,15 @@
                     return;
                 }
 
+                const notes = (draft.farmer_notes || draft.field_notes || '').trim();
+                if (!notes) {
+                    alert('Farmer notes are required to submit this report. Please edit the draft to add notes.');
+                    return;
+                }
+
                 const formData = new FormData();
                 formData.append('pest_type', draft.pest || 'Unknown Pest');
-                formData.append('location_notes', draft.farmer_notes || draft.field_notes || '');
+                formData.append('location_notes', notes);
                 formData.append('confidence', draft.confidence_value !== undefined ? draft.confidence_value : parseFloat((draft.confidence || '').replace('%', '')) || 0);
                 const lat = draft.gps?.latitude ? parseFloat(draft.gps.latitude) : '';
                 const lng = draft.gps?.longitude ? parseFloat(draft.gps.longitude) : '';

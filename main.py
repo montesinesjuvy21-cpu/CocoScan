@@ -227,6 +227,12 @@ def _validate_time_range(start_time, end_time):
     end_dt = datetime.strptime(normalized_end, "%H:%M:%S")
     if end_dt <= start_dt:
         raise ValueError("End time must be after start time.")
+    
+    # Validate 8 AM to 5 PM constraint
+    if start_dt.time() < datetime.strptime("08:00:00", "%H:%M:%S").time():
+        raise ValueError("Start time cannot be earlier than 8:00 AM.")
+    if end_dt.time() > datetime.strptime("17:00:00", "%H:%M:%S").time():
+        raise ValueError("End time cannot be later than 5:00 PM.")
 
     return normalized_start, normalized_end
 
@@ -264,8 +270,21 @@ def _fetch_visit_workflow_payload(report_id):
     if latest_schedule:
         schedule_stamp = _format_confirmed_schedule_label(latest_schedule.get("confirmed_date"), latest_schedule.get("start_time"), latest_schedule.get("end_time"))
 
+    has_pending_reschedule = bool(str(report_row.get("visit_reschedule_reason") or "").strip())
+    
+    if has_pending_reschedule and schedule_stamp:
+        schedule_stamp = schedule_stamp.replace("Confirmed:", "Previous Schedule:")
+
+    has_pending_reschedule = bool(str(report_row.get("visit_reschedule_reason") or "").strip())
     is_archived = _should_archive_visit_discussion(report_row.get("status"), report_row.get("visit_reschedule_reason"))
-    schedule_title = "New Schedule Confirmed" if bool(str(report_row.get("visit_reschedule_reason") or "").strip()) else "Visit Scheduled"
+    
+    if has_pending_reschedule:
+        schedule_title = "Reschedule Requested"
+    else:
+        schedule_title = "New Schedule Confirmed" if len(schedule_rows) > 1 else "Visit Scheduled"
+
+    visit_images_response = supabase.table("visit_images").select("image_url").eq("report_id", report_id).execute()
+    visit_images = [row.get("image_url") for row in getattr(visit_images_response, "data", None) or [] if row.get("image_url")]
 
     return {
         "report": report_row,
@@ -274,8 +293,8 @@ def _fetch_visit_workflow_payload(report_id):
         "schedule_stamp": schedule_stamp,
         "is_archived": is_archived,
         "schedule_title": schedule_title,
+        "visit_images": visit_images,
     }
-
 
 def _update_report_workflow(report_id, status, *, note=None, extra_updates=None):
     if not report_id:
@@ -331,6 +350,32 @@ def _persist_supporting_images(report_id, files, *, uploaded_at=None):
 
     if rows:
         supabase.table("report_supporting_images").insert(rows).execute()
+    return rows
+
+
+def _persist_visit_images(report_id, files, user_id, *, uploaded_at=None):
+    if not report_id or not files:
+        return []
+
+    uploaded_at = uploaded_at or datetime.now(UTC).isoformat()
+    rows = []
+    for index, uploaded_file in enumerate(files):
+        if not uploaded_file or not getattr(uploaded_file, "filename", None):
+            continue
+        safe_name = secure_filename(uploaded_file.filename or f"visit_{index}.jpg")
+        storage_name = f"visit_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}_{index}_{safe_name}"
+        image_bytes = uploaded_file.read()
+        image_url = upload_image_to_supabase(image_bytes, storage_name, uploaded_file.mimetype)
+        if image_url:
+            rows.append({
+                "report_id": report_id,
+                "image_url": image_url,
+                "uploaded_by": user_id,
+                "uploaded_at": uploaded_at,
+            })
+
+    if rows:
+        supabase.table("visit_images").insert(rows).execute()
     return rows
 
 # Notifications removed: backend persistence and helper functions have been deleted.
@@ -904,16 +949,31 @@ def _build_report_modal_payload(item, *, supporting_images=None, weather=None, d
     report_id = item.get("id")
     raw_initial_recommendations = item.get("initial_recommendations") or []
     raw_expert_recommendations = item.get("expert_recommendations") or []
+    
+    visit_chats = item.get("visit_chats") or []
+    chat_count = visit_chats[0].get("count", 0) if visit_chats and isinstance(visit_chats, list) and isinstance(visit_chats[0], dict) else 0
+
+    notes = item.get("farmer_notes") or item.get("notes") or ""
+    if notes:
+        notes = notes.split("\n\nFarmer requested a visit.")[0]
+        notes = notes.split("\n\nVisit scheduled.")[0]
+        notes = notes.split("\n\nVisit completed.")[0]
+        notes = notes.split("\n\nFarmer requested reschedule.")[0]
+        notes = notes.split("\n\nVisit canceled.")[0]
+        notes = notes.strip()
+    if not notes:
+        notes = "No notes logged."
 
     return {
         "id": report_id,
+        "chat_count": chat_count,
         "pest": item.get("pest_type") or item.get("pest") or "Unknown Pest",
         "confidence": _format_report_confidence(item.get("confidence")),
         "status": normalize_report_status(item.get("status"), default=default_status),
         "timestamp": format_report_timestamp(item.get("created_at") or item.get("submitted_at") or item.get("photo_taken_at")),
         "date": format_report_date(item.get("created_at") or item.get("submitted_at") or item.get("photo_taken_at")),
         "farmer": item.get("farmer_name") or item.get("farmer") or "Farmer",
-        "notes": item.get("farmer_notes") or item.get("notes") or "No notes logged.",
+        "notes": notes,
         "location_text": _format_report_location(item),
         "gps": {
             "latitude": item.get("latitude"),
@@ -944,7 +1004,7 @@ def farmer_dashboard():
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Farmer"
         
-        reports_response = supabase.table('reports').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+        reports_response = supabase.table('reports').select('*, visit_chats(count)').eq('user_id', user_id).order('created_at', desc=True).execute()
         reports = getattr(reports_response, 'data', []) or []
 
         total_cases = len(reports)
@@ -1007,7 +1067,7 @@ def farmer_scan():
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Farmer"
 
-        reports_response = supabase.table('reports').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+        reports_response = supabase.table('reports').select('*, visit_chats(count)').eq('user_id', user_id).order('created_at', desc=True).execute()
         recent_reports = []
         for item in getattr(reports_response, 'data', []) or []:
             created_raw = item.get('submitted_at') or item.get('created_at') or ''
@@ -1131,7 +1191,7 @@ def farmer_reports():
         logger.warning(f"Unable to load farmer profile for reports page: {str(e)}")
 
     try:
-        reports_response = supabase.table("reports").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        reports_response = supabase.table("reports").select("*, visit_chats(count)").eq("user_id", user_id).order("created_at", desc=True).execute()
         report_rows = getattr(reports_response, "data", []) or []
         logger.info(f"[FARMER_REPORTS] User {user_id}: Query returned {len(report_rows)} reports")
         for idx, r in enumerate(report_rows[:3]):
@@ -1195,7 +1255,7 @@ def agriculturist_dashboard():
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
         
-        reports_response = supabase.table('reports').select('*').order('created_at', desc=True).execute()
+        reports_response = supabase.table('reports').select('*, visit_chats(count)').order('created_at', desc=True).execute()
         reports = getattr(reports_response, 'data', []) or []
 
         total_cases = len(reports)
@@ -1260,7 +1320,7 @@ def lgu_dashboard():
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "LGU Officer"
         
-        reports_response = supabase.table('reports').select('*').order('created_at', desc=True).execute()
+        reports_response = supabase.table('reports').select('*, visit_chats(count)').order('created_at', desc=True).execute()
         reports = getattr(reports_response, 'data', []) or []
 
         total_cases = len(reports)
@@ -1325,7 +1385,7 @@ def lgu_analytics():
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "LGU Officer"
 
-        reports_response = supabase.table('reports').select('*').order('created_at', desc=True).execute()
+        reports_response = supabase.table('reports').select('*, visit_chats(count)').order('created_at', desc=True).execute()
         reports = getattr(reports_response, 'data', []) or []
 
         total_cases = len(reports)
@@ -1407,7 +1467,7 @@ def agriculturist_pending():
         
         # Pull reports in active workflow statuses from database
         reports_response = supabase.table("reports")\
-            .select("*")\
+            .select("*, visit_chats(count)")\
             .order("created_at", desc=True)\
             .execute()
             
@@ -1736,6 +1796,7 @@ def get_visit_discussion(report_id):
     return jsonify({
         'success': True,
         'messages': payload.get('messages', []),
+        'schedule': payload.get('schedule'),
         'schedule_stamp': payload.get('schedule_stamp', ''),
         'status': report_row.get('status') or '',
         'is_archived': is_archived,
@@ -1802,7 +1863,6 @@ def request_visit_reschedule(report_id):
             extra_updates={
                 'visit_reschedule_reason': reason,
                 'visit_rescheduled_at': datetime.now(UTC).isoformat(),
-                'visit_rescheduled_by': user_id,
             },
         )
         if getattr(update_response, 'error', None):
@@ -1844,14 +1904,37 @@ def agriculturist_finalize_visit_schedule():
             return jsonify({'success': False, 'message': 'Missing report reference'}), 400
         if not confirmed_date:
             return jsonify({'success': False, 'message': 'Please select a confirmed date.'}), 400
+            
+        try:
+            confirmed_dt = datetime.strptime(confirmed_date, "%Y-%m-%d").date()
+            if confirmed_dt < datetime.now().date():
+                return jsonify({'success': False, 'message': 'You cannot schedule a visit in the past.'}), 400
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Invalid date format.'}), 400
 
         existing_report_response = supabase.table('reports').select('visit_reschedule_reason').eq('id', report_id).execute()
         existing_report_row = (getattr(existing_report_response, 'data', None) or [{}])[0] if getattr(existing_report_response, 'data', None) else {}
         has_pending_reschedule = bool(str(existing_report_row.get('visit_reschedule_reason') or '').strip())
 
-        normalized_start, normalized_end = _validate_time_range(start_time, end_time)
+        try:
+            normalized_start, normalized_end = _validate_time_range(start_time, end_time)
+        except ValueError as e:
+            return jsonify({'success': False, 'message': str(e)}), 400
+
+        if confirmed_dt == datetime.now().date():
+            if datetime.strptime(normalized_start, "%H:%M:%S").time() < datetime.now().time():
+                return jsonify({'success': False, 'message': 'You cannot schedule a visit for a time that has already passed today.'}), 400
+
+        conflict_query = supabase.table('visit_schedules').select('start_time, end_time').eq('agriculturist_id', user_id).eq('confirmed_date', confirmed_date).execute()
+        conflict_rows = getattr(conflict_query, 'data', None) or []
+        for row in conflict_rows:
+            existing_start = _coerce_time_to_hhmmss(row.get('start_time'))
+            existing_end = _coerce_time_to_hhmmss(row.get('end_time'))
+            if existing_start and existing_end:
+                if (normalized_start < existing_end) and (normalized_end > existing_start):
+                    return jsonify({'success': False, 'message': 'You already have an overlapping schedule on this date and time.'}), 400
         schedule_label = _format_confirmed_schedule_label(confirmed_date, normalized_start, normalized_end)
-        schedule_message = f"{'New schedule confirmed' if has_pending_reschedule else 'Visit confirmed'} for {confirmed_date} from {normalized_start} to {normalized_end}."
+        schedule_message = f"{'New schedule confirmed' if has_pending_reschedule else 'Visit confirmed'}: {schedule_label.replace('Confirmed: ', '')}"
 
         schedule_insert_response = supabase.table('visit_schedules').insert({
             'report_id': report_id,
@@ -2056,12 +2139,12 @@ def agriculturist_complete_visit():
             return jsonify({'success': False, 'message': 'Please upload at least one visit image.'}), 400
 
         note = f"Visit completed: {visit_summary}"
-        update_response = _update_report_workflow(report_id, 'visit_completed', note=note)
+        update_response = _update_report_workflow(report_id, 'resolved', note=note)
         if getattr(update_response, 'error', None):
             logger.error(f"Visit completion update failed: {update_response.error}")
             return jsonify({'success': False, 'message': 'The visit completion note could not be saved.'}), 500
 
-        _persist_supporting_images(report_id, visit_files, uploaded_at=datetime.now(UTC).isoformat())
+        _persist_visit_images(report_id, visit_files, user_id, uploaded_at=datetime.now(UTC).isoformat())
         return jsonify({'success': True, 'message': 'Visit summary and images saved successfully.'})
     except Exception as e:
         logger.error(f"Error saving inspection completion: {str(e)}")

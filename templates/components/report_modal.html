@@ -221,7 +221,20 @@
             }
             .modal-card-head h4 {
                 margin: 0;
-            }
+            }        .modern-micro-upload-zone {
+            border: 2px dashed rgba(82, 130, 101, 0.2);
+            background-color: #f8faf9;
+            border-radius: 14px;
+            padding: 20px 16px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .modern-micro-upload-zone i { font-size: 1.35rem; color: #528265; }
+        .modern-micro-upload-zone span { font-size: 0.82rem; font-weight: 600; color: #102a43; }
+        .modern-micro-upload-zone p { font-size: 0.75rem; color: #64748b; }
         </style>
 
         <div class="modal-header-inline" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px;">
@@ -257,7 +270,7 @@
 
         <div class="premium-form-card" id="report-notes-card">
             <h4><i class="fa-solid fa-pen-to-square"></i> Farmer Notes</h4>
-            <textarea class="notes-input-box" id="field-notes-capture" placeholder="Write farmer notes here..."></textarea>
+            <textarea class="notes-input-box" id="field-notes-capture" placeholder="Describe what you observed on your coconut tree (e.g., yellowing leaves, damaged fruits, unusual insects, or other signs)."></textarea>
             <p id="report-notes-display" style="font-size: 0.88rem; color: var(--text-dark); line-height: 1.5; padding: 2px 0; display: none;">--</p>
         </div>
 
@@ -273,7 +286,7 @@
             <ul id="report-expert-list" class="expert-reco-clean-list"></ul>
             <p id="expert-assessment-issued-note" style="font-size:0.88rem; color:#475569; font-style:italic; margin:8px 0 0; display:none;">Expert assessment issued.</p>
             
-            <textarea id="expert-notes-input" class="notes-input-box" placeholder="Write expert assessment notes here..." style="display:none; margin-top: 12px;"></textarea>
+            <textarea id="expert-notes-input" class="notes-input-box" placeholder="Provide additional observations, clarifications, or recommendations based on your assessment of this report." style="display:none; margin-top: 12px;"></textarea>
             <p id="expert-notes-help" class="expert-notes-help-text" style="font-size:0.88rem; display:none;">Share assessment notes for the farmer using the Submit button.</p>
         </div>
 

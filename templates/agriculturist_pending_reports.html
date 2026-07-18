@@ -1080,6 +1080,11 @@
                 const statusLabel = formatWorkflowStatusLabel(item.status || "under_review");
                 const statusBadge = getWorkflowStatusBadgeStyle(item.status || "under_review");
 
+                const totalChats = item.chat_count || 0;
+                const readChats = parseInt(localStorage.getItem(`read_chats_${item.id}`) || '0');
+                const unreadCount = totalChats - readChats;
+                const unreadBadgeHTML = unreadCount > 0 ? `<span id="unread-badge-${item.id}" style="background-color: #ef4444; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); margin-right: auto;">${unreadCount} unread</span>` : '';
+
                 card.innerHTML = `
                     <div class="report-main-meta">
                             <h4>${highlightSearchText(String(item.pest || item.pest_type || ""), activeSearchQuery)}</h4>
@@ -1087,6 +1092,7 @@
                             <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(String(item.location || item.full_location || ""))}</div>
                     </div>
                     <div class="report-row-action" style="align-items:center; gap:10px;">
+                        ${unreadBadgeHTML}
                         <span class="status-badge-pill" style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-size:0.78rem; font-weight:700; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">
                             <i class="fa-solid fa-circle-dot"></i> ${escapeHtml(statusLabel)}
                         </span>
@@ -1148,6 +1154,11 @@
         }
 
         function openReviewModal(record) {
+            if (record.chat_count) {
+                localStorage.setItem(`read_chats_${record.id}`, record.chat_count);
+                const badge = document.getElementById(`unread-badge-${record.id}`);
+                if (badge) badge.style.display = 'none';
+            }
             selectedReportRecord = record;
             const payload = {
                 ...record,

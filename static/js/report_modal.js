@@ -394,7 +394,16 @@
 
         if (!items || items.length === 0) {
             const li = document.createElement("li");
-            if (showIcon) {
+            if (emptyText === "No expert recommendation available yet.") {
+                li.style.listStyle = "none";
+                li.style.margin = "0";
+                li.style.padding = "0";
+                li.innerHTML = `
+                <div style="background-color: #fffbeb; color: #92400e; padding: 12px 16px; border-radius: 8px; font-size: 0.92rem; margin-top: 4px; display: flex; align-items: center; gap: 10px; border: 1px solid #fcd34d;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.2rem; color:#d97706;"></i> 
+                    <span style="font-weight: 500;">${escapeHtml(emptyText)}</span>
+                </div>`;
+            } else if (showIcon) {
                 li.innerHTML = `<i class="fa-solid fa-circle-info" style="color: #d97706;"></i> <span>${escapeHtml(emptyText)}</span>`;
             } else {
                 li.textContent = emptyText;
@@ -661,12 +670,15 @@
                 return;
             }
             report.visitChats = Array.isArray(data.messages) ? data.messages : [];
+            report.schedule = data.schedule || null;
             report.visitScheduleStamp = data.schedule_stamp || "";
             report.visitArchived = Boolean(data.is_archived);
+            report.visitImages = Array.isArray(data.visit_images) ? data.visit_images : [];
+            report.visit_summary = data.report?.visit_summary || "";
             report.visitRescheduleReason = data.visit_reschedule_reason || "";
             report.visitRescheduledAt = data.visit_rescheduled_at || "";
             report.visitRescheduledBy = data.visit_rescheduled_by || "";
-            report.visitScheduleTitle = data.schedule_title || (report.visitRescheduleReason ? "New Schedule Confirmed" : "Visit Scheduled");
+            report.visitScheduleTitle = data.schedule_title || (report.visitRescheduleReason ? "Reschedule Requested" : "Visit Scheduled");
             report.status = data.status || report.status;
             if (report.status && typeof report.status === "string") {
                 report.status = report.status;
@@ -689,96 +701,102 @@
         const isAgriculturist = mode === "agriculturist";
         const chats = Array.isArray(report?.visitChats) ? report.visitChats : [];
         const statusLabel = getWorkflowStatusDisplayLabel(report?.status || "");
-        const scheduleTitle = report?.visitScheduleTitle || (report?.visitRescheduleReason ? "New Schedule Confirmed" : "Visit Scheduled");
+        const scheduleTitle = report?.visitScheduleTitle || (report?.visitRescheduleReason ? "Reschedule Requested" : "Visit Scheduled");
         const statusText = isArchived ? scheduleTitle : statusLabel;
         const messagePlaceholder = isAgriculturist ? "Type a message..." : "Type a message to reply...";
         const messageCount = chats.length;
         const messageLabel = `${messageCount} ${messageCount === 1 ? "message" : "messages"}`;
         const isExpanded = Boolean(report?.visitDiscussionExpanded);
 
+        const hasPendingReschedule = Boolean(report?.visitRescheduleReason);
+        const bannerStyle = hasPendingReschedule 
+            ? "background:#fffbeb; color:#b45309;" // Yellow/Orange
+            : "background:#ecfdf5; color:#065f46;"; // Green
+
         feedbackContainer.innerHTML = `
             <div style="display:grid; gap:16px; padding:16px 0;">
+
                <button id="visit-discussion-toggle" type="button"
-    aria-expanded="${isExpanded ? "true" : "false"}"
-    style="
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        width:100%;
-        padding:10px 14px;
-        border:1px solid #bfdbfe;
-        border-radius:999px;
-        background:#eff6ff;
-        color:#1d4ed8;
-        font-weight:700;
-        text-align:left;
-        cursor:pointer;
-        box-shadow:inset 0 1px 2px rgba(59,130,246,0.08);
-    ">
+                aria-expanded="${isExpanded ? "true" : "false"}"
+                style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:space-between;
+                    width:100%;
+                    padding:10px 14px;
+                    border:1px solid #bfdbfe;
+                    border-radius:999px;
+                    background:#eff6ff;
+                    color:#1d4ed8;
+                    font-weight:700;
+                    text-align:left;
+                    cursor:pointer;
+                    box-shadow:inset 0 1px 2px rgba(59,130,246,0.08);
+                ">
 
-    <!-- Left -->
-    <span style="
-        display:flex;
-        align-items:center;
-        gap:10px;
-        min-width:0;
-        flex:1;
-        white-space:nowrap;
-        overflow:hidden;
-    ">
+                <!-- Left -->
+                <span style="
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    min-width:0;
+                    flex:1;
+                    white-space:nowrap;
+                    overflow:hidden;
+                ">
 
-       <!-- Message Count -->
-        <span style="
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            width:24px;
-            height:24px;
-            border-radius:50%;
-            background:#dbeafe;
-            color:#2563eb;
-            border:1px solid #93c5fd;
-            font-size:0.85rem;
-            font-weight:700;
-            line-height:1;
-            flex-shrink:0;
-        ">
-            ${messageCount}
-        </span>
+                    <span style="
+                        display:inline-flex;
+                        align-items:center;
+                        justify-content:center;
+                        width:24px;
+                        height:24px;
+                        border-radius:50%;
+                        background:#dbeafe;
+                        color:#2563eb;
+                        border:1px solid #93c5fd;
+                        font-size:0.85rem;
+                        font-weight:700;
+                        line-height:1;
+                        flex-shrink:0;
+                    ">
+                        ${messageCount}
+                    </span>
 
-        <!-- Title -->
-        <span style="
-            font-size:0.90rem;
-            font-weight:600;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
-        ">
-            Visit Request Discussion
-        </span>
 
-    </span>
+                    <!-- Title -->
+                    <span style="
+                        font-size:0.90rem;
+                        font-weight:600;
+                        white-space:nowrap;
+                        overflow:hidden;
+                        text-overflow:ellipsis;
+                    ">
+                        Visit Request Discussion
+                    </span>
 
-    <!-- Chevron -->
-    <span style="
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        width:30px;
-        height:30px;
-        border-radius:50%;
-        background:#dbeafe;
-        color:#2563eb;
-        flex-shrink:0;
-        transform:rotate(${isExpanded ? 90 : 0}deg);
-        transition:transform .2s ease;
-    ">
-        <i class="fa-solid fa-chevron-right"></i>
-    </span>
+                </span>
 
-</button>
+                <!-- Chevron -->
+                <span style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    width:30px;
+                    height:30px;
+                    border-radius:50%;
+                    background:#dbeafe;
+                    color:#2563eb;
+                    flex-shrink:0;
+                    transform:rotate(${isExpanded ? 90 : 0}deg);
+                    transition:transform .2s ease;
+                ">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </span>
+
+            </button>
                 <div id="visit-discussion-body" style="display:${isExpanded ? "grid" : "none"}; gap:10px;">
-                    <div style="display:grid; gap:8px; padding:10px; border:1px solid #e2e8f0; border-radius:16px; background:#fff; max-height:320px; overflow-y:auto;">
+                    <div id="visit-discussion-messages-container" style="display:grid; gap:8px; padding:10px; border:1px solid #e2e8f0; border-radius:16px; background:#fff; max-height:320px; overflow-y:auto;">
                         ${chats.length ? chats.map((chat) => {
                             const isAgriculturistMessage = String(chat.sender_label || "").toLowerCase() === "agriculturist";
                             return `
@@ -802,7 +820,13 @@
                         </div>
                     `}
                 </div>
-                ${report?.visitScheduleStamp ? `<div style="padding:10px 12px; border-radius:14px; background:#ecfdf5; color:#065f46; font-size:0.92rem; font-weight:600;">${escapeHtml(scheduleTitle)}<br>${escapeHtml(report.visitScheduleStamp)}</div>` : ""}
+                ${report?.visitScheduleStamp ? `<div style="padding:10px 12px; border-radius:14px; ${bannerStyle} font-size:0.92rem; font-weight:600;">${escapeHtml(scheduleTitle)}<br>${escapeHtml(report.visitScheduleStamp)}</div>` : ""}
+                ${(hasPendingReschedule && !isArchived) ? `
+                    <div style="background:#eff6ff; color:#1e3a8a; padding:12px 14px; border-radius:8px; border:1px solid #bfdbfe; font-size:0.9rem; display:flex; align-items:center; gap:10px; font-family: sans-serif;">
+                        <strong>Tip:</strong> Click the "Visit Request Discussion" button to chat and finalize a new date and time.
+                    </div>
+                ` : ""}
+                ${(hasPendingReschedule && isAgriculturist) ? `<button type="button" id="visit-discussion-finalize-btn" class="btn-control submit-primary" style="justify-self:start; margin-top:4px;">Finalize Schedule</button>` : ""}
                 ${isArchived ? `<div style="font-size:0.9rem; color:#475569; line-height:1.5;">The scheduling discussion has been closed.</div>` : ""}
                 ${isArchived ? `<button type="button" id="request-reschedule-btn" class="btn-control submit-primary" style="justify-self:start;">Request Reschedule</button>` : ""}
             </div>`;
@@ -815,14 +839,43 @@
             });
         }
 
+        const finalizeBtn = feedbackContainer.querySelector('#visit-discussion-finalize-btn');
+        if (finalizeBtn) {
+            finalizeBtn.addEventListener('click', () => {
+                openFinalizeVisitScheduleModal(report);
+            });
+        }
+
         const sendButton = feedbackContainer.querySelector('#visit-discussion-send-btn');
         if (sendButton) {
             sendButton.addEventListener('click', async () => {
-                const message = feedbackContainer.querySelector('#visit-discussion-input')?.value?.trim() || "";
+                const messageInput = feedbackContainer.querySelector('#visit-discussion-input');
+                const message = messageInput?.value?.trim() || "";
                 if (!message) {
                     alert("Please type a message before sending.");
                     return;
                 }
+                
+                // Disable button and input to prevent double sending
+                sendButton.disabled = true;
+                sendButton.textContent = "Sending...";
+                messageInput.disabled = true;
+
+                // Save scroll position of the modal wrapper to prevent jumping
+                const modalRoot = getModalRoot();
+                let scrollContainer = modalRoot;
+                if (modalRoot) {
+                    const descendants = modalRoot.querySelectorAll('*');
+                    for (const el of descendants) {
+                        const style = getComputedStyle(el);
+                        if (el.scrollHeight > el.clientHeight && (style.overflowY === 'auto' || style.overflowY === 'scroll')) {
+                            scrollContainer = el;
+                            break;
+                        }
+                    }
+                }
+                const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+
                 try {
                     const response = await fetch(`/reports/${report.id}/visit-chat`, {
                         method: "POST",
@@ -832,12 +885,36 @@
                     const data = await response.json().catch(() => ({}));
                     if (!response.ok || !data.success) {
                         alert(data.message || "The message could not be saved.");
+                        sendButton.disabled = false;
+                        sendButton.textContent = "Send";
+                        messageInput.disabled = false;
                         return;
                     }
                     await loadVisitDiscussion(report);
                     renderWorkflowActions(currentReportModalMode, report);
+                    
+                    if (scrollContainer) {
+                        requestAnimationFrame(() => {
+                            scrollContainer.scrollTop = savedScrollTop;
+                        });
+                    }
                 } catch (error) {
                     alert("The message could not be sent right now.");
+                    sendButton.disabled = false;
+                    sendButton.textContent = "Send";
+                    messageInput.disabled = false;
+                }
+            });
+        }
+        
+        const messageInput = feedbackContainer.querySelector('#visit-discussion-input');
+        if (messageInput && sendButton) {
+            messageInput.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!sendButton.disabled) {
+                        sendButton.click();
+                    }
                 }
             });
         }
@@ -850,6 +927,13 @@
         const requestRescheduleButton = feedbackContainer.querySelector('#request-reschedule-btn');
         if (requestRescheduleButton) {
             requestRescheduleButton.addEventListener('click', () => openRequestRescheduleModal(report));
+        }
+
+        const messagesContainer = feedbackContainer.querySelector('#visit-discussion-messages-container');
+        if (messagesContainer && isExpanded) {
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 10);
         }
 
         if (workflowInput) {
@@ -981,11 +1065,35 @@
                     </label>
                     <label style="display:grid; gap:8px; font-size:0.96rem; color:#334155;">
                         <span style="font-weight:700;">Start Time</span>
-                        <input id="visit-start-time" type="time" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px;">
+                        <select id="visit-start-time" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px; background-color:#fff;">
+                            <option value="" disabled selected>Select start time</option>
+                            <option value="08:00">8:00 AM</option><option value="08:30">8:30 AM</option>
+                            <option value="09:00">9:00 AM</option><option value="09:30">9:30 AM</option>
+                            <option value="10:00">10:00 AM</option><option value="10:30">10:30 AM</option>
+                            <option value="11:00">11:00 AM</option><option value="11:30">11:30 AM</option>
+                            <option value="12:00">12:00 PM</option><option value="12:30">12:30 PM</option>
+                            <option value="13:00">1:00 PM</option><option value="13:30">1:30 PM</option>
+                            <option value="14:00">2:00 PM</option><option value="14:30">2:30 PM</option>
+                            <option value="15:00">3:00 PM</option><option value="15:30">3:30 PM</option>
+                            <option value="16:00">4:00 PM</option><option value="16:30">4:30 PM</option>
+                            <option value="17:00">5:00 PM</option>
+                        </select>
                     </label>
                     <label style="display:grid; gap:8px; font-size:0.96rem; color:#334155;">
                         <span style="font-weight:700;">End Time</span>
-                        <input id="visit-end-time" type="time" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px;">
+                        <select id="visit-end-time" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px; background-color:#fff;">
+                            <option value="" disabled selected>Select end time</option>
+                            <option value="08:00">8:00 AM</option><option value="08:30">8:30 AM</option>
+                            <option value="09:00">9:00 AM</option><option value="09:30">9:30 AM</option>
+                            <option value="10:00">10:00 AM</option><option value="10:30">10:30 AM</option>
+                            <option value="11:00">11:00 AM</option><option value="11:30">11:30 AM</option>
+                            <option value="12:00">12:00 PM</option><option value="12:30">12:30 PM</option>
+                            <option value="13:00">1:00 PM</option><option value="13:30">1:30 PM</option>
+                            <option value="14:00">2:00 PM</option><option value="14:30">2:30 PM</option>
+                            <option value="15:00">3:00 PM</option><option value="15:30">3:30 PM</option>
+                            <option value="16:00">4:00 PM</option><option value="16:30">4:30 PM</option>
+                            <option value="17:00">5:00 PM</option>
+                        </select>
                     </label>
                 </div>
                 <button type="button" id="visit-schedule-save-btn" class="btn-control submit-primary" style="width:100%; padding:16px 20px; border-radius:14px;">Save Schedule</button>
@@ -1047,10 +1155,19 @@
         if (workflowFormFields) {
             workflowFormFields.innerHTML = "";
         }
+        const existingWarning = document.getElementById("visit-scheduled-warning-banner");
+        if (existingWarning) existingWarning.remove();
+        const existingNotesLabel = document.getElementById("visit-scheduled-notes-label");
+        if (existingNotesLabel) existingNotesLabel.remove();
         if (workflowInput) {
             workflowInput.value = "";
+            workflowInput.disabled = false;
             workflowInput.style.display = "block";
             workflowInput.placeholder = "Add notes, a reason, availability, or the selected schedule...";
+        }
+        const workflowHeader = workflowCard.querySelector('h4');
+        if (workflowHeader) {
+            workflowHeader.innerHTML = '<i class="fa-solid fa-route"></i> Workflow Actions';
         }
 
         const actions = [];
@@ -1070,7 +1187,10 @@
 
         if (isVisitDiscussionState) {
             renderVisitDiscussionCard(mode, report);
-            return;
+            // Allow the agriculturist to see the workflow actions to complete the scheduled visit
+            if (mode === "farmer" || normalizedStatus !== "visit_scheduled") {
+                return;
+            }
         }
 
         if (mode === "agriculturist") {
@@ -1160,48 +1280,81 @@
                     if (feedbackCard) setDisplay(feedbackCard, true, 'block');
                 }
             } else if (normalizedStatus === "visit_scheduled") {
+                if (workflowHeader) {
+                    workflowHeader.innerHTML = '<i class="fa-solid fa-list-check"></i> Visit Summary';
+                }
+                let isVisitTimePassed = true;
+                if (report.schedule && report.schedule.confirmed_date) {
+                    const endTime = report.schedule.end_time || '23:59:59';
+                    const scheduledEndTime = new Date(`${report.schedule.confirmed_date}T${endTime}`);
+                    if (new Date() < scheduledEndTime) {
+                        isVisitTimePassed = false;
+                    }
+                }
+                const disabledReason = "You can only complete the visit after the scheduled time has passed.";
+                
                 actions.push({
                     label: "Complete Visit",
                     icon: "fa-solid fa-circle-check",
                     action: "complete-visit",
-                    help: "Record the visit summary and upload one or more visit images.",
+                    help: "Provide a summary and upload images to complete this record.",
+                    disabled: !isVisitTimePassed,
+                    disabledReason: disabledReason
                 });
                 if (workflowInput) {
-                    workflowInput.placeholder = "Enter the visit summary and findings...";
+                    workflowInput.placeholder = "Enter your visit summary notes here...";
+                    workflowInput.disabled = !isVisitTimePassed;
+                    workflowInput.style.backgroundColor = isVisitTimePassed ? "" : "#f1f5f9";
+                    workflowInput.style.display = "block";
+                    
+                    let warningHtml = '';
+                    if (!isVisitTimePassed) {
+                        warningHtml = `
+                        <div id="visit-scheduled-warning-banner" style="background-color: #fffbeb; color: #92400e; padding: 12px 16px; border-radius: 8px; font-size: 0.92rem; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; border: 1px solid #fcd34d;">
+                            <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.2rem;"></i> 
+                            <span style="font-weight: 500;">You can only complete the visit after the scheduled time has passed.</span>
+                        </div>`;
+                    }
+                    const labelHtml = `<label id="visit-scheduled-notes-label" style="font-size:0.9rem; font-weight:600; color:#334155; display:block; margin-bottom:8px;">Notes</label>`;
+                    workflowInput.insertAdjacentHTML('beforebegin', warningHtml + labelHtml);
                 }
                 if (workflowFormFields) {
                     workflowFormFields.innerHTML = `
                         <div style="display:grid; gap:10px;">
-                            <label style="font-size:0.9rem; font-weight:600; color:#334155;">Visit images</label>
-                            <input id="workflow-visit-images" type="file" accept="image/*" multiple style="min-height:auto; padding:12px 14px;">
+                            <label style="font-size:0.9rem; font-weight:600; color:#334155;">Visit Images</label>
+                            <div class="modern-micro-upload-zone" onclick="${isVisitTimePassed ? "this.querySelector('input').click()" : ""}" style="${isVisitTimePassed ? 'cursor:pointer;' : 'cursor:not-allowed; opacity:0.6;'}">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>Upload Visit Images</span>
+                                <p>Tap to open your phone gallery directory</p>
+                                <input id="workflow-visit-images" type="file" accept="image/*" multiple style="display:none;" ${!isVisitTimePassed ? 'disabled' : ''} onchange="
+                                    const files = this.files;
+                                    const txt = this.parentElement.querySelector('p');
+                                    if (files.length) txt.textContent = files.length + ' file(s) selected';
+                                    else txt.textContent = 'Tap to open your phone gallery directory';
+                                ">
+                            </div>
                         </div>`;
                 }
-            } else if (normalizedStatus === "visit_completed") {
-                actions.push({
-                    label: "Submit Final Remarks",
-                    icon: "fa-solid fa-comment-dots",
-                    action: "submit-final-remarks",
-                    help: "Submit the final remarks and optional notes for closure.",
-                });
+            } else if (normalizedStatus === "resolved" && report.visit_summary) {
+                if (workflowHeader) {
+                    workflowHeader.innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Visit Summary';
+                }
                 if (workflowInput) {
-                    workflowInput.placeholder = "Enter the final remarks for the report...";
+                    setDisplay(workflowInput, false);
                 }
                 if (workflowFormFields) {
-                    workflowFormFields.innerHTML = `
-                        <div style="display:grid; gap:10px;">
-                            <label style="font-size:0.9rem; font-weight:600; color:#334155;">Additional notes</label>
-                            <textarea id="workflow-additional-notes" class="notes-input-box" placeholder="Add any optional follow-up notes..." style="min-height:90px;"></textarea>
-                        </div>`;
-                }
-            } else if (normalizedStatus === "final_remarks_issued") {
-                actions.push({
-                    label: "Mark as Resolved",
-                    icon: "fa-solid fa-check-double",
-                    action: "mark-resolved",
-                    help: "Close the case after the final remarks are issued.",
-                });
-                if (workflowInput) {
-                    workflowInput.placeholder = "Optional closing note for the case...";
+                    const visitSummaryHtml = `
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:16px;">
+                            <h5 style="margin:0 0 8px 0; font-size:0.95rem; color:#0f172a; font-weight:600;">Visit Summary</h5>
+                            <p style="margin:0; font-size:0.9rem; color:#475569; line-height:1.5;">${escapeHTML(report.visit_summary)}</p>
+                            ${(report.visitImages && report.visitImages.length > 0) ? `
+                                <div style="display:flex; gap:8px; overflow-x:auto; margin-top:12px; padding-bottom:4px;">
+                                    ${report.visitImages.map(url => `<img src="${url}" style="height:80px; width:120px; object-fit:cover; border-radius:8px; border:1px solid #cbd5e1; cursor:pointer;" onclick="window.open('${url}', '_blank')">`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                    workflowFormFields.innerHTML = visitSummaryHtml;
                 }
             }
         } else if (mode === "farmer") {
@@ -1267,9 +1420,27 @@
                     const scheduleDisplay = Array.isArray(report.farmerSchedules) && report.farmerSchedules.length
                         ? `<div style="display:grid; gap:6px; padding-top:8px;">${report.farmerSchedules.map(s => `<div style="font-size:0.95rem; color:#0f172a;">• ${escapeHtml(s.display)}</div>`).join("")}</div>`
                         : "";
+                        
+                    let visitSummaryBlock = "";
+                    if (normalizedStatus === "resolved" && report.visit_summary) {
+                        visitSummaryBlock = `
+                            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-top:12px;">
+                                <h5 style="margin:0 0 8px 0; font-size:0.95rem; color:#0f172a; font-weight:600;">Visit Summary</h5>
+                                <p style="margin:0; font-size:0.9rem; color:#475569; line-height:1.5;">${escapeHTML(report.visit_summary)}</p>
+                                ${(report.visitImages && report.visitImages.length > 0) ? `
+                                    <div style="display:flex; gap:8px; overflow-x:auto; margin-top:12px; padding-bottom:4px;">
+                                        ${report.visitImages.map(url => `<img src="${url}" style="height:80px; width:120px; object-fit:cover; border-radius:8px; border:1px solid #cbd5e1; cursor:pointer;" onclick="window.open('${url}', '_blank')">`).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+                    
                     const message = normalizedStatus === "visit_requested"
                         ? `<p style="font-size:0.92rem; color:#334155; margin:0;">Your visit request was submitted successfully. The agriculturist will review your preferred schedules.</p>${reasonDisplay}${scheduleDisplay}`
-                        : `<p style="font-size:0.92rem; color:#334155; margin:0;">Thank you! You confirmed the assessment resolved your issue.</p>`;
+                        : (report.visit_summary 
+                            ? `<p style="font-size:0.92rem; color:#334155; margin:0;">The agriculturist has completed the visit and marked the issue as resolved.</p>${visitSummaryBlock}` 
+                            : `<p style="font-size:0.92rem; color:#334155; margin:0;">Thank you! You confirmed the assessment resolved your issue.</p>`);
                     feedbackContainer.innerHTML = `
                         <div style="margin-top:10px; padding:12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; display:grid; gap:12px;">
                             ${message}
@@ -1292,7 +1463,11 @@
         }
 
         if (actions.length === 0) {
-            setDisplay(workflowCard, false, "block");
+            if (normalizedStatus === "resolved" && report.visit_summary) {
+                setDisplay(workflowCard, true, "block");
+            } else {
+                setDisplay(workflowCard, false, "block");
+            }
             return;
         }
 
@@ -1303,7 +1478,16 @@
             button.type = "button";
             button.className = "btn-control submit-primary";
             button.innerHTML = `<i class="${action.icon}"></i> ${action.label}`;
-            button.onclick = () => submitWorkflowAction(action.action);
+            if (action.disabled) {
+                button.disabled = true;
+                button.style.backgroundColor = "#cbd5e1";
+                button.style.color = "#475569";
+                button.innerHTML = action.label;
+                button.style.cursor = "not-allowed";
+                button.title = action.disabledReason || "This action is currently disabled.";
+            } else {
+                button.onclick = () => submitWorkflowAction(action.action);
+            }
             workflowButtons.appendChild(button);
         });
 
@@ -1350,7 +1534,17 @@
 
                 <label style="display:grid; gap:4px; font-size:0.9rem; color:#334155;">
                     <span style="font-weight:500;">Time</span>
-                    <input type="time" class="farmer-schedule-time schedule-input" value="${escapeHtml(timeVal)}">
+                    <select class="farmer-schedule-time schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px; background-color:#fff;">
+                        <option value="" disabled ${!timeVal ? "selected" : ""}>Select time</option>
+                        ${['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'].map(val => {
+                            let h = parseInt(val.substring(0, 2), 10);
+                            let ampm = h < 12 ? 'AM' : 'PM';
+                            let h12 = h <= 12 ? h : h - 12;
+                            if (h12 === 0) h12 = 12;
+                            let display = h12 + val.substring(2) + ' ' + ampm;
+                            return `<option value="${val}" ${timeVal === val ? "selected" : ""}>${display}</option>`;
+                        }).join('')}
+                    </select>
                 </label>
             </div>
             <button type="button" class="btn-control cancel-secondary remove-schedule-btn" style="min-height:36px; padding:10px 12px; white-space:nowrap; width:100%; margin-top:8px;">Remove</button>
@@ -1581,8 +1775,9 @@
                     alert(data.message || "The visit summary could not be saved.");
                     return;
                 }
-                report.status = "visit_completed";
+                report.status = "resolved";
                 applyStatusStyle(report);
+                await loadVisitDiscussion(report);
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "Visit details saved.");
             } catch (error) {
