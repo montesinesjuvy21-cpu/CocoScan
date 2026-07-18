@@ -388,20 +388,28 @@
         setReportModalSubmissionState(false);
     }
 
-    function renderList(node, items, emptyText) {
+    function renderList(node, items, emptyText, showIcon = true) {
         if (!node) return;
         node.innerHTML = "";
 
         if (!items || items.length === 0) {
             const li = document.createElement("li");
-            li.innerHTML = `<i class="fa-solid fa-circle-info" style="color: #d97706;"></i> <span>${escapeHtml(emptyText)}</span>`;
+            if (showIcon) {
+                li.innerHTML = `<i class="fa-solid fa-circle-info" style="color: #d97706;"></i> <span>${escapeHtml(emptyText)}</span>`;
+            } else {
+                li.textContent = emptyText;
+            }
             node.appendChild(li);
             return;
         }
 
         items.forEach((item) => {
             const li = document.createElement("li");
-            li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${escapeHtml(item)}</span>`;
+            if (showIcon) {
+                li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${escapeHtml(item)}</span>`;
+            } else {
+                li.textContent = String(item ?? "");
+            }
             node.appendChild(li);
         });
     }
@@ -607,7 +615,7 @@
                 report.expertRecommendations = [];
             }
             report.expertRecommendations.push(assessment);
-            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.");
+            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.", false);
             applyStatusStyle(report);
             renderWorkflowActions(currentReportModalMode, report);
             // Refresh lists on the page if available and close modal for agriculturists
@@ -655,6 +663,10 @@
             report.visitChats = Array.isArray(data.messages) ? data.messages : [];
             report.visitScheduleStamp = data.schedule_stamp || "";
             report.visitArchived = Boolean(data.is_archived);
+            report.visitRescheduleReason = data.visit_reschedule_reason || "";
+            report.visitRescheduledAt = data.visit_rescheduled_at || "";
+            report.visitRescheduledBy = data.visit_rescheduled_by || "";
+            report.visitScheduleTitle = data.schedule_title || (report.visitRescheduleReason ? "New Schedule Confirmed" : "Visit Scheduled");
             report.status = data.status || report.status;
             if (report.status && typeof report.status === "string") {
                 report.status = report.status;
@@ -673,45 +685,135 @@
             return;
         }
 
-        const isArchived = Boolean(report?.visitArchived) || getStatusKey(report?.status || "") === "visit_scheduled";
+        const isArchived = Boolean(report?.visitArchived);
         const isAgriculturist = mode === "agriculturist";
         const chats = Array.isArray(report?.visitChats) ? report.visitChats : [];
         const statusLabel = getWorkflowStatusDisplayLabel(report?.status || "");
-        const statusText = isArchived ? "Visit Scheduled" : statusLabel;
+        const scheduleTitle = report?.visitScheduleTitle || (report?.visitRescheduleReason ? "New Schedule Confirmed" : "Visit Scheduled");
+        const statusText = isArchived ? scheduleTitle : statusLabel;
         const messagePlaceholder = isAgriculturist ? "Type a message..." : "Type a message to reply...";
+        const messageCount = chats.length;
+        const messageLabel = `${messageCount} ${messageCount === 1 ? "message" : "messages"}`;
+        const isExpanded = Boolean(report?.visitDiscussionExpanded);
 
         feedbackContainer.innerHTML = `
-            <div style="display:grid; gap:14px; padding:6px 0;">
-                <div style="display:grid; gap:8px;">
-                    <div style="font-size:0.95rem; font-weight:700; color:#102a43;">Visit Request Discussion</div>
-                    <div style="display:grid; gap:6px; padding:12px 14px; border:1px solid #e2e8f0; border-radius:14px; background:#f8fafc;">
-                        ${chats.length ? chats.map((chat) => `
-                            <div style="display:grid; gap:4px; padding:8px 10px; border-radius:12px; background:#fff; border:1px solid #e2e8f0;">
-                                <div style="display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap;">
-                                    <strong style="font-size:0.9rem; color:#0f172a;">${escapeHtml(chat.sender_label || "Farmer")}</strong>
-                                    <span style="font-size:0.77rem; color:#64748b;">${escapeHtml(formatVisitChatTimestamp(chat.created_at) || "Just now")}</span>
-                                </div>
-                                <div style="font-size:0.9rem; color:#334155; line-height:1.55;">${escapeHtml(chat.message || "")}</div>
+            <div style="display:grid; gap:16px; padding:16px 0;">
+               <button id="visit-discussion-toggle" type="button"
+    aria-expanded="${isExpanded ? "true" : "false"}"
+    style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        width:100%;
+        padding:10px 14px;
+        border:1px solid #bfdbfe;
+        border-radius:999px;
+        background:#eff6ff;
+        color:#1d4ed8;
+        font-weight:700;
+        text-align:left;
+        cursor:pointer;
+        box-shadow:inset 0 1px 2px rgba(59,130,246,0.08);
+    ">
+
+    <!-- Left -->
+    <span style="
+        display:flex;
+        align-items:center;
+        gap:10px;
+        min-width:0;
+        flex:1;
+        white-space:nowrap;
+        overflow:hidden;
+    ">
+
+       <!-- Message Count -->
+        <span style="
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:24px;
+            height:24px;
+            border-radius:50%;
+            background:#dbeafe;
+            color:#2563eb;
+            border:1px solid #93c5fd;
+            font-size:0.85rem;
+            font-weight:700;
+            line-height:1;
+            flex-shrink:0;
+        ">
+            ${messageCount}
+        </span>
+
+        <!-- Title -->
+        <span style="
+            font-size:0.90rem;
+            font-weight:600;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        ">
+            Visit Request Discussion
+        </span>
+
+    </span>
+
+    <!-- Chevron -->
+    <span style="
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        width:30px;
+        height:30px;
+        border-radius:50%;
+        background:#dbeafe;
+        color:#2563eb;
+        flex-shrink:0;
+        transform:rotate(${isExpanded ? 90 : 0}deg);
+        transition:transform .2s ease;
+    ">
+        <i class="fa-solid fa-chevron-right"></i>
+    </span>
+
+</button>
+                <div id="visit-discussion-body" style="display:${isExpanded ? "grid" : "none"}; gap:10px;">
+                    <div style="display:grid; gap:8px; padding:10px; border:1px solid #e2e8f0; border-radius:16px; background:#fff; max-height:320px; overflow-y:auto;">
+                        ${chats.length ? chats.map((chat) => {
+                            const isAgriculturistMessage = String(chat.sender_label || "").toLowerCase() === "agriculturist";
+                            return `
+                                <div style="display:flex; justify-content:${isAgriculturistMessage ? "flex-end" : "flex-start"};">
+                                    <div style="max-width:82%; display:grid; gap:4px;">
+                                        <div style="font-size:0.74rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.04em; padding:${isAgriculturistMessage ? "0 0 0 8px" : "0 8px 0 0"};">${escapeHtml(chat.sender_label || "Farmer")}</div>
+                                        <div style="padding:10px 12px; border-radius:16px; background:${isAgriculturistMessage ? "#ecfdf5" : "#f8fafc"}; color:#0f172a; box-shadow:0 1px 2px rgba(15,23,42,0.06);">
+                                            <div style="font-size:0.9rem; line-height:1.5;">${escapeHtml(chat.message || "")}</div>
+                                            <div style="margin-top:6px; font-size:0.72rem; color:#64748b;">${escapeHtml(formatVisitChatTimestamp(chat.created_at) || "Just now")}</div>
+                                        </div>
+                                    </div>
+                                </div>`;
+                        }).join("") : '<div style="font-size:0.9rem; color:#64748b;">No discussion messages yet.</div>'}
+                    </div>
+                    ${isArchived ? "" : `
+                        <div style="display:grid; gap:10px;">
+                            <textarea id="visit-discussion-input" class="notes-input-box" placeholder="${escapeHtml(messagePlaceholder)}" style="min-height:84px;"></textarea>
+                            <div style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+                                <button type="button" id="visit-discussion-send-btn" class="btn-control submit-primary">Send</button>
                             </div>
-                        `).join("") : '<div style="font-size:0.9rem; color:#64748b;">No discussion messages yet.</div>'}
-                    </div>
-                    ${report?.visitScheduleStamp ? `<div style="padding:12px 14px; border-radius:12px; background:#ecfdf5; color:#065f46; font-size:0.92rem; font-weight:600;">${escapeHtml(report.visitScheduleStamp)}</div>` : ""}
-                </div>
-                ${isArchived ? `<div style="padding:12px 14px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; color:#475569; font-size:0.9rem;">The visit schedule is locked and this conversation is now archived.</div>` : `
-                    <div style="display:grid; gap:10px;">
-                        <textarea id="visit-discussion-input" class="notes-input-box" placeholder="${escapeHtml(messagePlaceholder)}" style="min-height:90px;"></textarea>
-                        <div style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
-                            <button type="button" id="visit-discussion-send-btn" class="btn-control submit-primary">Send</button>
                         </div>
-                    </div>
-                `}
-                <div style="border-top:1px solid #e2e8f0; padding-top:10px; display:grid; gap:10px;">
-                    <div style="font-size:0.95rem; font-weight:700; color:#102a43;">${isAgriculturist ? "Scheduling Action" : "Schedule Status"}</div>
-                    <div style="font-size:0.92rem; color:#475569;">Status: ${escapeHtml(statusText)}</div>
-                    ${isAgriculturist && !isArchived ? `<button type="button" id="confirm-visit-schedule-btn" class="btn-control submit-primary" style="justify-self:start;">Confirm Visit Schedule</button>` : ""}
-                    ${!isAgriculturist && !isArchived ? `<div style="font-size:0.88rem; color:#64748b;">The agriculturist will lock the date once you agree on a time.</div>` : ""}
+                    `}
                 </div>
+                ${report?.visitScheduleStamp ? `<div style="padding:10px 12px; border-radius:14px; background:#ecfdf5; color:#065f46; font-size:0.92rem; font-weight:600;">${escapeHtml(scheduleTitle)}<br>${escapeHtml(report.visitScheduleStamp)}</div>` : ""}
+                ${isArchived ? `<div style="font-size:0.9rem; color:#475569; line-height:1.5;">The scheduling discussion has been closed.</div>` : ""}
+                ${isArchived ? `<button type="button" id="request-reschedule-btn" class="btn-control submit-primary" style="justify-self:start;">Request Reschedule</button>` : ""}
             </div>`;
+
+        const toggleButton = feedbackContainer.querySelector('#visit-discussion-toggle');
+        if (toggleButton) {
+            toggleButton.addEventListener('click', () => {
+                report.visitDiscussionExpanded = !Boolean(report.visitDiscussionExpanded);
+                renderVisitDiscussionCard(mode, report);
+            });
+        }
 
         const sendButton = feedbackContainer.querySelector('#visit-discussion-send-btn');
         if (sendButton) {
@@ -745,6 +847,11 @@
             confirmButton.addEventListener('click', () => openFinalizeVisitScheduleModal(report));
         }
 
+        const requestRescheduleButton = feedbackContainer.querySelector('#request-reschedule-btn');
+        if (requestRescheduleButton) {
+            requestRescheduleButton.addEventListener('click', () => openRequestRescheduleModal(report));
+        }
+
         if (workflowInput) {
             workflowInput.value = "";
             setDisplay(workflowInput, false);
@@ -753,6 +860,96 @@
             setDisplay(workflowCard, false, "block");
         }
         setDisplay(feedbackCard, true, "block");
+    }
+
+    function openRequestRescheduleModal(report) {
+        const existingModal = document.getElementById("visit-reschedule-mini-modal");
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modal = document.createElement("div");
+        modal.id = "visit-reschedule-mini-modal";
+        modal.style.position = "fixed";
+        modal.style.inset = "0";
+        modal.style.background = "rgba(15, 23, 42, 0.48)";
+        modal.style.display = "flex";
+        modal.style.alignItems = "center";
+        modal.style.justifyContent = "center";
+        modal.style.padding = "20px";
+        modal.style.zIndex = "4000";
+        modal.innerHTML = `
+            <div style="width:min(100%, 430px); background:#fff; border-radius:20px; box-shadow:0 20px 50px rgba(15,23,42,0.22); padding:28px; display:grid; gap:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:14px;">
+                    <div style="font-size:1.05rem; font-weight:700; color:#102a43;">Request Reschedule</div>
+                    <button type="button" id="visit-reschedule-modal-close" class="btn-control cancel-secondary" style="width: auto; min-height: 34px; padding: 8px 12px; border-radius: 999px; background: #dc2626; color: #ffffff; border: 1px solid #dc2626; box-shadow: none;">Close</button>
+                </div>
+                <div style="display:grid; gap:14px;">
+                    <label style="display:grid; gap:10px; font-size:0.98rem; color:#334155;">
+                        <span style="font-weight:700;">Reason</span>
+                        <select id="visit-reschedule-reason" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; height:48px; line-height:20px; box-sizing:border-box; font-size:1rem;">
+                            <option value="Emergency">Emergency</option>
+                            <option value="Bad weather">Bad weather</option>
+                            <option value="Personal conflict">Personal conflict</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </label>
+                    <div id="visit-reschedule-other-wrapper" style="display:none;">
+                        <label style="display:grid; gap:10px; font-size:0.98rem; color:#334155;">
+                            <span style="font-weight:700;">Reason Details</span>
+                            <textarea id="visit-reschedule-other-details" class="notes-input-box" placeholder="Add more details..." style="min-height:140px; padding:18px;"></textarea>
+                        </label>
+                    </div>
+                </div>
+                <button type="button" id="visit-reschedule-save-btn" class="btn-control submit-primary" style="width:100%; padding:16px 20px; border-radius:14px;">Submit Request</button>
+            </div>`;
+        document.body.appendChild(modal);
+
+        const reasonSelect = modal.querySelector('#visit-reschedule-reason');
+        const otherWrapper = modal.querySelector('#visit-reschedule-other-wrapper');
+        const toggleOtherInput = () => {
+            if (otherWrapper) {
+                otherWrapper.style.display = reasonSelect?.value === 'Other' ? 'block' : 'none';
+            }
+        };
+        reasonSelect?.addEventListener('change', toggleOtherInput);
+        toggleOtherInput();
+
+        modal.querySelector('#visit-reschedule-modal-close')?.addEventListener('click', () => modal.remove());
+        modal.querySelector('#visit-reschedule-save-btn')?.addEventListener('click', async () => {
+            const reason = reasonSelect?.value || "";
+            const details = modal.querySelector('#visit-reschedule-other-details')?.value?.trim() || "";
+            if (reason === 'Other' && !details) {
+                alert("Please provide reason details for 'Other'.");
+                return;
+            }
+            const finalReason = reason === 'Other' ? `${reason}: ${details}` : reason;
+            if (!finalReason) {
+                alert("Please select a reason before submitting the reschedule request.");
+                return;
+            }
+            try {
+                const response = await fetch(`/reports/${report.id}/request-reschedule`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reason: finalReason }),
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    alert(data.message || "The reschedule request could not be submitted.");
+                    return;
+                }
+                report.visitArchived = false;
+                report.visitDiscussionExpanded = true;
+                report.visitScheduleTitle = "Visit Scheduled";
+                await loadVisitDiscussion(report);
+                renderWorkflowActions(currentReportModalMode, report);
+                modal.remove();
+                alert(data.message || "Reschedule request submitted.");
+            } catch (error) {
+                alert("The reschedule request could not be submitted right now.");
+            }
+        });
     }
 
     function openFinalizeVisitScheduleModal(report) {
@@ -772,26 +969,26 @@
         modal.style.padding = "20px";
         modal.style.zIndex = "4000";
         modal.innerHTML = `
-            <div style="width:min(100%, 430px); background:#fff; border-radius:18px; box-shadow:0 20px 50px rgba(15,23,42,0.22); padding:22px; display:grid; gap:14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                    <div style="font-size:1rem; font-weight:700; color:#102a43;">Finalize Visit Schedule</div>
-                    <button type="button" id="visit-schedule-modal-close" class="btn-control cancel-secondary" style="padding:8px 12px;">Close</button>
+            <div style="width:min(100%, 430px); background:#fff; border-radius:18px; box-shadow:0 20px 50px rgba(15,23,42,0.22); padding:28px; display:grid; gap:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:14px;">
+                    <div style="font-size:1.05rem; font-weight:700; color:#102a43;">Finalize Visit Schedule</div>
+                    <button type="button" id="visit-schedule-modal-close" class="btn-control cancel-secondary" style="width: auto; min-height: 34px; padding: 8px 12px; border-radius: 999px; background: #dc2626; color: #ffffff; border: 1px solid #dc2626; box-shadow: none;">Close</button>
                 </div>
-                <div style="display:grid; gap:10px;">
-                    <label style="display:grid; gap:6px; font-size:0.9rem; color:#334155;">
-                        <span style="font-weight:600;">Select the agreed date</span>
-                        <input id="visit-confirmed-date" type="date" class="schedule-input">
+                <div style="display:grid; gap:14px;">
+                    <label style="display:grid; gap:8px; font-size:0.96rem; color:#334155;">
+                        <span style="font-weight:700;">Select the agreed date</span>
+                        <input id="visit-confirmed-date" type="date" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px;">
                     </label>
-                    <label style="display:grid; gap:6px; font-size:0.9rem; color:#334155;">
-                        <span style="font-weight:600;">Start Time</span>
-                        <input id="visit-start-time" type="time" class="schedule-input">
+                    <label style="display:grid; gap:8px; font-size:0.96rem; color:#334155;">
+                        <span style="font-weight:700;">Start Time</span>
+                        <input id="visit-start-time" type="time" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px;">
                     </label>
-                    <label style="display:grid; gap:6px; font-size:0.9rem; color:#334155;">
-                        <span style="font-weight:600;">End Time</span>
-                        <input id="visit-end-time" type="time" class="schedule-input">
+                    <label style="display:grid; gap:8px; font-size:0.96rem; color:#334155;">
+                        <span style="font-weight:700;">End Time</span>
+                        <input id="visit-end-time" type="time" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px;">
                     </label>
                 </div>
-                <button type="button" id="visit-schedule-save-btn" class="btn-control submit-primary">Save Schedule</button>
+                <button type="button" id="visit-schedule-save-btn" class="btn-control submit-primary" style="width:100%; padding:16px 20px; border-radius:14px;">Save Schedule</button>
             </div>`;
         document.body.appendChild(modal);
 
@@ -817,6 +1014,8 @@
                 }
                 report.status = "Visit Scheduled";
                 report.visitArchived = true;
+                report.visitDiscussionExpanded = false;
+                report.visitScheduleTitle = data.schedule_title || "Visit Scheduled";
                 report.visitScheduleStamp = data.schedule_stamp || "";
                 await loadVisitDiscussion(report);
                 applyStatusStyle(report);
@@ -913,7 +1112,7 @@
                     feedbackContainer.innerHTML = `
                         <div style="display:grid; gap:14px; padding:4px 0;">
                             <div style="border:1px solid #e2e8f0; border-radius:14px; padding:14px; background:#f8fafc; display:grid; gap:10px;">
-                                <div style="font-size:0.95rem; font-weight:700; color:#102a43;">Farmer Feedback Card</div>
+                                <div style="font-size:0.95rem; font-weight:700; color:#102a43;">Follow-up</div>
                                 <div style="font-size:0.9rem; color:#334155;">Farmer's Available Schedules</div>
                                 <div style="display:grid; gap:10px;">${optionMarkup}</div>
                             </div>
@@ -1479,7 +1678,7 @@
                 report.expertRecommendations = [];
             }
             report.expertRecommendations.push(assessment);
-            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.");
+            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.", false);
             applyStatusStyle(report);
             renderWorkflowActions(currentReportModalMode, report);
             alert(data.message || "Assessment notes saved successfully.");
@@ -1617,7 +1816,7 @@
             renderAdditionalImages(document.getElementById("report-additional-images-grid"), report.additionalImages);
         }
         renderList(document.getElementById("report-initial-list"), report.initialRecommendations, "No initial recommendations available.");
-        renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.");
+        renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.", false);
 
         applyStatusStyle(report);
         applyModeState(currentReportModalMode, report);

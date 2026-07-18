@@ -154,14 +154,52 @@
             .btn-control {
                 position: relative;
                 overflow: hidden;
-                min-height: 52px;
-                padding: 14px 18px;
+                min-height: 46px;
+                padding: 12px 16px;
+                border-radius: 999px;
+                border: 1px solid transparent;
+                font-weight: 600;
                 transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
             }
             .btn-control:hover,
             .btn-control:focus-visible {
                 transform: translateY(-1px);
                 box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+            }
+            .btn-control.cancel-secondary {
+                background-color: #dc2626;
+                color: #ffffff;
+                border-color: #dc2626;
+            }
+            .btn-control.cancel-secondary:hover,
+            .btn-control.cancel-secondary:focus-visible {
+                background-color: #b91c1c;
+                color: #ffffff;
+                box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+            }
+            /* Make the reschedule/schedule modal close buttons use the primary red pill (photo1)
+               and hover into a subtle light background instead of darkening. */
+            #visit-reschedule-modal-close.btn-control.cancel-secondary,
+            #visit-schedule-modal-close.btn-control.cancel-secondary {
+                background: #dc2626;
+                color: #ffffff;
+                border-color: #dc2626;
+                box-shadow: none;
+            }
+            #visit-reschedule-modal-close.btn-control.cancel-secondary:hover,
+            #visit-schedule-modal-close.btn-control.cancel-secondary:focus-visible,
+            #visit-schedule-modal-close.btn-control.cancel-secondary:active,
+            #visit-schedule-modal-close.btn-control.cancel-secondary:focus {
+                background: #fdeceb;
+                color: #dc2626;
+                border-color: #fecaca;
+                box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+            }
+            .premium-form-card#report-farmer-feedback-card {
+                padding: 24px 24px;
+            }
+            .premium-form-card#report-farmer-feedback-card h4 {
+                margin-bottom: 18px;
             }
             .btn-control.is-disabled,
             .btn-control:disabled {
@@ -186,8 +224,9 @@
             }
         </style>
 
-        <div class="modal-header-inline" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-header-inline" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px;">
             <h2 style="margin: 0;">Report Summary</h2>
+            <button class="btn-control cancel-secondary" id="report-modal-close-btn" type="button" onclick="closeReportModal()" style="width: auto; min-height: 34px; padding: 8px 12px; border-radius: 999px; background: #dc2626; color: #ffffff; border: 1px solid #dc2626; box-shadow: none;">Close</button>
         </div>
 
         <div class="status-row-bar">Status: <span id="report-status-text">--</span></div>
@@ -239,7 +278,7 @@
         </div>
 
         <div class="premium-form-card" id="report-farmer-feedback-card" style="display:none;">
-            <h4><i class="fa-solid fa-comments"></i> Farmer Feedback</h4>
+            <h4><i class="fa-solid fa-calendar-check"></i> Follow-up</h4>
             <div id="report-farmer-feedback"></div>
         </div>
 
@@ -272,9 +311,6 @@
             </button>
             <button class="btn-control submit-primary" id="report-agri-submit-btn" type="button" onclick="window.submitExpertValidation()">
                 <i class="fa-solid fa-paper-plane"></i> Submit Assessment
-            </button>
-            <button class="btn-control cancel-secondary" id="report-modal-cancel-btn" type="button" onclick="closeReportModal()">
-                Cancel
             </button>
         </div>
     </div>

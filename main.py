@@ -115,6 +115,14 @@ def _append_status_note(existing_notes, note_text):
     return f"{cleaned_existing}\n\n{cleaned_note}"
 
 
+def _should_archive_visit_discussion(status, reschedule_reason):
+    normalized_status = str(status or "").strip().lower()
+    has_pending_reschedule = bool(str(reschedule_reason or "").strip())
+    if normalized_status == "visit scheduled" or normalized_status == "visit_scheduled":
+        return not has_pending_reschedule
+    return False
+
+
 def _coerce_time_to_hhmmss(value):
     if value is None:
         return ""
@@ -175,7 +183,7 @@ def _validate_time_range(start_time, end_time):
 
 
 def _fetch_visit_workflow_payload(report_id):
-    report_response = supabase.table("reports").select("id, status, user_id, reviewed_by_id, visit_request_reason, visit_requested_at, visit_summary, visit_completed_at, final_remarks").eq("id", report_id).execute()
+    report_response = supabase.table("reports").select("id, status, user_id, reviewed_by_id, visit_request_reason, visit_requested_at, visit_summary, visit_completed_at, final_remarks, visit_reschedule_reason, visit_rescheduled_at, visit_rescheduled_by").eq("id", report_id).execute()
     report_row = (getattr(report_response, "data", None) or [{}])[0] if getattr(report_response, "data", None) else {}
 
     chats_response = supabase.table("visit_chats").select("id, sender_id, message, created_at").eq("report_id", report_id).order("created_at", desc=False).execute()
@@ -207,11 +215,16 @@ def _fetch_visit_workflow_payload(report_id):
     if latest_schedule:
         schedule_stamp = _format_confirmed_schedule_label(latest_schedule.get("confirmed_date"), latest_schedule.get("start_time"), latest_schedule.get("end_time"))
 
+    is_archived = _should_archive_visit_discussion(report_row.get("status"), report_row.get("visit_reschedule_reason"))
+    schedule_title = "New Schedule Confirmed" if bool(str(report_row.get("visit_reschedule_reason") or "").strip()) else "Visit Scheduled"
+
     return {
         "report": report_row,
         "messages": messages,
         "schedule": latest_schedule,
         "schedule_stamp": schedule_stamp,
+        "is_archived": is_archived,
+        "schedule_title": schedule_title,
     }
 
 
@@ -1669,13 +1682,17 @@ def get_visit_discussion(report_id):
 
     payload = _fetch_visit_workflow_payload(report_id)
     report_row = payload.get('report') or {}
-    is_archived = str(report_row.get('status') or '').strip().lower() == 'visit scheduled'
+    is_archived = payload.get('is_archived', False)
     return jsonify({
         'success': True,
         'messages': payload.get('messages', []),
         'schedule_stamp': payload.get('schedule_stamp', ''),
         'status': report_row.get('status') or '',
         'is_archived': is_archived,
+        'visit_reschedule_reason': report_row.get('visit_reschedule_reason') or '',
+        'visit_rescheduled_at': report_row.get('visit_rescheduled_at') or '',
+        'visit_rescheduled_by': report_row.get('visit_rescheduled_by') or '',
+        'schedule_title': payload.get('schedule_title', 'Visit Scheduled'),
     })
 
 
@@ -1693,8 +1710,9 @@ def save_visit_chat(report_id):
             return jsonify({'success': False, 'message': 'A message is required.'}), 400
 
         report_payload = _fetch_visit_workflow_payload(report_id)
-        current_status = str(report_payload.get('report', {}).get('status') or '').strip()
-        if current_status.lower() == 'visit scheduled':
+        report_row = report_payload.get('report') or {}
+        current_status = str(report_row.get('status') or '').strip()
+        if _should_archive_visit_discussion(current_status, report_row.get('visit_reschedule_reason')):
             return jsonify({'success': False, 'message': 'The visit discussion is archived.'}), 400
 
         insert_response = supabase.table('visit_chats').insert({
@@ -1711,6 +1729,49 @@ def save_visit_chat(report_id):
     except Exception as e:
         logger.error(f"Error saving visit chat: {str(e)}")
         return jsonify({'success': False, 'message': 'The message could not be saved.'}), 500
+
+
+@app.route('/reports/<int:report_id>/request-reschedule', methods=['POST'])
+def request_visit_reschedule(report_id):
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+
+    if not user_id or user_role not in {'farmer', 'agri_expert'}:
+        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        reason = str(payload.get('reason') or request.form.get('reason') or '').strip()
+        if not reason:
+            return jsonify({'success': False, 'message': 'Please select a reschedule reason.'}), 400
+
+        update_response = _update_report_workflow(
+            report_id,
+            'Awaiting Confirmed Schedule',
+            note=None,
+            extra_updates={
+                'visit_reschedule_reason': reason,
+                'visit_rescheduled_at': datetime.now(UTC).isoformat(),
+                'visit_rescheduled_by': user_id,
+            },
+        )
+        if getattr(update_response, 'error', None):
+            logger.error(f"Reschedule request update failed: {update_response.error}")
+            return jsonify({'success': False, 'message': 'The reschedule request could not be saved.'}), 500
+
+        message = f"Reschedule requested: {reason}"
+        chat_insert_response = supabase.table('visit_chats').insert({
+            'report_id': report_id,
+            'sender_id': user_id,
+            'message': message,
+        }).execute()
+        if getattr(chat_insert_response, 'error', None):
+            logger.warning(f"Reschedule chat insert failed: {chat_insert_response.error}")
+
+        return jsonify({'success': True, 'message': 'Reschedule request submitted.'})
+    except Exception as e:
+        logger.error(f"Error requesting visit reschedule: {str(e)}")
+        return jsonify({'success': False, 'message': 'The reschedule request could not be submitted.'}), 500
 
 
 @app.route('/agriculturist/finalize-visit-schedule', methods=['POST'])
@@ -1734,9 +1795,13 @@ def agriculturist_finalize_visit_schedule():
         if not confirmed_date:
             return jsonify({'success': False, 'message': 'Please select a confirmed date.'}), 400
 
+        existing_report_response = supabase.table('reports').select('visit_reschedule_reason').eq('id', report_id).execute()
+        existing_report_row = (getattr(existing_report_response, 'data', None) or [{}])[0] if getattr(existing_report_response, 'data', None) else {}
+        has_pending_reschedule = bool(str(existing_report_row.get('visit_reschedule_reason') or '').strip())
+
         normalized_start, normalized_end = _validate_time_range(start_time, end_time)
         schedule_label = _format_confirmed_schedule_label(confirmed_date, normalized_start, normalized_end)
-        schedule_message = f"Visit confirmed for {confirmed_date} from {normalized_start} to {normalized_end}."
+        schedule_message = f"{'New schedule confirmed' if has_pending_reschedule else 'Visit confirmed'} for {confirmed_date} from {normalized_start} to {normalized_end}."
 
         schedule_insert_response = supabase.table('visit_schedules').insert({
             'report_id': report_id,
@@ -1764,6 +1829,9 @@ def agriculturist_finalize_visit_schedule():
             extra_updates={
                 'visit_summary': schedule_label,
                 'visit_completed_at': datetime.now(UTC).isoformat(),
+                'visit_reschedule_reason': None,
+                'visit_rescheduled_at': None,
+                'visit_rescheduled_by': None,
             },
         )
         if getattr(update_response, 'error', None):
@@ -1774,6 +1842,7 @@ def agriculturist_finalize_visit_schedule():
             'success': True,
             'message': 'The visit schedule has been finalized.',
             'schedule_stamp': schedule_label,
+            'schedule_title': 'New Schedule Confirmed' if has_pending_reschedule else 'Visit Scheduled',
         })
     except ValueError as e:
         return jsonify({'success': False, 'message': str(e)}), 400
