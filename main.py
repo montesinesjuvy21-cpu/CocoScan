@@ -1629,11 +1629,10 @@ def farmer_submit_assessment_feedback():
             if not reason:
                 return jsonify({'success': False, 'message': 'Please provide a reason for requesting the visit.'}), 400
 
-            note = f"Farmer requested a visit. Reason: {reason}"
             update_response = _update_report_workflow(
                 report_id,
                 'Awaiting Confirmed Schedule',
-                note=note,
+                note=None,
                 extra_updates={
                     'visit_request_reason': reason,
                     'visit_requested_at': datetime.now(UTC).isoformat(),
