@@ -465,37 +465,41 @@ def send_status_email(user_email, user_name, status):
     # Dynamic styling matching the context status
     theme_color = "#40916c" if status == "Approved" else "#e63946"
     
-    # EMAIL-SAFE UNIFIED LOGO SVG (Shield + Overlaid Seedling Sprout)
+    # Clean, vibrant SVG logo for email
     cocoscan_logo_svg = """
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="50" height="50" style="display: block; margin: 0 auto;">
-        <!-- Shield Left Side (Filled White) -->
-        <path fill="#ffffff" d="M256 0c-11.5 0-22.1 5.5-28.5 14.8C183.3 78.1 105.9 115.4 52 123.8c-12 1.9-20 12.3-20 24.5 0 185.3 125.7 319.4 207.7 359.8 10.1 5 22.4 5 32.5 0 20.3-10 54.3-30.8 89.2-61.9-10.7-18-17.4-38.6-17.4-60.7 0-61.1 46.1-111.4 106-118.6V148.3c0-12.2-8-22.6-20-24.5-53.9-8.4-131.3-45.7-175.5-109C278.1 5.5 267.5 0 256 0z"/>
-        <!-- Shield Right Side Inner Outlines for Halved Effect -->
-        <path fill="#162a2d" opacity="0.4" d="M256 44.2v396.4c55.3-31.9 133.8-124.9 142.4-245.5v-75C345 113 288.5 81 256 44.2z"/>
-        <!-- Overlaid Brand Seedling Sprout on Bottom Right -->
-        <g transform="translate(310, 310) scale(0.38)" fill="#40916c">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="64" height="64" style="display: block; margin: 0 auto;">
+        <!-- Shield Base -->
+        <path fill="#059669" d="M256 0c-11.5 0-22.1 5.5-28.5 14.8C183.3 78.1 105.9 115.4 52 123.8c-12 1.9-20 12.3-20 24.5 0 185.3 125.7 319.4 207.7 359.8 10.1 5 22.4 5 32.5 0 20.3-10 54.3-30.8 89.2-61.9-10.7-18-17.4-38.6-17.4-60.7 0-61.1 46.1-111.4 106-118.6V148.3c0-12.2-8-22.6-20-24.5-53.9-8.4-131.3-45.7-175.5-109C278.1 5.5 267.5 0 256 0z"/>
+        <!-- Shield Halved Highlight -->
+        <path fill="#047857" d="M256 44.2v396.4c55.3-31.9 133.8-124.9 142.4-245.5v-75C345 113 288.5 81 256 44.2z"/>
+        <!-- Inner Leaf/Sprout -->
+        <g transform="translate(156, 160) scale(0.4)" fill="#ffffff">
             <path d="M96 96c0-53 43-96 96-96h16c17.7 0 32 14.3 32 32v16c0 53-43 96-96 96H128c-17.7 0-32-14.3-32-32V96zM0 224c0-53 43-96 96-96h16c17.7 0 32 14.3 32 32v16c0 53-43 96-96 96H32c-17.7 0-32-14.3-32-32v-16zm224-32c0-17.7 14.3-32 32-32s32 14.3 32 32v192c0 17.7-14.3 32-32 32s-32-14.3-32-32V192z"/>
         </g>
     </svg>
     """
 
     if status == "Approved":
-        status_title = "Application Approved"
+        status_title = "APPLICATION APPROVED"
+        status_color = "#059669"
         message_body = f"""
-        <p>Great news! Your account application for <strong>CocoScan</strong> has been reviewed and approved by our administration team.</p>
-        <p>You can now log in to access your custom dashboard, review coconut metrics, and utilize our pest scanning system features.</p>
-        <div style="margin: 30px 0; text-align: center;">
-            <a href="http://127.0.0.1:5000/login" style="background-color: {theme_color}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Log In To Dashboard</a>
+        <p style="margin-bottom: 16px;">Great news! Your account application for <strong>CocoScan</strong> has been reviewed and approved by our administration team.</p>
+        <p style="margin-bottom: 24px;">You can now log in to access your custom dashboard, review coconut metrics, and utilize our pest scanning system features.</p>
+        <div style="margin: 32px 0; text-align: center;">
+            <a href="http://127.0.0.1:5000/login" style="background-color: {status_color}; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px; display: inline-block;">Log In To Dashboard</a>
         </div>
         """
     else:
-        status_title = "Application Declined"
+        status_title = "APPLICATION DECLINED"
+        status_color = "#dc2626"
         message_body = f"""
-        <p>Thank you for your interest in <strong>CocoScan</strong>.</p>
-        <p>After carefully reviewing your registration details, our administration team has declined your account application at this time.</p>
-        <p style="background-color: #f8f9fa; border-left: 4px solid {theme_color}; padding: 14px; color: #6c757d; font-size: 14px; border-radius: 4px;">
-            <strong>Notice:</strong> If you believe this decision was made in error or if you provided incorrect credentials during registration, please reach out to our system support desk for manual verification.
-        </p>
+        <p style="margin-bottom: 16px;">Thank you for your interest in <strong>CocoScan</strong>.</p>
+        <p style="margin-bottom: 24px;">After carefully reviewing your registration details, our administration team has declined your account application at this time.</p>
+        <div style="background-color: #fef2f2; border-left: 4px solid {status_color}; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
+            <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.5;">
+                <strong>Notice:</strong> If you believe this decision was made in error or if you provided incorrect credentials during registration, please reach out to our system support desk for manual verification.
+            </p>
+        </div>
         """
 
     body_html = f"""
@@ -506,38 +510,48 @@ def send_status_email(user_email, user_name, status):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{subject}</title>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #0b1315; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #e2e8f0;-webkit-font-smoothing: antialiased;">
-        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #0b1315; padding: 40px 0;">
+    <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1f2937; -webkit-font-smoothing: antialiased;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f3f4f6; padding: 40px 20px;">
             <tr>
                 <td align="center">
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 550px; background-color: #121f22; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+                        <!-- Header Section -->
                         <tr>
-                            <td align="center" style="position: relative; padding: 50px 20px; background: linear-gradient(135deg, #162a2d 0%, #0b1315 100%); border-bottom: 2px solid {theme_color};">
-                                <div style="width: 100px; height: 100px; margin-bottom: 10px; text-align: center;">
-                                    <!-- Embedded safe vector graphic -->
+                            <td align="center" style="padding: 48px 24px 32px 24px; background-color: #ffffff; border-bottom: 1px solid #e5e7eb;">
+                                <div style="margin-bottom: 16px;">
                                     {cocoscan_logo_svg}
                                 </div>
-                                <div style="font-weight: 800; font-size: 32px; color: #ffffff; letter-spacing: 1px; margin-bottom: 4px;">CocoScan</div>
-                                <div style="font-size: 13px; color: #789c8a; letter-spacing: 2px; text-transform: uppercase; font-weight: 500;">{status_title}</div>
+                                <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #111827; letter-spacing: -0.5px;">CocoScan</h1>
+                                <div style="display: inline-block; padding: 4px 12px; background-color: {status_color}15; color: {status_color}; font-size: 12px; font-weight: 700; letter-spacing: 1px; border-radius: 9999px;">
+                                    {status_title}
+                                </div>
                             </td>
                         </tr>
+                        
+                        <!-- Body Section -->
                         <tr>
-                            <td style="padding: 40px 35px; background-color: #121f22;">
-                                <h3 style="margin-top: 0; color: #ffffff; font-size: 18px; font-weight: 600;">Hello {user_name},</h3>
-                                <div style="font-size: 15px; line-height: 1.7; color: #cbd5e1;">
+                            <td style="padding: 40px 32px; background-color: #ffffff;">
+                                <h2 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 600; color: #111827;">Hello {user_name},</h2>
+                                <div style="font-size: 16px; line-height: 1.6; color: #4b5563;">
                                     {message_body}
                                 </div>
-                                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.06); margin: 35px 0;">
-                                <p style="margin: 0; font-size: 14px; color: #64748b; line-height: 1.5;">
-                                    Best regards,<br>
-                                    <span style="color: #ffffff; font-weight: 600;">The CocoScan Development Team</span>
-                                </p>
+                                
+                                <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+                                    <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.6;">
+                                        Best regards,<br>
+                                        <strong style="color: #111827;">The CocoScan Team</strong>
+                                    </p>
+                                </div>
                             </td>
                         </tr>
+                    </table>
+                    
+                    <!-- Footer Section -->
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
                         <tr>
-                            <td align="center" style="background-color: #0b1315; padding: 25px; font-size: 11px; color: #475569; letter-spacing: 0.5px;">
-                                <p style="margin: 0 0 4px 0;">This transmission is encrypted and delivered from the administrative terminal cloud hub.</p>
-                                <p style="margin: 0;">&copy; 2026 CocoScan Security Framework • Coconut Disease Detection Systems</p>
+                            <td align="center" style="padding: 24px; font-size: 12px; color: #9ca3af; line-height: 1.5;">
+                                <p style="margin: 0 0 8px 0;">This transmission is encrypted and delivered from the CocoScan system.</p>
+                                <p style="margin: 0;">&copy; 2026 CocoScan • Coconut Disease Detection Systems</p>
                             </td>
                         </tr>
                     </table>
