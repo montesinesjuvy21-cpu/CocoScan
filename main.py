@@ -454,10 +454,10 @@ def upload_image_to_supabase(file_bytes, filename, content_type="application/oct
 
 def send_status_email(user_email, user_name, status):
     """Sends a transactional HTML notification email to the user via Gmail SMTP"""
-    smtp_server = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    smtp_server = os.getenv("MAIL_SERVER", "smtp.gmail.com").strip()
     smtp_port = int(os.getenv("MAIL_PORT", 587))
-    sender_email = os.getenv("MAIL_USERNAME")    
-    sender_password = os.getenv("MAIL_PASSWORD")  
+    sender_email = (os.getenv("MAIL_USERNAME") or "").strip()
+    sender_password = (os.getenv("MAIL_PASSWORD") or "").strip()
     
     sender_name = "CocoScan Admin Team"
     subject = f"Account Update: Your CocoScan Application has been {status}"

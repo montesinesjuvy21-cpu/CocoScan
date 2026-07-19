@@ -589,18 +589,20 @@
     function handleRoleChange(selectedRole) {
         document.querySelectorAll('.dynamic-section').forEach(element => {
             element.style.display = 'none';
-            element.querySelectorAll('input').forEach(input => input.disabled = true);
-            element.querySelectorAll('input').forEach(input => input.removeAttribute('required'));
+            element.querySelectorAll('input, select, textarea').forEach(field => {
+                field.disabled = true;
+                field.removeAttribute('required');
+            });
         });
 
         if(selectedRole) {
             const targetSection = document.getElementById(`section-${selectedRole}`);
             if(targetSection) {
                 targetSection.style.display = 'block';
-                targetSection.querySelectorAll('input').forEach(input => input.disabled = false);
+                targetSection.querySelectorAll('input, select, textarea').forEach(field => field.disabled = false);
                 
                 if(selectedRole === 'farmer') {
-                    document.getElementById('farmer_barangay').removeAttribute('required');
+                    document.getElementById('farmer_barangay').setAttribute('required', 'true');
                 } else if(selectedRole === 'lgu') {
                     document.getElementById('lgu_agency').setAttribute('required', 'true');
                     document.getElementById('lgu_position').setAttribute('required', 'true');
