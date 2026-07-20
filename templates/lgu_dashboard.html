@@ -5,7 +5,7 @@
 {% block sidebar_menu %}
 <li><a href="/lgu/dashboard" class="menu-item-link active"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
 <li><a href="/lgu/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
-<li><a href="/lgu/reports" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> Reports</a></li>
+<li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> Reports</a></li>
 <li><a href="/lgu/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
 {% endblock %}
 

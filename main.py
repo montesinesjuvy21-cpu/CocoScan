@@ -2601,6 +2601,78 @@ def resend_user_email():
         logger.error(f"Resend email route processing failure: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/reports/overview')
+def overview_reports():
+    """Shared report list view for Admin and LGU"""
+    user_role = str(session.get('user_role', '')).strip().lower()
+    if user_role not in ['admin', 'lgu']:
+        flash("Unauthorized access path.", "error")
+        return redirect(url_for('login'))
+        
+    try:
+        reports_response = supabase.table('reports').select('*, visit_chats(count)').order('created_at', desc=True).execute()
+        reports = getattr(reports_response, 'data', []) or []
+        
+        # Format the date properly for the template
+        for report in reports:
+            report['formatted_date'] = format_report_date(report.get('created_at'))
+            report['normalized_status'] = normalize_report_status(report.get('status'))
+            
+        return render_template(
+            'overview_reports.html',
+            reports=reports,
+            user_name=session.get('user_name', 'User')
+        )
+    except Exception as e:
+        logger.error(f"Error serving overview_reports: {str(e)}")
+        flash("Error fetching reports.", "error")
+        return redirect(url_for('login'))
+
+@app.route('/reports/view/<int:report_id>')
+def view_report_readonly(report_id):
+    """Read-only view for a specific report, used by Admin and LGU"""
+    user_role = str(session.get('user_role', '')).strip().lower()
+    if user_role not in ['admin', 'lgu']:
+        flash("Unauthorized access path.", "error")
+        return redirect(url_for('login'))
+        
+    try:
+        report_response = supabase.table('reports').select('*').eq('id', report_id).execute()
+        if not report_response.data:
+            flash("Report not found.", "error")
+            return redirect(url_for('overview_reports'))
+            
+        report = report_response.data[0]
+        
+        # Get chats
+        chats_response = supabase.table('visit_chats').select('*').eq('report_id', report_id).order('created_at', asc=True).execute()
+        chats = chats_response.data or []
+        
+        # Get images
+        primary_image = report.get('image_url')
+        supporting_images = [primary_image] if primary_image else []
+        for chat in chats:
+            if chat.get('image_url') and chat.get('image_url') not in supporting_images:
+                supporting_images.append(chat.get('image_url'))
+                
+        # Format timestamps
+        report['formatted_date'] = format_report_date(report.get('created_at'))
+        for chat in chats:
+            chat['formatted_time'] = format_report_timestamp(chat.get('created_at'))
+            
+        return render_template(
+            'report_readonly.html',
+            report=report,
+            chats=chats,
+            supporting_images=supporting_images,
+            user_name=session.get('user_name', 'User'),
+            user_role=user_role
+        )
+    except Exception as e:
+        logger.error(f"Error serving view_report_readonly: {str(e)}")
+        flash("Error fetching report details.", "error")
+        return redirect(url_for('overview_reports'))
+
 @app.route('/logout')
 def logout():
     session.clear()
