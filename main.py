@@ -662,7 +662,7 @@ def login():
             logger.info(f"User {email} successfully logged in with role: {session['user_role']}")
             
             if session['user_role'] == 'admin':
-                return redirect(url_for('admin_user_management'))
+                return redirect(url_for('admin_dashboard'))
             else:
                 return redirect(url_for('dashboard'))
 
@@ -772,7 +772,7 @@ def dashboard():
     elif user_role == 'lgu':
         return redirect(url_for('lgu_dashboard'))
     elif user_role == 'admin':
-        return redirect(url_for('admin_user_management'))
+        return redirect(url_for('admin_dashboard'))
         
     return render_template('404.html')
 
@@ -2396,6 +2396,52 @@ def farmer_submit_report():
         return jsonify({'success': False, 'message': friendly_message}), 500
 
 # Admin
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    current_role = str(session.get('user_role', '')).strip().lower()
+    if current_role != 'admin':
+        return redirect(url_for('login'))
+
+    # Build basic metrics
+    reports = []
+    try:
+        response = supabase.table('reports').select('status, barangay, created_at, pest_type').execute()
+        reports = response.data or []
+        total = len(reports)
+        pending = sum(1 for r in reports if 'review' in str(r.get('status', '')).lower() or 'pending' in str(r.get('status', '')).lower())
+        resolved = sum(1 for r in reports if 'resolved' in str(r.get('status', '')).lower() or 'complete' in str(r.get('status', '')).lower())
+        affected = len(set(r.get('barangay') for r in reports if r.get('barangay')))
+        metrics = {
+            'total_cases': total,
+            'pending_cases': pending,
+            'resolved_cases': resolved,
+            'affected_areas': affected
+        }
+    except Exception:
+        metrics = {'total_cases': 0, 'pending_cases': 0, 'resolved_cases': 0, 'affected_areas': 0}
+
+    chart_data = build_dashboard_chart_payload(reports)
+
+    # Basic mock weather for now
+    weather = {
+        'location': 'Davao City, Philippines',
+        'is_down': False,
+        'temp': '31',
+        'humidity': '78',
+        'rainfall': '12',
+        'wind': '15'
+    }
+    risk = calculate_environmental_risk(weather['temp'], weather['humidity'], weather['rainfall'])
+
+    return render_template(
+        'admin_dashboard.html',
+        user_name=session.get('user_name', 'Admin'),
+        metrics=metrics,
+        chart_data=chart_data,
+        weather=weather,
+        risk=risk
+    )
+
 @app.route('/admin/user-management')
 def admin_user_management():
     current_role = str(session.get('user_role', '')).strip().lower()

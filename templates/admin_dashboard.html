@@ -1,0 +1,44 @@
+{% extends 'components/dashboard_base.html' %}
+
+{% block title %}CocoScan - Administrator Dashboard{% endblock %}
+
+{% block sidebar_menu %}
+<li><a href="/admin/dashboard" class="menu-item-link active">
+    <i class="fa-solid fa-gauge-high"></i> Dashboard
+</a></li>
+
+<li><a href="/admin/analytics" class="menu-item-link">
+    <i class="fa-solid fa-chart-line"></i> Analytics
+</a></li>
+
+<li><a href="/admin/reports" class="menu-item-link">
+    <i class="fa-solid fa-file-lines"></i> Reports
+</a></li>
+
+<li><a href="/admin/map" class="menu-item-link">
+    <i class="fa-solid fa-map-location-dot"></i> Map View
+</a></li>
+
+<li><a href="/admin/user-management" class="menu-item-link">
+    <i class="fa-solid fa-users-gear"></i> User Management
+</a></li>
+{% endblock %}
+
+{% block user_role %}PCA Administrator{% endblock %}
+
+{% block page_header %}
+<h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;"> Administrator Dashboard</h1>
+<p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview of reported and detected pests</p>
+{% endblock %}
+
+{% block quick_action %}
+<div class="quick-action-card">
+    <h3>Reports</h3>
+    <p>All-time submitted by Agriculturists and Farmers</p>
+    <a href="{{ url_for('overview_reports') }}" class="btn-primary-scan" style="text-decoration: none;">
+        <i class="fa-solid fa-list-ul"></i> View Reports
+    </a>
+</div>
+{% endblock %}
+
+{% block js_role_name %}Administrator{% endblock %}

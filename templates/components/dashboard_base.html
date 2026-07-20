@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}CocoScan - Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/weather_widget.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ==========================================================================
+           1. VARIABLES & BASE STYLES
+           ========================================================================== */
+        :root {
+            --bg-base: #f4f7f5;
+            --bg-card: #ffffff;
+            --brand-dark: #0b251a;
+            --brand-accent: #4ac68f;
+            --primary-green: #528265;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-light: rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--brand-dark);
+            color: var(--text-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ==========================================================================
+           2. FIXED HEADER & NAVIGATION
+           ========================================================================== */
+        .mobile-header {
+            width: 100%;
+            height: 64px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            padding: 0 max(16px, calc((100% - 1400px) / 2 + 24px));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .mobile-header .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mobile-header .logo-img-fallback {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-card);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-header h2 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+        }
+
+        .mobile-header p {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+        }
+
+        .hamburger-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.35rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        /* ==========================================================================
+           3. SIDEBAR DRAWER MENU
+           ========================================================================== */
+        .sidebar-wrapper {
+            width: 290px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            top: 64px;
+            bottom: 0;
+            right: 0;
+            z-index: 999;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.25);
+        }
+
+        .sidebar-wrapper.show-mobile {
+            transform: translateX(0);
+        }
+
+        .menu-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.4);
+            padding: 24px 20px 12px 20px;
+            font-weight: 700;
+        }
+
+        .sidebar-menu-list {
+            list-style: none;
+            padding: 0 10px;
+        }
+
+        .menu-item-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            margin-bottom: 6px;
+        }
+
+        .menu-item-link:hover,
+        .menu-item-link.active {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .sidebar-user-footer {
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .user-meta-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .user-identity-text h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .user-identity-text p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-logout-trigger {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.2rem;
+            transition: color 0.2s ease;
+            padding: 4px;
+        }
+
+        .btn-logout-trigger:hover {
+            color: #ef4444 !important;
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(11, 37, 26, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 950;
+        }
+
+        .sidebar-backdrop.active {
+            display: block;
+        }
+
+        /* ==========================================================================
+           4. CORE MAIN LAYOUT & TITLES
+           ========================================================================== */
+        .mobile-viewport-container {
+            width: 100%;
+            min-height: 100vh;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .main-content-layout {
+            flex: 1;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 88px 24px 24px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .dashboard-header-container {
+            margin-bottom: 4px;
+        }
+
+        .dashboard-header-container h1 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: var(--brand-dark);
+            letter-spacing: -0.5px;
+        }
+
+        .dashboard-header-container p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ==========================================================================
+           5. METRIC CARDS RESPONSIVE GRID 
+           ========================================================================== */
+        .metrics-grid-matrix {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+
+        @media (min-width: 1024px) {
+            .metrics-grid-matrix {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 24px;
+            }
+        }
+
+        .metrics-row-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+    
+        .metrics-sub-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .metric-card-node {
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            width: 100%;
+        }
+
+        .metric-data h5 {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        .metric-data .metric-count {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: var(--brand-dark);
+            margin: 2px 0;
+            line-height: 1.1;
+        }
+
+        .metric-data p {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+
+        .metric-icon-box {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+        }
+
+        .metric-card-node.cases .metric-icon-box {
+            color: var(--brand-dark);
+            background-color: #f0f4f2;
+        }
+
+        .metric-card-node.pending .metric-icon-box {
+            color: #d97706;
+            background-color: #fffbeb;
+        }
+
+        .metric-card-node.resolved .metric-icon-box {
+            color: #059669;
+            background-color: #ecfdf5;
+        }
+
+        .metric-card-node.affected .metric-icon-box {
+            color: #92400e;
+            background-color: #fff6ed;
+        }
+
+        /* ==========================================================================
+           7. GRAPH & CHARTS
+           ========================================================================== */
+        .chart-visual-card {
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+            width: 100%;
+        }
+
+        .chart-header-inline {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chart-header-inline i {
+            color: var(--primary-green);
+        }
+
+        .chart-box-render-frame {
+            position: relative;
+            width: 100%;
+            height: 190px;
+        }
+
+        /* ==========================================================================
+           8. QUICK ACTION SYSTEM BUTTONS
+           ========================================================================== */
+        .quick-action-card {
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            text-align: center;
+            width: 100%;
+        }
+
+        .quick-action-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+        }
+
+        .quick-action-card p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin: 6px 0 16px 0;
+            line-height: 1.4;
+        }
+
+        .btn-primary-scan {
+            width: 100%;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            border: none;
+            padding: 14px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* ==========================================================================
+           9. NOTIFICATIONS & RISKS
+           ========================================================================== */
+        .dynamic-risk-card {
+            background-color: var(--risk-bg, #ffffff) !important;
+            border: 1px solid var(--risk-border, rgba(0, 0, 0, 0.08)) !important;
+            color: var(--risk-color, #0b251a) !important;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-top: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .dynamic-risk-card .risk-icon {
+            margin-top: 2px;
+            flex-shrink: 0;
+            font-size: 1.1rem;
+            color: var(--risk-color) !important;
+        }
+
+        .dynamic-risk-card .risk-text {
+            font-size: 0.82rem;
+            line-height: 1.4;
+            color: #1e293b;
+        }
+
+        .dynamic-risk-card .risk-text strong {
+            color: var(--risk-color) !important;
+            font-weight: 700;
+        }
+
+        /* ==========================================================================
+           10. RESPONSIVE MEDIA QUERIES
+           ========================================================================== */
+        @media (max-width: 500px) {
+            .main-content-layout {
+                padding: 88px 16px 24px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .main-content-layout {
+                max-width: 1400px;
+                padding: 108px 32px 32px 32px;
+                gap: 24px;
+            }
+
+            .mobile-header {
+                height: 72px;
+                padding: 0 max(32px, calc((100% - 1400px) / 2 + 32px));
+            }
+
+            .hamburger-btn {
+                background: none;
+                border: none;
+                color: #ffffff;
+                font-size: 1.35rem;
+                cursor: pointer;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+
+            .sidebar-wrapper {
+                top: 72px;
+            }
+
+            .dashboard-header-container h1 {
+                font-size: 1.95rem;
+            }
+
+            .dashboard-header-container p {
+                font-size: 0.98rem;
+                margin-top: 4px;
+            }
+
+            .metric-card-node {
+                padding: 24px;
+                border-radius: 20px;
+            }
+
+            .metric-data h5 {
+                font-size: 0.8rem;
+            }
+
+            .metric-data .metric-count {
+                font-size: 2.3rem;
+                margin: 6px 0;
+            }
+
+            .metric-data p {
+                font-size: 0.78rem;
+            }
+
+            .metric-icon-box {
+                width: 52px;
+                height: 52px;
+                font-size: 1.4rem;
+            }
+
+            .chart-visual-card {
+                padding: 24px;
+                border-radius: 20px;
+            }
+
+            .chart-header-inline {
+                font-size: 1rem;
+                margin-bottom: 20px;
+            }
+
+            .chart-box-render-frame {
+                height: 260px;
+            }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+
+    <div class="mobile-viewport-container">
+        <header class="mobile-header">
+            <div class="logo-group">
+                <div class="logo-img-fallback">
+                    <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
+                </div>
+                <div>
+                    <h2>CocoScan</h2>
+                    <p>Coconut Pest Detection</p>
+                </div>
+            </div>
+            <button class="hamburger-btn" onclick="toggleSidebarMenu()">
+                <i class="fa-solid fa-bars" id="toggleIcon"></i>
+            </button>
+        </header>
+
+        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
+
+        <aside class="sidebar-wrapper" id="sidebar">
+            <div>
+                <div class="menu-label">Main Menu</div>
+                <ul class="sidebar-menu-list">
+                    {% block sidebar_menu %}{% endblock %}
+                </ul>
+            </div>
+
+            <div class="sidebar-user-footer">
+                <div class="user-meta-box">
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user"
+                            style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-identity-text">
+                        <h4>{{ user_name }}</h4>
+                        <p>{% block user_role %}User{% endblock %}</p>
+                    </div>
+                </div>
+                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="main-content-layout">
+
+            <header class="dashboard-header-container"
+                style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-bottom: 12px; position: relative;">
+                <div>
+                    {% block page_header %}
+                    <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">Dashboard</h1>
+                    <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview</p>
+                    {% endblock %}
+                </div>
+            </header>
+
+            {% block main_content %}
+            <div>
+                <p id="greeting-banner"
+                    style="font-size: 1rem; font-weight: 700; color: #164630; margin: 0; line-height: 1.2;"></p>
+            </div>
+
+            {% block metrics_grid %}
+            <div class="metrics-grid-matrix">
+                <!-- Default metric cards content if not overridden -->
+                <div class="metric-card-node cases">
+                    <div class="metric-data">
+                        <h5>Total Reported</h5>
+                        <div class="metric-count">{{ metrics.total_cases }}</div>
+                        <p>This Month</p>
+                    </div>
+                    <div class="metric-icon-box"><i class="fa-solid fa-bug"></i></div>
+                </div>
+
+                <div class="metric-card-node pending">
+                    <div class="metric-data">
+                        <h5>Pending</h5>
+                        <div class="metric-count">{{ metrics.pending_cases }}</div>
+                        <p>Attention Required</p>
+                    </div>
+                    <div class="metric-icon-box"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                </div>
+
+                <div class="metric-card-node resolved">
+                    <div class="metric-data">
+                        <h5>Resolved</h5>
+                        <div class="metric-count">{{ metrics.resolved_cases }}</div>
+                        <p>This Month</p>
+                    </div>
+                    <div class="metric-icon-box"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+
+                <div class="metric-card-node affected">
+                    <div class="metric-data">
+                        <h5>Affected Areas</h5>
+                        <div class="metric-count">{{ metrics.affected_areas }}</div>
+                        <p>Farms Logged</p>
+                    </div>
+                    <div class="metric-icon-box"><i class="fa-solid fa-location-dot"></i></div>
+                </div>
+            </div>
+            {% endblock %}
+
+            {% block quick_action %}{% endblock %}
+
+            <!-- Meteorological Conditions & Analytical Risk Core -->
+            {% include 'components/weather_widget.html' %}
+
+            {% block charts %}
+            <!-- Statistical Infographics Charts -->
+            <div class="chart-visual-card">
+                <div class="chart-header-inline"><i class="fa-solid fa-chart-line"></i> Pest Trend </div>
+                <div class="chart-box-render-frame">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-visual-card">
+                <div class="chart-header-inline"><i class="fa-solid fa-chart-pie"></i> Pest Distribution</div>
+                <div class="chart-box-render-frame">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+            {% endblock %}
+            {% endblock %}
+
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
+
+    <script id="chart-data" type="application/json">
+        {{ (chart_data if chart_data is defined and chart_data else {}) | tojson }}
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const hour = new Date().getHours();
+            const banner = document.getElementById("greeting-banner");
+            const fullName = "{{ user_name }}".trim();
+            const firstName = fullName.split(" ")[0] || "{% block js_role_name %}User{% endblock %}";
+
+            let welcome = "Dashboard";
+            if (hour < 12) welcome = `Good Morning, ${firstName}!`;
+            else if (hour < 18) welcome = `Good Afternoon, ${firstName}!`;
+            else welcome = `Good Evening, ${firstName}!`;
+            if (banner) banner.textContent = welcome;
+
+            initCharts();
+        });
+
+        function toggleSidebarMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            const icon = document.getElementById('toggleIcon');
+
+            sidebar.classList.toggle('show-mobile');
+            backdrop.classList.toggle('active');
+
+            if (sidebar.classList.contains('show-mobile')) {
+                icon.className = "fa-solid fa-xmark";
+            } else {
+                icon.className = "fa-solid fa-bars";
+            }
+        }
+
+        function initCharts() {
+            let chartPayload = {};
+            try {
+                const rawData = document.getElementById('chart-data').textContent;
+                chartPayload = JSON.parse(rawData);
+            } catch (e) {
+                console.error("Failed to parse chart data", e);
+            }
+            
+            const trendEl = document.getElementById('trendChart');
+            if (trendEl) {
+                const ctxTrend = trendEl.getContext('2d');
+                const trendLabels = chartPayload && Array.isArray(chartPayload.trend_labels) && chartPayload.trend_labels.length ? chartPayload.trend_labels : ['No data'];
+                const trendDatasets = chartPayload && Array.isArray(chartPayload.trend_datasets) && chartPayload.trend_datasets.length ? chartPayload.trend_datasets : [{
+                    label: 'No reports yet',
+                    data: [0],
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'rgba(148, 163, 184, 0.15)',
+                    borderWidth: 2,
+                    tension: 0.2,
+                    pointRadius: 3,
+                    fill: true
+                }];
+                new Chart(ctxTrend, {
+                    type: 'line',
+                    data: {
+                        labels: trendLabels,
+                        datasets: trendDatasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                onClick: function (e, legendItem, legend) {
+                                    const index = legendItem.datasetIndex;
+                                    const ci = legend.chart;
+                                    if (ci.isDatasetVisible(index)) {
+                                        ci.hide(index);
+                                    } else {
+                                        ci.show(index);
+                                    }
+                                },
+                                labels: {
+                                    boxWidth: 10,
+                                    font: { size: 10, weight: '600' },
+                                    // Intercept label mapping to substitute shading layout parameters for line-through strikes
+                                    generateLabels: function (chart) {
+                                        const datasets = chart.data.datasets;
+                                        return datasets.map((dataset, i) => {
+                                            const isVisible = chart.isDatasetVisible(i);
+                                            return {
+                                                text: dataset.label,
+                                                datasetIndex: i,
+                                                // Dynamic color shading updates
+                                                fillStyle: isVisible ? dataset.borderColor : 'rgba(203, 213, 225, 0.4)',
+                                                strokeStyle: isVisible ? dataset.borderColor : 'rgba(203, 213, 225, 0.4)',
+                                                fontColor: isVisible ? '#64748b' : 'rgba(100, 116, 139, 0.4)',
+                                                lineWidth: dataset.borderWidth,
+                                                // Tricking Chart.js to drop text decoration strikes while tracking actual visibility
+                                                hidden: false
+                                            };
+                                        });
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            const distEl = document.getElementById('distributionChart');
+            if (distEl) {
+                const ctxDist = distEl.getContext('2d');
+                const distributionLabels = Array.isArray(chartPayload?.distribution_labels) && chartPayload.distribution_labels.length ? chartPayload.distribution_labels : ['No reports yet'];
+                const distributionData = Array.isArray(chartPayload?.distribution_data) && chartPayload.distribution_data.length ? chartPayload.distribution_data : [0];
+                const distributionColors = distributionLabels.map((_, index) => ['#164630', '#d97706', '#0f766e', '#3b82f6', '#f59e0b'][index % 5]);
+                new Chart(ctxDist, {
+                    type: 'doughnut',
+                    data: {
+                        labels: distributionLabels,
+                        datasets: [{
+                            data: distributionData,
+                            backgroundColor: distributionColors,
+                            borderWidth: 3,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                onClick: function (e, legendItem, legend) {
+                                    const index = legendItem.index;
+                                    const ci = legend.chart;
+
+                                    // Toggle doughnut segment visibility natively
+                                    const alreadyHidden = ci.getDataVisibility(index) === false;
+                                    if (alreadyHidden) {
+                                        ci.toggleDataVisibility(index);
+                                    } else {
+                                        ci.toggleDataVisibility(index);
+                                    }
+                                    ci.update();
+                                },
+                                labels: {
+                                    boxWidth: 12,
+                                    font: { size: 11, weight: '500' },
+                                    // Custom label mapping to bypass text strike decorations and apply shading instead
+                                    generateLabels: function (chart) {
+                                        const data = chart.data;
+                                        if (data.labels.length && data.datasets.length) {
+                                            const dataset = data.datasets[0];
+                                            return data.labels.map((label, i) => {
+                                                const isVisible = chart.getDataVisibility(i);
+                                                return {
+                                                    text: label,
+                                                    index: i,
+                                                    // Shading behavior applied dynamically to match active vs toggled status colors
+                                                    fillStyle: isVisible ? dataset.backgroundColor[i] : 'rgba(203, 213, 225, 0.4)',
+                                                    strokeStyle: isVisible ? dataset.backgroundColor[i] : 'rgba(203, 213, 225, 0.4)',
+                                                    fontColor: isVisible ? '#64748b' : 'rgba(100, 116, 139, 0.4)',
+                                                    lineWidth: dataset.borderWidth || 1,
+                                                    // Suppresses the strike-through decoration line natively
+                                                    hidden: false
+                                                };
+                                            });
+                                        }
+                                        return [];
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+            }
+        }
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>
