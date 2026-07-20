@@ -1368,7 +1368,10 @@
                 row.style.cursor = 'pointer';
                 const totalChats = item.chat_count || 0;
                 const readChats = parseInt(localStorage.getItem(`read_chats_${item.id}`) || '0');
-                const unreadCount = totalChats - readChats;
+                let unreadCount = totalChats - readChats;
+                if (readChats === 0 && totalChats === 1) {
+                    unreadCount = 0;
+                }
                 const unreadBadgeHTML = unreadCount > 0 ? `<span id="unread-badge-${item.id}" style="background-color: #ef4444; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); margin-right: auto;">${unreadCount} unread</span>` : '';
 
                 row.innerHTML = `

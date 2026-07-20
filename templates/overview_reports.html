@@ -50,7 +50,7 @@
                     </span>
                 </td>
                 <td style="padding: 16px 12px; text-align: center;">
-                    <a href="{{ url_for('view_report_readonly', report_id=report.id) }}" style="display: inline-block; text-decoration: none; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; background-color: var(--brand-accent); color: white; transition: opacity 0.2s;">View</a>
+                    <button type="button" class="view-report-btn" data-report-id="{{ report.id }}" style="cursor: pointer; border: none; display: inline-block; text-decoration: none; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; background-color: var(--brand-accent); color: white; transition: opacity 0.2s;">View</button>
                 </td>
             </tr>
             {% else %}
@@ -61,4 +61,28 @@
         </tbody>
     </table>
 </div>
+
+{% include 'components/report_modal.html' %}
+
+<script id="reports-data" type="application/json" data-role="{{ session.get('user_role', 'lgu') }}">
+    {{ reports | tojson | safe }}
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const dataElement = document.getElementById("reports-data");
+        const allReportsData = JSON.parse(dataElement.textContent);
+        const userRole = dataElement.getAttribute("data-role");
+        
+        document.querySelectorAll('.view-report-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const reportId = parseInt(this.getAttribute('data-report-id'), 10);
+                const report = allReportsData.find(r => r.id === reportId);
+                if (report && typeof window.openReportModal === "function") {
+                    window.openReportModal(report, userRole);
+                }
+            });
+        });
+    });
+</script>
+
 {% endblock %}

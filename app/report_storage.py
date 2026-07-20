@@ -113,7 +113,7 @@ def parse_utc_timestamp(value: Any) -> datetime | None:
     return parsed.astimezone(MANILA_TIMEZONE)
 
 
-def format_report_timestamp(value: Any, fmt: str = "%b %d, %Y • %I:%M %p") -> str:
+def format_report_timestamp(value: Any, fmt: str = "%b %d, %Y  %I:%M %p") -> str:
     parsed = parse_utc_timestamp(value)
     return parsed.strftime(fmt) if parsed else "Timestamp unavailable"
 

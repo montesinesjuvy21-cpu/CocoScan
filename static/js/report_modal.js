@@ -58,6 +58,16 @@
 
         if (typeof value === "string") {
             const cleaned = value.trim();
+            if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
+                try {
+                    const parsed = JSON.parse(cleaned);
+                    if (Array.isArray(parsed)) {
+                        return parsed.map((item) => String(item ?? "").trim()).filter(Boolean);
+                    }
+                } catch (e) {
+                    // Ignore JSON parse errors and treat as a regular string
+                }
+            }
             return cleaned ? [cleaned] : [];
         }
 
@@ -107,23 +117,43 @@
             return String(value);
         }
 
-        return new Intl.DateTimeFormat("en-US", {
+        const dateStr = new Intl.DateTimeFormat("en-US", {
             timeZone: "Asia/Manila",
             year: "numeric",
             month: "short",
             day: "numeric",
+        }).format(parsed);
+
+        const timeStr = new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Manila",
             hour: "2-digit",
             minute: "2-digit",
             hour12: true,
         }).format(parsed);
+
+        return `${dateStr} ${timeStr}`;
+    }
+
+    function cleanFarmerNotes(rawNotes = "") {
+        if (!rawNotes) return "";
+        const blocks = rawNotes.split(/\n\n+/);
+        const cleanBlocks = blocks.filter(block => {
+            const txt = block.trim();
+            if (/^(Farmer confirmed the assessment|Farmer requested a visit|Agriculturist proposed a schedule|Farmer proposed a reschedule|Reason:|Availability:|Option \d+:|Visit scheduled|Visit completed|Visit canceled)/i.test(txt)) {
+                return false;
+            }
+            return true;
+        });
+        return cleanBlocks.join("\n\n").trim();
     }
 
     function normalizeReportData(reportData = {}) {
         const gps = reportData.gps || {};
         const primaryImage = reportData.primary_image || reportData.img || reportData.image_url || reportData.image || "";
         const additionalImages = normalizeList(reportData.additional_images || reportData.supporting_images);
-        const notes = reportData.notes || reportData.farmer_notes || reportData.field_notes || "";
-        const feedbackData = extractFarmerFeedback(notes, reportData.status);
+        const rawNotes = reportData.notes || reportData.farmer_notes || reportData.field_notes || "";
+        const cleanNotes = cleanFarmerNotes(rawNotes);
+        const feedbackData = extractFarmerFeedback(rawNotes, reportData.status);
 
         return {
             id: reportData.id ?? null,
@@ -132,9 +162,11 @@
             confidence: normalizeConfidence(reportData.confidence || reportData.pest_confidence),
             status: String(reportData.status || reportData.current_status || "").trim() || (currentReportModalMode === "scan" ? "Ready to Submit" : "Pending"),
             timestamp: reportData.timestamp || reportData.created_at || reportData.submitted_at || reportData.photo_taken_at || "",
-            farmer: reportData.farmer || reportData.farmer_name || "Farmer",
-            notes,
-            locationText: reportData.location_text || reportData.full_location || reportData.location || "No location logged",
+            updated_at: reportData.updated_at || reportData.resolved_at || "",
+            farmer: String(reportData.farmer || reportData.farmer_name || "Farmer").trim(),
+            notes: cleanNotes,
+            rawNotes: rawNotes,
+            locationText: reportData.location_text || reportData.full_location || reportData.location || reportData.barangay || "No location logged",
             latitude: gps.latitude ?? reportData.latitude ?? "",
             longitude: gps.longitude ?? reportData.longitude ?? "",
             accuracy: gps.accuracy ?? reportData.gps_accuracy ?? "",
@@ -388,7 +420,32 @@
         setReportModalSubmissionState(false);
     }
 
-    function renderList(node, items, emptyText, showIcon = true) {
+    function getRecommendationTooltip(text) {
+        const lower = String(text).toLowerCase();
+        if (lower.includes("sanitation")) return "Step 1: Collect all dead leaves, rotting trunks, and fallen fruits. Step 2: Burn them or bury them deep away from healthy trees to destroy hidden pest breeding grounds.";
+        if (lower.includes("trap") && lower.includes("pheromone")) return "Step 1: Hang the trap 1.5 to 2 meters high on a pole. Step 2: Place it at least 20-30 meters away from your healthy trees so it lures pests AWAY from your farm, not into it.";
+        if (lower.includes("fungus") || lower.includes("muscardine")) return "Mix the recommended Green Muscardine fungus with water and spray directly onto compost pits, rotting logs, or traps where adult beetles lay eggs.";
+        if (lower.includes("biological")) return "Introduce natural predators like earwigs or use organic biocontrol agents recommended by the local agriculture office.";
+        if (lower.includes("light trap")) return "Set up a bright light bulb over a basin of soapy water at night. Flying pests will be attracted to the light and drown in the water.";
+        if (lower.includes("prun") || lower.includes("cut")) return "Use a clean, sharp bolo to cut off heavily infested fronds. Burn or bury the cut pieces immediately so pests don't spread to other leaves.";
+        if (lower.includes("fertiliz")) return "Apply the recommended nitrogen or potassium fertilizers around the base of the tree (about 1 meter away from the trunk) to help the tree recover faster.";
+        if (lower.includes("chemical") || lower.includes("insecticide")) return "WARNING: Only use chemicals as a final option. Wear gloves and a mask, follow the exact dosage on the bottle, and spray only on affected areas.";
+        if (lower.includes("monitor")) return "Visit your farm every 3-5 days. Check the crown and young leaves of the affected trees for any new boreholes, chewed leaves, or pest droppings.";
+        return "Please follow this recommendation carefully. For exact measurements or detailed guidance, wait for the agriculturist's expert assessment.";
+    }
+
+    function getRecommendationPriority(text) {
+        const lower = String(text).toLowerCase();
+        if (lower.includes("sanitation") || lower.includes("prun") || lower.includes("cut") || lower.includes("remov")) return 1;
+        if (lower.includes("trap") || lower.includes("net") || lower.includes("physical")) return 2;
+        if (lower.includes("biological") || lower.includes("fungus") || lower.includes("muscardine") || lower.includes("natural")) return 3;
+        if (lower.includes("fertiliz") || lower.includes("water") || lower.includes("nutrient")) return 4;
+        if (lower.includes("monitor") || lower.includes("check")) return 5;
+        if (lower.includes("chemical") || lower.includes("insecticide") || lower.includes("pesticide") || lower.includes("spray")) return 7;
+        return 6;
+    }
+
+    function renderList(node, items, emptyText, showIcon = true, withTooltip = false) {
         if (!node) return;
         node.innerHTML = "";
 
@@ -399,7 +456,7 @@
                 li.style.margin = "0";
                 li.style.padding = "0";
                 li.innerHTML = `
-                <div style="background-color: #fffbeb; color: #92400e; padding: 12px 16px; border-radius: 8px; font-size: 0.92rem; margin-top: 4px; display: flex; align-items: center; gap: 10px; border: 1px solid #fcd34d;">
+                <div style="background-color: #fffbeb; color: #92400e; padding: 12px 16px; border-radius: 8px; font-size: 0.92rem; margin-top: 4px; display: flex; align-items: center; gap: 10px; border: 1px solid #fcd34d; width: 100%; box-sizing: border-box;">
                     <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.2rem; color:#d97706;"></i> 
                     <span style="font-weight: 500;">${escapeHtml(emptyText)}</span>
                 </div>`;
@@ -412,13 +469,59 @@
             return;
         }
 
-        items.forEach((item) => {
+        const sortedItems = withTooltip ? [...items].sort((a, b) => getRecommendationPriority(a) - getRecommendationPriority(b)) : items;
+
+        sortedItems.forEach((item) => {
             const li = document.createElement("li");
-            if (showIcon) {
-                li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${escapeHtml(item)}</span>`;
-            } else {
-                li.textContent = String(item ?? "");
+            li.style.display = "flex";
+            li.style.flexDirection = "column";
+            li.style.marginBottom = "4px";
+            
+            let html = `<div style="display: flex; align-items: flex-start; gap: 8px; width: 100%;">`;
+            if (showIcon && !withTooltip) {
+                html += `<i class="fa-solid fa-circle-check" style="margin-top: 3px; color: var(--primary-green);"></i>`;
+            } else if (showIcon && withTooltip) {
+                html += `<div style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--text-muted); margin-top: 8px; flex-shrink: 0;"></div>`;
             }
+            html += `<span style="flex: 1; font-size: 0.88rem; line-height: 1.5; color: var(--text-dark); padding: 2px 0;">${escapeHtml(item)}</span>`;
+            
+            const tooltipText = withTooltip ? getRecommendationTooltip(item) : "";
+            if (withTooltip) {
+                html += `<i class="fa-solid fa-circle-question reco-tooltip-icon" style="color: rgba(56, 189, 248, 0.7); cursor: pointer; margin-top: 3px; font-size: 1.1rem; transition: opacity 0.2s;" title="Click for details"></i>`;
+            }
+            html += `</div>`;
+            
+            li.innerHTML = html;
+            
+            if (withTooltip) {
+                const dropdownDiv = document.createElement("div");
+                dropdownDiv.style.display = "none";
+                dropdownDiv.style.marginTop = "4px";
+                dropdownDiv.style.padding = "8px 10px";
+                dropdownDiv.style.backgroundColor = "rgba(56, 189, 248, 0.1)";
+                dropdownDiv.style.borderLeft = "3px solid rgba(56, 189, 248, 0.7)";
+                dropdownDiv.style.borderRadius = "0 6px 6px 0";
+                dropdownDiv.style.fontSize = "0.85rem";
+                dropdownDiv.style.color = "var(--text-dark)";
+                dropdownDiv.style.lineHeight = "1.4";
+                dropdownDiv.textContent = tooltipText;
+                
+                li.appendChild(dropdownDiv);
+                
+                const icon = li.querySelector(".reco-tooltip-icon");
+                if (icon) {
+                    icon.addEventListener("click", () => {
+                        if (dropdownDiv.style.display === "none") {
+                            dropdownDiv.style.display = "block";
+                            icon.style.opacity = "1";
+                        } else {
+                            dropdownDiv.style.display = "none";
+                            icon.style.opacity = "0.7";
+                        }
+                    });
+                }
+            }
+            
             node.appendChild(li);
         });
     }
@@ -715,7 +818,7 @@
 
         feedbackContainer.innerHTML = `
             <div style="display:grid; gap:16px; padding:16px 0;">
-
+                ${(mode !== "lgu" && mode !== "admin") ? `
                <button id="visit-discussion-toggle" type="button"
                 aria-expanded="${isExpanded ? "true" : "false"}"
                 style="
@@ -812,23 +915,25 @@
                         }).join("") : '<div style="font-size:0.9rem; color:#64748b;">No discussion messages yet.</div>'}
                     </div>
                     ${isArchived ? "" : `
-                        <div style="display:grid; gap:10px;">
-                            <textarea id="visit-discussion-input" class="notes-input-box" placeholder="${escapeHtml(messagePlaceholder)}" style="min-height:84px;"></textarea>
-                            <div style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
-                                <button type="button" id="visit-discussion-send-btn" class="btn-control submit-primary">Send</button>
-                            </div>
+                        <div style="display:flex; align-items:flex-end; background:#f8fafc; border:1px solid #cbd5e1; border-radius:24px; padding:6px 6px 6px 16px; gap:8px;">
+                            <textarea id="visit-discussion-input" placeholder="${escapeHtml(messagePlaceholder)}" style="flex:1; border:none; background:transparent; resize:none; min-height:24px; max-height:100px; padding:10px 0; font-family:inherit; font-size:0.95rem; color:#0f172a; outline:none; line-height:1.4;" rows="1" oninput="this.style.height='24px'; this.style.height=(this.scrollHeight)+'px';"></textarea>
+                            <button type="button" id="visit-discussion-send-btn" style="background:#2563eb; color:#fff; border:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                                <i class="fa-solid fa-paper-plane" style="margin-right:2px; margin-top:1px; font-size:1rem;"></i>
+                            </button>
                         </div>
                     `}
                 </div>
+                ` : ""}
                 ${report?.visitScheduleStamp ? `<div style="padding:10px 12px; border-radius:14px; ${bannerStyle} font-size:0.92rem; font-weight:600;">${escapeHtml(scheduleTitle)}<br>${escapeHtml(report.visitScheduleStamp)}</div>` : ""}
-                ${(hasPendingReschedule && !isArchived) ? `
+                ${(hasPendingReschedule && !isArchived && mode !== "lgu" && mode !== "admin") ? `
                     <div style="background:#eff6ff; color:#1e3a8a; padding:12px 14px; border-radius:8px; border:1px solid #bfdbfe; font-size:0.9rem; display:flex; align-items:center; gap:10px; font-family: sans-serif;">
                         <strong>Tip:</strong> Click the "Visit Request Discussion" button to chat and finalize a new date and time.
                     </div>
                 ` : ""}
-                ${(hasPendingReschedule && isAgriculturist) ? `<button type="button" id="visit-discussion-finalize-btn" class="btn-control submit-primary" style="justify-self:start; margin-top:4px;">Finalize Schedule</button>` : ""}
-                ${isArchived ? `<div style="font-size:0.9rem; color:#475569; line-height:1.5;">The scheduling discussion has been closed.</div>` : ""}
-                ${isArchived ? `<button type="button" id="request-reschedule-btn" class="btn-control submit-primary" style="justify-self:start;">Request Reschedule</button>` : ""}
+                ${(!isArchived && isAgriculturist && mode !== "lgu" && mode !== "admin") ? `<button type="button" id="visit-discussion-finalize-btn" class="btn-control submit-primary" style="justify-self:start; margin-top:4px;">Finalize Schedule</button>` : ""}
+                ${(isArchived && mode !== "lgu" && mode !== "admin") ? `<div style="font-size:0.9rem; color:#475569; line-height:1.5;">The scheduling discussion has been closed.</div>` : ""}
+                ${(isArchived && mode !== "lgu" && mode !== "admin") ? `<button type="button" id="request-reschedule-btn" class="btn-control submit-primary" style="justify-self:start;">Request Reschedule</button>` : ""}
+                ${(report?.visit_summary && (mode === "lgu" || mode === "admin")) ? `<div style="font-size:0.95rem; color:#334155; line-height:1.6; background:#f8fafc; padding:14px; border-radius:12px; border:1px solid #e2e8f0; margin-top:10px;"><strong>Visit Summary:</strong><br>${escapeHtml(report.visit_summary)}</div>` : ""}
             </div>`;
 
         const toggleButton = feedbackContainer.querySelector('#visit-discussion-toggle');
@@ -858,7 +963,7 @@
                 
                 // Disable button and input to prevent double sending
                 sendButton.disabled = true;
-                sendButton.textContent = "Sending...";
+                sendButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:1rem;"></i>';
                 messageInput.disabled = true;
 
                 // Save scroll position of the modal wrapper to prevent jumping
@@ -886,7 +991,7 @@
                     if (!response.ok || !data.success) {
                         alert(data.message || "The message could not be saved.");
                         sendButton.disabled = false;
-                        sendButton.textContent = "Send";
+                        sendButton.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right:2px; margin-top:1px; font-size:1rem;"></i>';
                         messageInput.disabled = false;
                         return;
                     }
@@ -901,7 +1006,7 @@
                 } catch (error) {
                     alert("The message could not be sent right now.");
                     sendButton.disabled = false;
-                    sendButton.textContent = "Send";
+                    sendButton.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right:2px; margin-top:1px; font-size:1rem;"></i>';
                     messageInput.disabled = false;
                 }
             });
@@ -971,7 +1076,7 @@
                 <div style="display:grid; gap:14px;">
                     <label style="display:grid; gap:10px; font-size:0.98rem; color:#334155;">
                         <span style="font-weight:700;">Reason</span>
-                        <select id="visit-reschedule-reason" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; height:48px; line-height:20px; box-sizing:border-box; font-size:1rem;">
+                        <select id="visit-reschedule-reason" class="schedule-input" style="padding:0 14px; border-radius:12px; border:1px solid #e6e6e6; height:48px; box-sizing:border-box; font-size:1rem;">
                             <option value="Emergency">Emergency</option>
                             <option value="Bad weather">Bad weather</option>
                             <option value="Personal conflict">Personal conflict</option>
@@ -1061,11 +1166,11 @@
                 <div style="display:grid; gap:14px;">
                     <label style="display:grid; gap:8px; font-size:0.96rem; color:#334155;">
                         <span style="font-weight:700;">Select the agreed date</span>
-                        <input id="visit-confirmed-date" type="date" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px;">
+                        <input id="visit-confirmed-date" type="date" class="schedule-input" style="padding:0 14px; border-radius:12px; border:1px solid #e6e6e6; height:48px; box-sizing:border-box;">
                     </label>
                     <label style="display:grid; gap:8px; font-size:0.96rem; color:#334155;">
                         <span style="font-weight:700;">Start Time</span>
-                        <select id="visit-start-time" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px; background-color:#fff;">
+                        <select id="visit-start-time" class="schedule-input" style="padding:0 14px; border-radius:12px; border:1px solid #e6e6e6; height:48px; box-sizing:border-box; background-color:#fff;">
                             <option value="" disabled selected>Select start time</option>
                             <option value="08:00">8:00 AM</option><option value="08:30">8:30 AM</option>
                             <option value="09:00">9:00 AM</option><option value="09:30">9:30 AM</option>
@@ -1081,7 +1186,7 @@
                     </label>
                     <label style="display:grid; gap:8px; font-size:0.96rem; color:#334155;">
                         <span style="font-weight:700;">End Time</span>
-                        <select id="visit-end-time" class="schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px; background-color:#fff;">
+                        <select id="visit-end-time" class="schedule-input" style="padding:0 14px; border-radius:12px; border:1px solid #e6e6e6; height:48px; box-sizing:border-box; background-color:#fff;">
                             <option value="" disabled selected>Select end time</option>
                             <option value="08:00">8:00 AM</option><option value="08:30">8:30 AM</option>
                             <option value="09:00">9:00 AM</option><option value="09:30">9:30 AM</option>
@@ -1358,8 +1463,8 @@
                 }
             }
         } else if (mode === "farmer") {
-            // Show farmer feedback card when an assessment or recommendation has been issued.
-            if (recommendationIssued) {
+            // Show farmer feedback card when an assessment or recommendation has been issued, but not if they already answered it.
+            if (recommendationIssued && normalizedStatus !== "visit_requested" && normalizedStatus !== "resolved") {
                 actions.push({
                     label: "Submit Feedback",
                     icon: "fa-solid fa-comments",
@@ -1409,7 +1514,13 @@
                         submitFeedbackBtn.addEventListener('click', () => submitWorkflowAction('farmer-feedback'));
                     }
                     const feedbackCard = document.getElementById('report-farmer-feedback-card');
-                    if (feedbackCard) setDisplay(feedbackCard, true, 'block');
+                    if (feedbackCard) {
+                        setDisplay(feedbackCard, true, 'block');
+                        const h4 = feedbackCard.querySelector('h4');
+                        if (h4) {
+                            h4.innerHTML = `<i class="fa-solid fa-calendar-check"></i> Follow-up`;
+                        }
+                    }
                 }
             } else if (normalizedStatus === "visit_requested" || normalizedStatus === "resolved") {
                 if (workflowInput) {
@@ -1440,13 +1551,27 @@
                         ? `<p style="font-size:0.92rem; color:#334155; margin:0;">Your visit request was submitted successfully. The agriculturist will review your preferred schedules.</p>${reasonDisplay}${scheduleDisplay}`
                         : (report.visit_summary 
                             ? `<p style="font-size:0.92rem; color:#334155; margin:0;">The agriculturist has completed the visit and marked the issue as resolved.</p>${visitSummaryBlock}` 
-                            : `<p style="font-size:0.92rem; color:#334155; margin:0;">Thank you! You confirmed the assessment resolved your issue.</p>`);
+                            : `
+                            <div style="font-size: 0.8rem; color: #64748b; line-height: 1.3; display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                                <div><strong style="color: #475569;">Outcome:</strong> Issue resolved by following expert assessment.</div>
+                                <div><strong style="color: #475569;">Resolved On:</strong> ${formatTimestamp(report.updated_at || report.timestamp)}</div>
+                            </div>`);
                     feedbackContainer.innerHTML = `
-                        <div style="margin-top:10px; padding:12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; display:grid; gap:12px;">
+                        <div style="margin-top:10px; display:grid; gap:12px;">
                             ${message}
                         </div>`;
                     const feedbackCard = document.getElementById('report-farmer-feedback-card');
-                    if (feedbackCard) setDisplay(feedbackCard, true, 'block');
+                    if (feedbackCard) {
+                        setDisplay(feedbackCard, true, 'block');
+                        const h4 = feedbackCard.querySelector('h4');
+                        if (h4) {
+                            if (normalizedStatus === "resolved") {
+                                h4.innerHTML = `<i class="fa-solid fa-check-circle"></i> Resolution Details`;
+                            } else {
+                                h4.innerHTML = `<i class="fa-solid fa-calendar-check"></i> Follow-up`;
+                            }
+                        }
+                    }
                 }
             } else {
                 if (feedbackContainer) {
@@ -1563,7 +1688,7 @@
             if (d && t) {
                 try {
                     const dt = new Date(`${d}T${t}`);
-                    display = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dt) + ' • ' + new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(dt);
+                    display = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dt)  + new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(dt);
                 } catch (e) { display = `${d} ${t}`; }
             }
             return { date: d, time: t, display };
@@ -1605,6 +1730,8 @@
                 // Close modal for agriculturist after submit
                 if (currentReportModalMode === 'agriculturist') closeReportModal();
                 alert(data.message || "Assessment notes saved.");
+                closeReportModal();
+                window.location.reload();
             } catch (error) {
                 alert("The assessment could not be saved right now.");
             }
@@ -1648,6 +1775,8 @@
                 }
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "Feedback saved.");
+                closeReportModal();
+                window.location.reload();
             } catch (error) {
                 alert("The feedback could not be saved right now.");
             }
@@ -1673,6 +1802,8 @@
                 applyStatusStyle(report);
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "Visit scheduled successfully.");
+                closeReportModal();
+                window.location.reload();
             } catch (error) {
                 alert("The selected schedule could not be saved right now.");
             }
@@ -1701,6 +1832,8 @@
                 applyStatusStyle(report);
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "Visit scheduled successfully.");
+                closeReportModal();
+                window.location.reload();
             } catch (error) {
                 alert("The proposed schedule could not be saved right now.");
             }
@@ -1749,6 +1882,8 @@
                     try { window.renderReportsGrid(); } catch (e) { console.debug(e); }
                 }
                 alert(data.message || "Visit request updated.");
+                closeReportModal();
+                window.location.reload();
             } catch (error) {
                 alert("The visit review could not be saved right now.");
             }
@@ -1780,6 +1915,8 @@
                 await loadVisitDiscussion(report);
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "Visit details saved.");
+                closeReportModal();
+                window.location.reload();
             } catch (error) {
                 alert("The visit summary could not be saved right now.");
             }
@@ -1808,6 +1945,8 @@
                 applyStatusStyle(report);
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "Final remarks saved.");
+                closeReportModal();
+                window.location.reload();
             } catch (error) {
                 alert("The final remarks could not be saved right now.");
             }
@@ -1830,6 +1969,8 @@
                 applyStatusStyle(report);
                 renderWorkflowActions(currentReportModalMode, report);
                 alert(data.message || "The report has been marked as resolved.");
+                closeReportModal();
+                window.location.reload();
             } catch (error) {
                 alert("The case could not be marked resolved right now.");
             }
@@ -1877,6 +2018,8 @@
             applyStatusStyle(report);
             renderWorkflowActions(currentReportModalMode, report);
             alert(data.message || "Assessment notes saved successfully.");
+            closeReportModal();
+            window.location.reload();
         } catch (error) {
             console.error("Assessment submission error:", error);
             alert("The assessment could not be submitted right now.");
@@ -1947,7 +2090,7 @@
             return;
         }
 
-        currentReportModalMode = mode || "farmer";
+        currentReportModalMode = String(mode || "farmer").toLowerCase();
         currentReportModalRecord = normalizeReportData({ ...reportData, mode: currentReportModalMode });
 
         const report = currentReportModalRecord;
@@ -2010,8 +2153,17 @@
         } else {
             renderAdditionalImages(document.getElementById("report-additional-images-grid"), report.additionalImages);
         }
-        renderList(document.getElementById("report-initial-list"), report.initialRecommendations, "No initial recommendations available.");
-        renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.", false);
+        
+        const initialCard = document.getElementById("report-initial-card");
+        if (currentReportModalMode === "lgu" || currentReportModalMode === "admin") {
+            if (initialCard) {
+                initialCard.style.setProperty("display", "none", "important");
+            }
+        } else {
+            if (initialCard) setDisplay(initialCard, true, "flex");
+            renderList(document.getElementById("report-initial-list"), report.initialRecommendations, "No initial recommendations available.", true, true);
+        }
+        renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.", false, false);
 
         applyStatusStyle(report);
         applyModeState(currentReportModalMode, report);
@@ -2021,11 +2173,14 @@
         const statusKey = getStatusKey(report?.status || "");
         const assessmentAlreadyIssued = ["assessment_issued", "recommendation_issued", "waiting_for_agriculturist_confirmation", "waiting_agriculturist_confirmation", "awaiting_confirmed_schedule", "visit_requested", "visit_scheduled", "visit_completed", "final_remarks_issued", "resolved", "closed"].includes(statusKey) || (Array.isArray(report.expertRecommendations) && report.expertRecommendations.length > 0);
         if (expertCard) {
-            setDisplay(expertCard, true, "flex");
+            setDisplay(expertCard, true, "block");
             const expertInput = document.getElementById("expert-notes-input");
             const expertHelp = document.getElementById("expert-notes-help");
-            setDisplay(expertInput, currentReportModalMode === "agriculturist" && !assessmentAlreadyIssued, "block");
-            setDisplay(expertHelp, currentReportModalMode === "agriculturist" && !assessmentAlreadyIssued, "block");
+            const agriSubmitBtn = document.getElementById("report-agri-submit-btn");
+            const showExpertControls = currentReportModalMode === "agriculturist" && !assessmentAlreadyIssued;
+            setDisplay(expertInput, showExpertControls, "block");
+            setDisplay(expertHelp, showExpertControls, "block");
+            if (agriSubmitBtn) setDisplay(agriSubmitBtn, showExpertControls, "block");
         }
 
         // Render any farmer schedules into a dedicated display area for agriculturists

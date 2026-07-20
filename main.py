@@ -1821,7 +1821,7 @@ def farmer_submit_assessment_feedback():
 def get_visit_discussion(report_id):
     user_id = _get_current_app_user_id()
     user_role = normalize_role(session.get('user_role'))
-    if not user_id or user_role not in {'farmer', 'agri_expert'}:
+    if not user_id or user_role not in {'farmer', 'agri_expert', 'lgu', 'admin'}:
         return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     payload = _fetch_visit_workflow_payload(report_id)
@@ -2645,18 +2645,30 @@ def view_report_readonly(report_id):
         report = report_response.data[0]
         
         # Get chats
-        chats_response = supabase.table('visit_chats').select('*').eq('report_id', report_id).order('created_at', asc=True).execute()
+        chats_response = supabase.table('visit_chats').select('*').eq('report_id', report_id).order('created_at', desc=False).execute()
         chats = chats_response.data or []
         
         # Get images
-        primary_image = report.get('image_url')
+        primary_image = resolve_report_image_url(report.get('image_url') or report.get('img'))
         supporting_images = [primary_image] if primary_image else []
         for chat in chats:
-            if chat.get('image_url') and chat.get('image_url') not in supporting_images:
-                supporting_images.append(chat.get('image_url'))
+            chat_img = resolve_report_image_url(chat.get('image_url'))
+            if chat_img and chat_img not in supporting_images:
+                supporting_images.append(chat_img)
                 
-        # Format timestamps
+        # Format timestamps and fields
         report['formatted_date'] = format_report_date(report.get('created_at'))
+        
+        location_parts = []
+        if report.get('barangay'): location_parts.append(report.get('barangay'))
+        if report.get('municipality'): location_parts.append(report.get('municipality'))
+        report['location_text'] = ", ".join(location_parts) if location_parts else "Location unavailable"
+        
+        report['resolved_notes'] = resolve_farmer_notes(report) or "No initial notes provided."
+        
+        report['initial_recommendations'] = _normalize_string_list(report.get('initial_recommendations'))
+        report['expert_recommendations'] = _normalize_string_list(report.get('expert_recommendations'))
+        
         for chat in chats:
             chat['formatted_time'] = format_report_timestamp(chat.get('created_at'))
             
