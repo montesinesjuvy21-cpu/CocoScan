@@ -768,7 +768,7 @@ def dashboard():
     if user_role == 'farmer':
         return redirect(url_for('farmer_dashboard'))
     elif user_role == 'agri_expert':
-        return redirect(url_for('agriculturist_dashboard'))
+        return redirect(url_for('agri_dashboard'))
     elif user_role == 'lgu':
         return redirect(url_for('lgu_dashboard'))
     elif user_role == 'admin':
@@ -1276,7 +1276,7 @@ def farmer_drafts():
 
 # Agriculturist
 @app.route('/agriculturist/dashboard')
-def agriculturist_dashboard():
+def agri_dashboard():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
@@ -1335,7 +1335,7 @@ def agriculturist_dashboard():
 
         risk = calculate_environmental_risk(weather["temp"], weather["humidity"], weather["rainfall"])
 
-        return render_template('agriculturist_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk, chart_data=chart_data)
+        return render_template('agri_dashboard.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk, chart_data=chart_data)
         
     except Exception as e:
         logger.error(f"Agriculturist dashboard routing exception: {str(e)}")
@@ -1485,7 +1485,7 @@ def debug_reports():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/agriculturist/pending')
-def agriculturist_pending():
+def agri_active_reports():
     """Fetches active workflow reports from Supabase and renders the active reports queue."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
@@ -1536,7 +1536,7 @@ def agriculturist_pending():
         logger.info(f"[ACTIVE] Returning {len(active_reports_list)} active reports to template")
             
         return render_template(
-            'agriculturist_pending_reports.html', 
+            'agri_active_reports.html', 
             user_name=user_name, 
             pending_reports=active_reports_list
         )
@@ -1544,10 +1544,10 @@ def agriculturist_pending():
     except Exception as e:
         logger.error(f"Error serving agriculturist pending list module: {str(e)}")
         flash("An alignment error occurred reading data snapshots.", "error")
-        return redirect(url_for('agriculturist_dashboard'))
+        return redirect(url_for('agri_dashboard'))
 
 @app.route('/agriculturist/reviewed')
-def agriculturist_reviewed():
+def agri_resolved_reports():
     """Fetches reports with 'Recommendation Issued' status from Supabase and renders the archive."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
@@ -1591,7 +1591,7 @@ def agriculturist_reviewed():
             })
             
         return render_template(
-            'agriculturist_reviewed_reports.html', 
+            'agri_resolved_reports.html', 
             user_name=user_name, 
             reviewed_reports=reviewed_reports_list
         )
@@ -1599,7 +1599,7 @@ def agriculturist_reviewed():
     except Exception as e:
         logger.error(f"Error serving agriculturist reviewed list module: {str(e)}")
         flash("An alignment error occurred reading data snapshots.", "error")
-        return redirect(url_for('agriculturist_dashboard'))
+        return redirect(url_for('agri_dashboard'))
 
 @app.route('/agriculturist/map')
 def agriculturist_map():
@@ -1663,7 +1663,7 @@ def agriculturist_map():
     except Exception as e:
         logger.error(f"Error serving geospatial map canvas metrics: {str(e)}")
         flash("An alignment error occurred reading spatial coordinates.", "error")
-        return redirect(url_for('agriculturist_dashboard'))
+        return redirect(url_for('agri_dashboard'))
 
 @app.route('/farmer/follow-up-report', methods=['POST'])
 def farmer_follow_up_report():
