@@ -702,6 +702,11 @@
                             <i class="fa-solid fa-circle-xmark" style="color: #c92a2a; font-size: 0.85rem;"></i>
                             Delivery Failed
                         </span>
+                        <div style="margin-top: 6px;">
+                            <button type="button" onclick="resendEmail('{{ user.id }}', this)" style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+                                <i class="fa-solid fa-rotate-right"></i> Resend
+                            </button>
+                        </div>
                     {% else %}
                         <span style="color: #4a5568; background-color: #edf2f7; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
                             <i class="fa-solid fa-circle-exclamation" style="color: #a0aec0; font-size: 0.85rem;"></i>
@@ -935,6 +940,43 @@
         .catch(err => {
             console.error(err);
             location.reload();
+        });
+    }
+
+    /* --- STEP 5: RESEND EMAIL FUNCTIONALITY --- */
+    function resendEmail(userId, btnElement) {
+        const originalText = btnElement.innerHTML;
+        btnElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sending...`;
+        btnElement.disabled = true;
+        btnElement.style.opacity = '0.7';
+
+        fetch('/admin/resend-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (data.email_notified) {
+                    alert("Email has been sent successfully.");
+                } else {
+                    alert("Delivery failed again. Please check the server logs.");
+                }
+                location.reload();
+            } else {
+                alert(`Error resending email: ${data.message}`);
+                btnElement.innerHTML = originalText;
+                btnElement.disabled = false;
+                btnElement.style.opacity = '1';
+            }
+        })
+        .catch(err => {
+            console.error("Resend email error:", err);
+            alert("Network connection error while trying to resend email.");
+            btnElement.innerHTML = originalText;
+            btnElement.disabled = false;
+            btnElement.style.opacity = '1';
         });
     }
 </script>

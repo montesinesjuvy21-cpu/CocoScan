@@ -1,4 +1,5 @@
 import os
+import traceback
 import logging
 import json
 from datetime import datetime, UTC
@@ -569,16 +570,35 @@ def send_status_email(user_email, user_name, status):
     msg.attach(MIMEText(body_html, 'html'))
 
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.sendmail(sender_email, user_email, msg.as_string())
+        try:
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+        except Exception as e:
+            logger.error(f"Gmail SMTP Connection failed: {str(e)}\n{traceback.format_exc()}")
+            return False
+
+        try:
+            server.starttls()
+        except Exception as e:
+            logger.error(f"Gmail SMTP STARTTLS failed: {str(e)}\n{traceback.format_exc()}")
+            return False
+
+        try:
+            server.login(sender_email, sender_password)
+        except Exception as e:
+            logger.error(f"Gmail SMTP Login failed: {str(e)}\n{traceback.format_exc()}")
+            return False
+
+        try:
+            server.sendmail(sender_email, user_email, msg.as_string())
+        except Exception as e:
+            logger.error(f"Gmail SMTP Sendmail failed: {str(e)}\n{traceback.format_exc()}")
+            return False
+
         server.quit()
-        
         logger.info(f"Notification email dispatched cleanly via Gmail to {user_email}.")
         return True
     except Exception as e:
-        logger.error(f"Gmail SMTP Exception thrown while mailing {user_email}: {str(e)}")
+        logger.error(f"Gmail SMTP Unexpected Exception thrown while mailing {user_email}: {str(e)}\n{traceback.format_exc()}")
         return False
     
 @app.route('/favicon.ico')
@@ -2493,6 +2513,46 @@ def update_user_status():
         })
     except Exception as e:
         logger.error(f"Status update route processing failure: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/admin/resend-email', methods=['POST'])
+def resend_user_email():
+    """Endpoint to resend status notification email for a specific user"""
+    if normalize_role(session.get('user_role')) != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized access'}), 403
+        
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        return jsonify({'success': False, 'message': 'User ID missing'}), 400
+        
+    try:
+        user_query = supabase.table("users").select("email, first_name, last_name, status").eq("id", user_id).execute()
+        if not user_query.data:
+            return jsonify({'success': False, 'message': 'Target user not found'}), 404
+            
+        target_user = user_query.data[0]
+        target_email = target_user.get('email')
+        target_fullname = f"{target_user.get('first_name', '')} {target_user.get('last_name', '')}".strip()
+        target_status = target_user.get('status')
+        
+        if not target_status or target_status == 'Under Review':
+            return jsonify({'success': False, 'message': 'User status is pending. Approve or reject before sending email.'}), 400
+
+        email_sent = send_status_email(target_email, target_fullname, target_status)
+        db_email_status = "Sent Successfully" if email_sent else "Delivery Failed"
+
+        supabase.table("users").update({
+            "email_status": db_email_status
+        }).eq("id", user_id).execute()
+        
+        return jsonify({
+            'success': True, 
+            'email_notified': email_sent
+        })
+    except Exception as e:
+        logger.error(f"Resend email route processing failure: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/logout')
