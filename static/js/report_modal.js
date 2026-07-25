@@ -472,7 +472,7 @@
 
         const sortedItems = withTooltip ? [...items].sort((a, b) => getRecommendationPriority(a) - getRecommendationPriority(b)) : items;
 
-        sortedItems.forEach((item) => {
+        sortedItems.forEach((item, index) => {
             const li = document.createElement("li");
             li.style.display = "flex";
             li.style.flexDirection = "column";
@@ -482,7 +482,7 @@
             if (showIcon && !withTooltip) {
                 html += `<i class="fa-solid fa-circle-check" style="margin-top: 2px; color: var(--primary-green); flex-shrink: 0;"></i>`;
             } else if (showIcon && withTooltip) {
-                html += `<div style="width: 5px; height: 5px; border-radius: 50%; background-color: var(--text-muted); margin-top: 6px; flex-shrink: 0;"></div>`;
+                html += `<div style="font-weight: 700; color: var(--text-muted); font-size: 0.85rem; margin-top: 1px; flex-shrink: 0; min-width: 14px;">${index + 1}.</div>`;
             }
             html += `<span style="font-size: 0.85rem; line-height: 1.3; color: var(--text-dark); padding: 0;">${escapeHtml(item)}</span>`;
             

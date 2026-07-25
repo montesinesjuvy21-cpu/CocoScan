@@ -1164,7 +1164,7 @@
                 body: formData
             })
             .then(response => response.json())
-            .then(data => {
+            .then(async data => {
                 if (!data.success) {
                     alert(`Error: ${data.error || 'Failed to process image'}`);
                     document.getElementById('step-loading-view').classList.remove('active-view');
@@ -1176,12 +1176,34 @@
                 const captureTimestamp = globalPrimaryGPS?.timestamp ? new Date(globalPrimaryGPS.timestamp) : activeDate;
                 const formattedTimestamp = formatTimestampInManila(isNaN(captureTimestamp.getTime()) ? activeDate : captureTimestamp);
                 
+                let locationStr = globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable';
+                if (globalPrimaryGPS) {
+                    try {
+                        const geoResp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${globalPrimaryGPS.latitude}&lon=${globalPrimaryGPS.longitude}&zoom=14`);
+                        if (geoResp.ok) {
+                            const geoData = await geoResp.json();
+                            if (geoData && geoData.address) {
+                                const addr = geoData.address;
+                                const parts = [addr.village || addr.suburb || addr.barangay || addr.hamlet, addr.city || addr.town || addr.municipality, addr.state || addr.province];
+                                const shortAddress = parts.filter(Boolean).join(", ");
+                                if (shortAddress) {
+                                    locationStr = shortAddress;
+                                } else if (geoData.display_name) {
+                                    locationStr = geoData.display_name;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Reverse geocoding failed", e);
+                    }
+                }
+                
                 window.currentPrediction = {
                     ...data,
                     pest: data.pest,
                     confidence: `${data.pest_confidence}%`,
                     timestamp: formattedTimestamp,
-                    location_text: globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable',
+                    location_text: locationStr,
                     gps: globalPrimaryGPS ? {
                         latitude: globalPrimaryGPS.latitude,
                         longitude: globalPrimaryGPS.longitude,
