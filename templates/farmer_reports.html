@@ -1057,7 +1057,9 @@
                 'Visit Completed',
                 'Resolved'
             ];
-            const pests = Array.from(new Set(reports.map(r => (r.pest || '').trim()).filter(Boolean))).sort();
+            const defaultPests = ["Rhinoceros Beetle", "Brontispa"];
+            const dynamicPests = Array.from(new Set(reports.map(r => (r.pest || '').trim()).filter(Boolean)));
+            const pests = Array.from(new Set([...defaultPests, ...dynamicPests])).sort();
 
             // Populate status dropdown (only statuses; 'All' is the separate button)
             if (statusDropdownPanel) {
@@ -1286,6 +1288,7 @@
                 "final remarks issued": "final_remarks_issued",
                 "recommendation issued": "recommendation_issued",
                 "resolved": "resolved",
+                "ready to submit": "ready_to_submit"
             };
             return officialWorkflowStates[clean] || clean.replace(/ /g, "_");
         }
@@ -1304,6 +1307,7 @@
                 "final_remarks_issued": "Final Remarks Issued",
                 "resolved": "Resolved",
                 "recommendation_issued": "Recommendation Issued",
+                "ready_to_submit": "Ready to Submit"
             };
             return labels[normalized] || String(status || "").trim() || "Unknown";
         }

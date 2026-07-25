@@ -686,7 +686,8 @@
                 "visit completed": "visit_completed",
                 "final remarks issued": "final_remarks_issued",
                 "recommendation issued": "recommendation_issued",
-                "resolved": "resolved"
+                "resolved": "resolved",
+                "ready to submit": "ready_to_submit"
             };
             return officialWorkflowStates[clean] || clean.replace(/ /g, "_") || "under_review";
         }
@@ -709,7 +710,8 @@
                 "visit_completed": "Visit Completed",
                 "final_remarks_issued": "Final Remarks Issued",
                 "recommendation_issued": "Recommendation Issued",
-                "resolved": "Resolved"
+                "resolved": "Resolved",
+                "ready_to_submit": "Ready to Submit"
             };
             return labels[key] || String(status || "").trim() || "Unknown";
         }

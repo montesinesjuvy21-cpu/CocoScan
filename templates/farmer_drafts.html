@@ -518,7 +518,7 @@
                     <p>Resume, submit, or remove your saved field scan reports.</p>
                 </div>
                 <div>
-                    <button class="btn-icon-refresh" onclick="loadDrafts()" title="Refresh Layout"><i class="fa-solid fa-arrows-rotate"></i></button>
+                    <button class="btn-icon-refresh" onclick="spinAndLoadDrafts(this)" title="Refresh Layout"><i class="fa-solid fa-arrows-rotate"></i></button>
                 </div>
             </header>
 
@@ -543,6 +543,15 @@
             sidebar.classList.toggle('show-mobile');
             backdrop.classList.toggle('active');
             icon.className = sidebar.classList.contains('show-mobile') ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+        }
+
+        function spinAndLoadDrafts(btn) {
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.classList.add('fa-spin');
+                setTimeout(() => icon.classList.remove('fa-spin'), 500);
+            }
+            loadDrafts();
         }
 
         function openDraftDB() {

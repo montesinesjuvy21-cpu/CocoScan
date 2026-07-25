@@ -1383,9 +1383,9 @@
         function handleSupportingImages(event) {
             const files = Array.from(event.target.files || []);
             if (!files.length) return;
-            const remainingSlots = 5 - supportingImages.length;
+            const remainingSlots = 3 - supportingImages.length;
             if (remainingSlots <= 0) {
-                alert('You can add up to 5 supporting photos only.');
+                alert('You can add up to 3 supporting photos only.');
                 event.target.value = '';
                 return;
             }

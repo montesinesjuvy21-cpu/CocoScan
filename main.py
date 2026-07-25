@@ -2758,7 +2758,7 @@ def farmer_submit_report():
                 if not support_file:
                     continue
                 support_name = secure_filename(support_file.filename or f'supporting_{index}.jpg')
-                support_path_name = f"support_{support_timestamp}_{support_name}"
+                support_path_name = f"support_{support_timestamp}_{index}_{support_name}"
                 support_bytes = support_file.read()
                 support_url = upload_image_to_supabase(support_bytes, support_path_name, support_file.mimetype)
                 supporting_rows.append({
