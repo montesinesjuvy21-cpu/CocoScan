@@ -452,7 +452,7 @@
 
         if (!items || items.length === 0) {
             const li = document.createElement("li");
-            if (emptyText === "No expert recommendation available yet.") {
+            if (emptyText === "No expert recommendation available yet." || emptyText === "Submit report for expert assessment") {
                 li.style.listStyle = "none";
                 li.style.margin = "0";
                 li.style.padding = "0";
@@ -2208,7 +2208,12 @@
             if (initialCard) setDisplay(initialCard, true, "flex");
             renderList(document.getElementById("report-initial-list"), report.initialRecommendations, "No initial recommendations available.", true, true);
         }
-        renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.", false, false);
+        
+        let expertEmptyText = "No expert recommendation available yet.";
+        if (currentReportModalMode === "scan") {
+            expertEmptyText = "Submit report for expert assessment";
+        }
+        renderList(document.getElementById("report-expert-list"), report.expertRecommendations, expertEmptyText, false, false);
 
         applyStatusStyle(report);
         applyModeState(currentReportModalMode, report);

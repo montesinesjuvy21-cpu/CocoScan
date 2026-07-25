@@ -2662,7 +2662,7 @@ def api_geocode():
         return jsonify({"success": False, "error": "Missing coordinates"}), 400
     
     geo_data = reverse_geocode_latlng(lat, lon)
-    display_name = geo_data.get("formatted") or ", ".join(filter(None, [geo_data.get("barangay"), geo_data.get("municipality"), geo_data.get("province")]))
+    display_name = ", ".join(filter(None, [geo_data.get("barangay"), geo_data.get("municipality"), geo_data.get("province")])) or geo_data.get("formatted") or "Unknown Location"
     return jsonify({
         "success": True,
         "address": geo_data,
