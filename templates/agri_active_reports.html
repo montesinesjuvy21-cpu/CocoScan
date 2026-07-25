@@ -350,6 +350,35 @@
             .sidebar-wrapper {
                 top: 72px;
             }
+
+            /* Make reports display as a grid on larger screens to avoid full-width stretching */
+            .reports-feed-stack {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+
+            @media (min-width: 1400px) {
+                .reports-feed-stack {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+
+            .report-row-node {
+                border-radius: 20px;
+                padding: 20px;
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            }
+
+            .report-row-node>div:last-child {
+                width: 100%;
+                justify-content: flex-end;
+                border-top: 1px solid var(--border-light);
+                padding-top: 12px;
+            }
         }
        </style>
 </head>

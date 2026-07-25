@@ -594,7 +594,7 @@
                     <div class="user-avatar-circle"><i class="fa-solid fa-user"
                             style="color:#fff; font-size: 0.95rem;"></i></div>
                     <div class="user-identity-text">
-                        <h4>{{ user_name }}</h4>
+                        <h4>{{ user_name or 'Account' }}</h4>
                         <p>{% block user_role %}User{% endblock %}</p>
                     </div>
                 </div>
@@ -669,20 +669,7 @@
             {% include 'components/weather_widget.html' %}
 
             {% block charts %}
-            <!-- Statistical Infographics Charts -->
-            <div class="chart-visual-card">
-                <div class="chart-header-inline"><i class="fa-solid fa-chart-line"></i> Pest Trend </div>
-                <div class="chart-box-render-frame">
-                    <canvas id="trendChart"></canvas>
-                </div>
-            </div>
-
-            <div class="chart-visual-card">
-                <div class="chart-header-inline"><i class="fa-solid fa-chart-pie"></i> Pest Distribution</div>
-                <div class="chart-box-render-frame">
-                    <canvas id="distributionChart"></canvas>
-                </div>
-            </div>
+            {% include 'components/chart_cards.html' %}
             {% endblock %}
             {% endblock %}
 
@@ -697,7 +684,7 @@
         document.addEventListener("DOMContentLoaded", async () => {
             const hour = new Date().getHours();
             const banner = document.getElementById("greeting-banner");
-            const fullName = "{{ user_name }}".trim();
+            const fullName = "{{ user_name or '' }}".trim();
             const firstName = fullName.split(" ")[0] || "{% block js_role_name %}User{% endblock %}";
 
             let welcome = "Dashboard";
@@ -733,8 +720,21 @@
                 console.error("Failed to parse chart data", e);
             }
 
+            if (window.chartInstances && window.chartInstances.length) {
+                window.chartInstances.forEach((chart) => chart.destroy());
+                window.chartInstances = [];
+            }
+            window.chartInstances = window.chartInstances || [];
+
             const trendEl = document.getElementById('trendChart');
             if (trendEl) {
+                // Destroy any Chart already attached to this canvas to avoid "Canvas is already in use" errors
+                try {
+                    const existing = Chart.getChart(trendEl);
+                    if (existing) existing.destroy();
+                } catch (e) {
+                    console.debug('No existing trend chart to destroy', e);
+                }
                 const ctxTrend = trendEl.getContext('2d');
                 const trendLabels = chartPayload && Array.isArray(chartPayload.trend_labels) && chartPayload.trend_labels.length ? chartPayload.trend_labels : ['No data'];
                 const trendDatasets = chartPayload && Array.isArray(chartPayload.trend_datasets) && chartPayload.trend_datasets.length ? chartPayload.trend_datasets : [{
@@ -747,7 +747,7 @@
                     pointRadius: 3,
                     fill: true
                 }];
-                new Chart(ctxTrend, {
+                const trendChart = new Chart(ctxTrend, {
                     type: 'line',
                     data: {
                         labels: trendLabels,
@@ -798,15 +798,23 @@
                         }
                     }
                 });
+                window.chartInstances.push(trendChart);
             }
 
             const distEl = document.getElementById('distributionChart');
             if (distEl) {
+                // Ensure existing chart on this canvas is destroyed first
+                try {
+                    const existingDist = Chart.getChart(distEl);
+                    if (existingDist) existingDist.destroy();
+                } catch (e) {
+                    console.debug('No existing distribution chart to destroy', e);
+                }
                 const ctxDist = distEl.getContext('2d');
                 const distributionLabels = Array.isArray(chartPayload?.distribution_labels) && chartPayload.distribution_labels.length ? chartPayload.distribution_labels : ['No reports yet'];
                 const distributionData = Array.isArray(chartPayload?.distribution_data) && chartPayload.distribution_data.length ? chartPayload.distribution_data : [0];
                 const distributionColors = distributionLabels.map((_, index) => ['#164630', '#d97706', '#0f766e', '#3b82f6', '#f59e0b'][index % 5]);
-                new Chart(ctxDist, {
+                const distributionChart = new Chart(ctxDist, {
                     type: 'doughnut',
                     data: {
                         labels: distributionLabels,

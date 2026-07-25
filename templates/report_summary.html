@@ -54,13 +54,12 @@
             color: #1e293b;
             margin-top: 40px;
             margin-bottom: 20px;
-            border-left: 4px solid #164630;
-            padding-left: 12px;
+            padding-left: 0;
         }
 
         .summary-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -143,20 +142,114 @@
             transform: translateY(-2px);
         }
 
+        @page {
+            size: auto;
+            margin: 15mm;
+        }
+
         @media print {
+            html,
             body {
-                background: white;
-                padding: 0;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                color: #0f172a !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             .report-container {
-                box-shadow: none;
-                padding: 0;
-                max-width: 100%;
+                box-shadow: none !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                background: white !important;
+                color: #0f172a !important;
             }
 
             .print-btn {
-                display: none;
+                display: none !important;
+            }
+
+            /* Force page break before Trends and Distribution */
+            .page-break-section {
+                page-break-before: always !important;
+                break-before: page !important;
+            }\n\n            .section-title {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+                padding-left: 0 !important;
+                color: #1e293b !important;
+            }
+
+            .summary-grid,
+            .stat-box,
+            table {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Preserve stat box colors */
+            .stat-box {
+                background: #f8fafc !important;
+                color: #0f172a !important;
+                border: 1px solid #e2e8f0 !important;
+                box-shadow: none !important;
+            }
+
+            .stat-box.primary {
+                background: #164630 !important;
+                color: white !important;
+                border: none !important;
+            }
+
+            .stat-box.primary h3 {
+                color: white !important;
+            }
+
+            .stat-box.primary p {
+                color: #cbd5e1 !important;
+            }
+
+            .stat-box h3 {
+                color: inherit !important;
+            }
+
+            .stat-box p {
+                color: #64748b !important;
+            }
+
+            /* Preserve border colors on operational status cards */
+            .stat-box[style*="border-left"],
+            .summary-grid .stat-box[style*="border-left: 4px"] {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            canvas {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                max-height: 420px !important;
+            }
+
+            table {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                border-color: #e2e8f0 !important;
+                background: white !important;
+            }
+
+            th {
+                background: #f8fafc !important;
+                color: #475569 !important;
+                border-bottom-color: #e2e8f0 !important;
+            }
+
+            td {
+                color: #1e293b !important;
+                border-bottom-color: #e2e8f0 !important;
             }
         }
     </style>
@@ -200,41 +293,74 @@
             </div>
         </div>
 
-        <div class="section-title">Operational Status</div>
-        <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="stat-box" style="border-left: 4px solid #f59e0b;">
-                <h3 style="color: #d97706;">{{ data.pending_count }}</h3>
-                <p>Pending</p>
-            </div>
-            <div class="stat-box" style="border-left: 4px solid #3b82f6;">
-                <h3 style="color: #2563eb;">{{ data.in_progress_count }}</h3>
-                <p>In Progress</p>
-            </div>
-            <div class="stat-box" style="border-left: 4px solid #10b981;">
-                <h3 style="color: #059669;">{{ data.resolved_count }}</h3>
-                <p>Resolved</p>
+        <div class="section-title">Operational Status Breakdown</div>
+        <div class="summary-grid" style="margin-bottom: 20px; grid-template-columns: 1fr;">
+            <div class="stat-box" style="grid-column: 1 / -1;">
+                <h3 style="font-size: 1.05rem; margin-bottom: 12px; color: #1e293b;">Status Breakdown</h3>
+                <div style="position: relative; height: 200px;">
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <table style="margin-top:12px; width: auto; max-width: 480px;">
+                    <tbody>
+                        <tr>
+                            <td style="padding:6px 10px; color:#64748b;">Pending (Under Review)</td>
+                            <td style="padding:6px 10px; font-weight:700; text-align:right;">{{ data.pending_count }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px 10px; color:#64748b;">In Progress</td>
+                            <td style="padding:6px 10px; font-weight:700; text-align:right;">{{ data.in_progress_count }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px 10px; color:#64748b;">Resolved</td>
+                            <td style="padding:6px 10px; font-weight:700; text-align:right;">{{ data.resolved_count }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="section-title">Trends and Distribution</div>
+        <div class="section-title page-break-section">Trends and Distribution</div>
         <div class="summary-grid">
             <div class="stat-box" style="grid-column: 1 / -1;">
-                <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: #1e293b;"><i class="fa-solid fa-chart-line"
-                        style="color: #528265;"></i> Pest Trend</h3>
-                <div style="position: relative; height: 250px;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: #1e293b;">Pest Trend</h3>
+                <div style="position: relative; height: 260px;">
                     <canvas id="trendChart"></canvas>
                 </div>
             </div>
             <div class="stat-box" style="grid-column: 1 / -1;">
-                <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: #1e293b;"><i class="fa-solid fa-chart-pie"
-                        style="color: #528265;"></i> Pest Distribution</h3>
-                <div style="position: relative; height: 250px;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 15px; color: #1e293b;">Pest Distribution</h3>
+                <div style="position: relative; height: 260px;">
                     <canvas id="distributionChart"></canvas>
+                </div>
+                {% set distribution_labels = data.dashboard_payload.get('distribution_labels', []) if data.dashboard_payload is defined else [] %}
+                {% set distribution_data = data.dashboard_payload.get('distribution_data', []) if data.dashboard_payload is defined else [] %}
+                <div style="margin-top: 18px;">
+                    <div style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-bottom: 10px;">Distribution Breakdown</div>
+                    {% if distribution_labels and distribution_data %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pest</th>
+                                <th style="text-align: right;">Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in range(distribution_labels|length) %}
+                            <tr>
+                                <td>{{ distribution_labels[i] }}</td>
+                                <td style="text-align: right; font-weight: 700;">{{ distribution_data[i] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="color: #64748b; font-style: italic; margin: 0;">No distribution details available for this period.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
-        <div class="section-title">Affected Locations</div>
+        <div class="section-title page-break-section">Affected Locations</div>
         {% if data.locations %}
         <table>
             <thead>
@@ -275,6 +401,48 @@
                 console.error("Failed to parse chart data", e);
             }
 
+            const statusCounts = {
+                pending: {{ data.pending_count | default(0) }},
+                in_progress: {{ data.in_progress_count | default(0) }},
+                resolved: {{ data.resolved_count | default(0) }}
+            };
+
+            // Render status chart first so it prints above other charts
+            try {
+                const statusEl = document.getElementById('statusChart');
+                if (statusEl) {
+                    try {
+                        const existingStatus = Chart.getChart(statusEl);
+                        if (existingStatus) existingStatus.destroy();
+                    } catch (e) {
+                        // ignore
+                    }
+                    const ctxStatus = statusEl.getContext('2d');
+                    new Chart(ctxStatus, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Under Review', 'In Progress', 'Resolved'],
+                            datasets: [{
+                                label: 'Reports',
+                                data: [statusCounts.pending, statusCounts.in_progress, statusCounts.resolved],
+                                backgroundColor: ['#f59e0b', '#164630', '#10b981']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: { duration: 0 },
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to render status chart', e);
+            }
+
             const trendEl = document.getElementById('trendChart');
             if (trendEl) {
                 const ctxTrend = trendEl.getContext('2d');
@@ -300,6 +468,9 @@
                         maintainAspectRatio: false,
                         animation: {
                             duration: 0 // Disable animation for printing
+                        },
+                        plugins: {
+                            legend: { display: true, position: 'bottom', labels: { boxWidth: 10, padding: 12 } }
                         },
                         scales: {
                             y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { stepSize: 1 } },
@@ -331,6 +502,9 @@
                         maintainAspectRatio: false,
                         animation: {
                             duration: 0 // Disable animation for printing
+                        },
+                        plugins: {
+                            legend: { display: true, position: 'bottom', labels: { boxWidth: 12, padding: 10 } }
                         }
                     }
                 });

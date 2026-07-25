@@ -8,9 +8,13 @@
                 background: rgba(11, 37, 26, 0.45);
                 backdrop-filter: blur(6px);
                 z-index: 2000;
-                align-items: flex-end;
+                align-items: center;
                 justify-content: center;
                 padding: 16px;
+            }
+
+            @media (max-width: 859px) {
+                .modal-screen-overlay { align-items: flex-end; }
             }
             .modal-screen-overlay * {
                 box-sizing: border-box;

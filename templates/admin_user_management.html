@@ -12,7 +12,7 @@
     }
     
     /* Search & Filter Bar */
-    .control-actions-form { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 2rem; width: 100%; }
+    .control-actions-form { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1rem; width: 100%; }
     .search-input-row { width: 100%; }
     .search-box-wrapper { position: relative; width: 100%; }
     .search-box-wrapper input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 1px solid rgba(0,0,0,0.08); border-radius: 30px; background-color: #ffffff; font-size: 0.95rem; box-sizing: border-box; outline: none; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
@@ -41,17 +41,21 @@
         gap: 6px;
     }
     
-    .chip-filter-btn:hover { border-color: rgba(26, 77, 50, 0.3); outline: none; }
+    .chip-filter-btn:hover { 
+        border-color: #1a4d32; 
+        color: #1a4d32;
+    }
     
     .custom-select-chip.active-chip, .chip-filter-btn.active-chip {
         background-color: #1a4d32;
         color: #ffffff;
         border-color: #1a4d32;
+        box-shadow: 0 2px 6px rgba(26, 77, 50, 0.2);
     }
     
     .filter-dropdown-panel { display: none; position: absolute; top: 100%; left: 0; margin-top: 8px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); min-width: 180px; max-height: 240px; overflow: auto; z-index: 100; padding: 8px; }
-    .dropdown-item { display: block; width: 100%; padding: 8px 10px; text-align: left; background: transparent; border: none; cursor: pointer; font-size: 0.92rem; color: #1e293b; border-radius: 6px; }
-    .dropdown-item:hover { background: rgba(82,130,101,0.06); }
+    .dropdown-item { display: block; width: 100%; padding: 8px 10px; text-align: left; background: transparent; border: none; cursor: pointer; font-size: 0.92rem; color: #1e293b; border-radius: 6px; transition: background-color 0.15s; }
+    .dropdown-item:hover { background-color: #f1f5f9; color: #0f172a; }
     
     .btn-clear-filters { background-color: #eb5757; color: #ffffff; border: none; padding: 8px 16px; border-radius: 28px; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2); transition: all 0.2s ease; white-space: nowrap; margin-left: auto; }
     .btn-clear-filters:hover { background-color: #d64040; }
@@ -66,7 +70,7 @@
     .pca-data-table tbody tr { border-bottom: 1px solid var(--bg-base); transition: background-color 0.2s; }
     .pca-data-table tbody tr:hover { background-color: #f9fafb; }
     .pca-data-table td { padding: 16px 12px; font-size: 0.9rem; vertical-align: middle; }
-    .role-badge-cell { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+    .role-badge-cell { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--text-dark); }
     .status-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
     .status-tag.pending { background-color: #fef3c7; color: #d97706; }
     .status-tag.approved { background-color: #d1fae5; color: #065f46; }
@@ -96,9 +100,11 @@
     .btn-modal-dismiss:hover { background-color: #e5e7eb; }
     
     /* Pagination */
-    .pagination-container { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: auto; padding-top: 2rem; }
-    .page-link-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; border: 1px solid #e5e7eb; background-color: #ffffff; color: #374151; text-decoration: none; border-radius: 8px; font-size: 0.875rem; }
-    .page-link-btn.active { background-color: #1b4332; color: #ffffff; border-color: #1b4332; }
+    .pagination-container { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px; width: 100%; }
+    .page-btn { min-width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-light); background-color: var(--bg-card); color: var(--text-dark); font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
+    .page-btn:hover:not(:disabled) { background-color: #eef5f2; color: var(--brand-dark); }
+    .page-btn.active-page { background-color: #1a4d32; color: #ffffff; border-color: #1a4d32; }
+    .page-btn.disabled, .page-btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
 
     @media (max-width: 991px) {
         .search-input-row { flex-direction: column; align-items: stretch; }
@@ -211,21 +217,18 @@
                 <tr id="row-{{ user.id }}">
                     <td>
                         <div class="role-badge-cell">
-                            {% if user.role == 'farmer' %}
-                                <i class="fa-solid fa-tractor" style="color:#2a7b4c;"></i> Farmer
-                            {% elif user.role == 'lgu' %}
-                                <i class="fa-solid fa-building-shield" style="color:#023e8a;"></i> LGU
-                            {% else %}
-                                <i class="fa-solid fa-graduation-cap" style="color:#7209b7;"></i> Expert
+                            {% if user.role == 'farmer' %} Farmer
+                            {% elif user.role == 'lgu' %} LGU
+                            {% else %} Expert
                             {% endif %}
                         </div>
                     </td>
 
-                    <td><strong class="user-display-name">{{ user.highlighted_first | safe }} {{ user.highlighted_last | safe }}</strong></td>
+                    <td><span class="user-display-name">{{ user.highlighted_first | safe }} {{ user.highlighted_last | safe }}</span></td>
 
                     <td>
                         {% if user.role == 'farmer' and user.profiles %}
-                            <span style="font-size:0.85rem;">Brgy: <strong>{{ user.profiles.farmer_barangay or 'N/A' }}</strong></span>
+                            <span style="font-size:0.85rem;">Brgy: <span style="font-weight:400">{{ user.profiles.farmer_barangay or 'N/A' }}</span></span>
                         {% elif user.profiles %}
                             <span style="font-size:0.85rem; display:block;"> {{ user.profiles.agency_office or 'N/A' }}</span>
                             <small style="color:#6b7280;">Scope: {{ user.profiles.jurisdiction or 'N/A' }}</small>
@@ -236,30 +239,28 @@
 
                     <td>{{ user.highlighted_email | safe }}</td>
                     
-                    <td class="account-status-cell">
-                        <span class="status-tag {% if user.status == 'Under Review' %}pending{% elif user.status == 'Approved' %}approved{% else %}rejected{% endif %}">
-                            {{ user.status }}
-                        </span>
+                    <td class="account-status-cell" style="text-align: center;">
+                        {% if user.status == 'Approved' %}
+                            <span class="status-tag approved"><i class="fa-solid fa-check-circle" style="margin-right:8px;color:inherit"></i>{{ user.status }}</span>
+                        {% elif user.status == 'Under Review' %}
+                            <span class="status-tag pending">{{ user.status }}</span>
+                        {% else %}
+                            <span class="status-tag rejected">{{ user.status }}</span>
+                        {% endif %}
                     </td>
 
-                    <td class="email-status-cell">
+                    <td class="email-status-cell" style="text-align: center;">
                         {% if user.email_status == 'Sent Successfully' %}
-                            <span class="status-tag approved">
-                                Email Sent
-                            </span>
+                            <span class="status-tag approved"><i class="fa-solid fa-envelope" style="margin-right:8px;color:inherit"></i>Email Sent</span>
                         {% elif user.email_status == 'Delivery Failed' %}
-                            <span class="status-tag rejected">
-                                Delivery Failed
-                            </span>
+                            <span class="status-tag rejected">Delivery Failed</span>
                             <div style="margin-top: 6px;">
                                 <button type="button" onclick="resendEmail('{{ user.id }}', this)" style="background-color: #dc2626; color: #ffffff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
                                     <i class="fa-solid fa-rotate-right"></i> Resend
                                 </button>
                             </div>
                         {% else %}
-                            <span class="status-tag default">
-                                Pending Action
-                            </span>
+                            <span class="status-tag default">Pending Action</span>
                         {% endif %}
                     </td>
 
@@ -270,7 +271,7 @@
                                 <button type="button" class="btn-action-reject" onclick="triggerStatusConfirmation('{{ user.id }}', 'reject')">Reject</button>
                             </div>
                         {% else %}
-                            <small style="color:#9ca3af;">Handled by:<br><strong>{{ user.approved_by or 'System' }}</strong></small>
+                            <small style="color:#9ca3af;">Handled by:<br><span style="font-weight:400">{{ user.approved_by or 'System' }}</span></small>
                         {% endif %}
                     </td>
                 </tr>
@@ -294,11 +295,11 @@
 
 {% if total_pages > 1 %}
 <div class="pagination-container">
-    <a href="{{ url_for('admin_user_management', page=current_page-1, status=current_status, role=current_role, search=search) }}" class="page-link-btn {% if current_page == 1 %}disabled{% endif %}">« Prev</a>
+    <a href="{{ url_for('admin_user_management', page=current_page-1, status=current_status, role=current_role, search=search) }}" class="page-btn {% if current_page == 1 %}disabled{% endif %}" aria-disabled="{{ 1 if current_page == 1 else 0 }}">« Prev</a>
     {% for p in range(1, total_pages + 1) %}
-        <a href="{{ url_for('admin_user_management', page=p, status=current_status, role=current_role, search=search) }}" class="page-link-btn {% if current_page == p %}active{% endif %}">{{ p }}</a>
+        <a href="{{ url_for('admin_user_management', page=p, status=current_status, role=current_role, search=search) }}" class="page-btn {% if current_page == p %}active-page{% endif %}">{{ p }}</a>
     {% endfor %}
-    <a href="{{ url_for('admin_user_management', page=current_page+1, status=current_status, role=current_role, search=search) }}" class="page-link-btn {% if current_page == total_pages %}disabled{% endif %}">Next »</a>
+    <a href="{{ url_for('admin_user_management', page=current_page+1, status=current_status, role=current_role, search=search) }}" class="page-btn {% if current_page == total_pages %}disabled{% endif %}" aria-disabled="{{ 1 if current_page == total_pages else 0 }}">Next »</a>
 </div>
 {% endif %}
 </div>

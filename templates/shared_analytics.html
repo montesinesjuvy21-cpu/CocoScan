@@ -38,8 +38,6 @@
 {% block js_role_name %}{{ 'Administrator' if user_role == 'admin' else ('Agriculturist' if user_role == 'agri_expert' else 'LGU') }}{% endblock %}
 
 {% block extra_head %}
-<!-- Include Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     .analytics-container {
         display: flex;
@@ -63,6 +61,53 @@
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         font-family: inherit;
+        background: #ffffff;
+        color: #0f172a;
+        transition: all 0.2s ease;
+    }
+
+    .filters-bar input:hover {
+        border-color: #1a4d32;
+        color: #1a4d32;
+    }
+
+    .filters-bar input:focus {
+        outline: none;
+        border-color: #1a4d32;
+        box-shadow: 0 0 0 3px rgba(26, 77, 50, 0.1);
+    }
+
+    .filters-bar select {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-family: inherit;
+        background: #ffffff;
+        color: #0f172a;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231a4d32' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        padding-right: 28px;
+    }
+
+    .filters-bar select:hover {
+        border-color: #1a4d32;
+        color: #1a4d32;
+    }
+
+    .filters-bar select:focus {
+        outline: none;
+        border-color: #1a4d32;
+        box-shadow: 0 0 0 3px rgba(26, 77, 50, 0.1);
+    }
+
+    /* Override default month picker blue color */
+    .filters-bar input[type="month"]::-webkit-calendar-picker-indicator {
+        filter: invert(0.7);
+        cursor: pointer;
     }
 
     .filters-bar button {
@@ -116,7 +161,7 @@
 {% block main_content %}
 <div class="analytics-container">
     <div class="filters-bar">
-        <div style="font-weight: 600; color: #1e293b;"><i class="fa-solid fa-filter"></i> Date Range:</div>
+        <div style="font-weight: 600; color: #1e293b;"> Date Range:</div>
         <div>
             <label for="monthFilter" style="font-size: 0.85rem; color: #64748b; margin-right: 8px;">Month</label>
             <input type="month" id="monthFilter">
@@ -141,51 +186,31 @@
         </div>
     </div>
 
+    <div class="chart-card full-width">
+        <h3 class="chart-title">Status Breakdown</h3>
+        <div style="position: relative; height: 320px;">
+            <canvas id="statusBarChart"></canvas>
+        </div>
+        <p class="chart-description">This chart uses Under Review for pending reports, In Progress for all active reports, and Resolved for completed cases.</p>
+    </div>
+
     <div class="charts-grid">
-        <div class="chart-card">
-            <h3 class="chart-title"><i class="fa-solid fa-chart-pie" style="color: #528265;"></i> Pest Distribution
-            </h3>
-            <div style="position: relative; height: 300px;">
-                <canvas id="distributionChart"></canvas>
-            </div>
-            <p class="chart-description">This chart compares the overall volume of pests detected in the filtered date
-                range.</p>
-        </div>
-
-        <div class="chart-card">
-            <h3 class="chart-title">Status Breakdown</h3>
-            <div style="position: relative; height: 300px;">
-                <canvas id="statusBarChart"></canvas>
-            </div>
-            <p class="chart-description">This metric tracks the operational progress of handling reported infestations,
-                showing Pending, In Progress, and Resolved cases.</p>
-        </div>
-
-        <div class="chart-card full-width">
-            <h3 class="chart-title"><i class="fa-solid fa-chart-line" style="color: #528265;"></i> Pest Trend</h3>
-            <div style="position: relative; height: 350px;">
-                <canvas id="trendChart"></canvas>
-            </div>
-            <p class="chart-description">Interpret the trend lines to spot sudden outbreaks or seasonal spikes of pests
-                over time.</p>
-        </div>
+        {% include 'components/chart_cards.html' %}
     </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        let distChartObj = null;
         let barChartObj = null;
-        let trendChartObj = null;
 
         const monthFilter = document.getElementById('monthFilter');
         const weekFilter = document.getElementById('weekFilter');
         const generateReportBtn = document.getElementById('generateReportBtn');
 
-        // Default to current month
         const today = new Date();
-        const currentMonth = today.toISOString().slice(0, 7);
-        monthFilter.value = currentMonth;
+        monthFilter.value = today.toISOString().slice(0, 7);
 
         document.getElementById('applyFiltersBtn').addEventListener('click', loadData);
 
@@ -203,191 +228,66 @@
             window.open(url, '_blank');
         });
 
-        function loadData() {
+        async function loadData() {
             const month = monthFilter.value;
             const week = weekFilter.value;
+            const params = new URLSearchParams();
+            if (month) params.append('month', month);
+            if (week) params.append('week', week);
+            params.append('_t', Date.now());
 
-            let url = '/api/analytics';
-            if (month || week) {
-                const params = new URLSearchParams();
-                if (month) params.append('month', month);
-                if (week) params.append('week', week);
-                url += '?' + params.toString();
+            try {
+                const response = await fetch('/api/analytics?' + params.toString(), { cache: 'no-store' });
+                const data = await response.json();
+                if (!data.success) {
+                    alert('Error loading analytics: ' + data.message);
+                    return;
+                }
+
+                const chartDataScript = document.getElementById('chart-data');
+                if (chartDataScript) {
+                    chartDataScript.textContent = JSON.stringify(data.dashboard_payload || {});
+                }
+                if (typeof initCharts === 'function') {
+                    initCharts();
+                }
+                renderStatusChart(data.status_breakdown || {});
+            } catch (error) {
+                console.error('Analytics fetch failed', error);
             }
-
-            let fetchUrl = url;
-            if (fetchUrl.includes('?')) {
-                fetchUrl += '&_t=' + new Date().getTime();
-            } else {
-                fetchUrl += '?_t=' + new Date().getTime();
-            }
-
-            fetch(fetchUrl, { cache: 'no-store' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        renderCharts(data);
-                    } else {
-                        alert('Error loading analytics: ' + data.message);
-                    }
-                })
-                .catch(err => console.error(err));
         }
 
-        function renderCharts(data) {
-            const primaryColor = '#164630';
-            const secondaryColor = '#e1b12c';
+        function renderStatusChart(statusBreakdown) {
+            if (barChartObj) {
+                barChartObj.destroy();
+            }
 
-            // Distribution Chart (Doughnut)
-            if (distChartObj) distChartObj.destroy();
-            const ctxDist = document.getElementById('distributionChart').getContext('2d');
-            const distributionLabels = data.dashboard_payload && Array.isArray(data.dashboard_payload.distribution_labels) && data.dashboard_payload.distribution_labels.length ? data.dashboard_payload.distribution_labels : ['No reports yet'];
-            const distributionData = data.dashboard_payload && Array.isArray(data.dashboard_payload.distribution_data) && data.dashboard_payload.distribution_data.length ? data.dashboard_payload.distribution_data : [0];
-            const distributionColors = distributionLabels.map((_, index) => ['#164630', '#d97706', '#0f766e', '#3b82f6', '#f59e0b'][index % 5]);
-
-            distChartObj = new Chart(ctxDist, {
-                type: 'doughnut',
-                data: {
-                    labels: distributionLabels,
-                    datasets: [{
-                        data: distributionData,
-                        backgroundColor: distributionColors,
-                        borderWidth: 3,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            onClick: function (e, legendItem, legend) {
-                                const index = legendItem.index;
-                                const ci = legend.chart;
-                                ci.toggleDataVisibility(index);
-                                ci.update();
-                            },
-                            labels: {
-                                boxWidth: 12,
-                                font: { size: 11, weight: '500' },
-                                generateLabels: function (chart) {
-                                    const chartData = chart.data;
-                                    if (chartData.labels.length && chartData.datasets.length) {
-                                        const dataset = chartData.datasets[0];
-                                        return chartData.labels.map((label, i) => {
-                                            const isVisible = chart.getDataVisibility(i);
-                                            return {
-                                                text: label,
-                                                index: i,
-                                                fillStyle: isVisible ? dataset.backgroundColor[i] : 'rgba(203, 213, 225, 0.4)',
-                                                strokeStyle: isVisible ? dataset.backgroundColor[i] : 'rgba(203, 213, 225, 0.4)',
-                                                fontColor: isVisible ? '#64748b' : 'rgba(100, 116, 139, 0.4)',
-                                                lineWidth: dataset.borderWidth || 1,
-                                                hidden: false
-                                            };
-                                        });
-                                    }
-                                    return [];
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-
-            // Status Breakdown Bar Chart
-            if (barChartObj) barChartObj.destroy();
-            const ctxBar = document.getElementById('statusBarChart').getContext('2d');
-            const rhinoStatus = data.status_breakdown['rhinoceros beetle'] || { pending: 0, in_progress: 0, resolved: 0 };
-            const brontispaStatus = data.status_breakdown['brontispa'] || { pending: 0, in_progress: 0, resolved: 0 };
+            const statusCanvas = document.getElementById('statusBarChart');
+            // If a Chart instance is already bound to this canvas, destroy it first
+            try {
+                const existing = Chart.getChart(statusCanvas);
+                if (existing) existing.destroy();
+            } catch (e) {
+                console.debug('No existing status chart to destroy', e);
+            }
+            const ctxBar = statusCanvas.getContext('2d');
+            const statusTotals = statusBreakdown.total || { pending: 0, in_progress: 0, resolved: 0 };
 
             barChartObj = new Chart(ctxBar, {
                 type: 'bar',
                 data: {
-                    labels: ['Pending', 'In Progress', 'Resolved'],
-                    datasets: [
-                        {
-                            label: 'Rhinoceros Beetle',
-                            data: [rhinoStatus.pending, rhinoStatus.in_progress, rhinoStatus.resolved],
-                            backgroundColor: primaryColor
-                        },
-                        {
-                            label: 'Brontispa',
-                            data: [brontispaStatus.pending, brontispaStatus.in_progress, brontispaStatus.resolved],
-                            backgroundColor: secondaryColor
-                        }
-                    ]
+                    labels: ['Under Review', 'In Progress', 'Resolved'],
+                    datasets: [{
+                        label: 'Report Status',
+                        data: [statusTotals.pending, statusTotals.in_progress, statusTotals.resolved],
+                        backgroundColor: ['#f59e0b', '#164630', '#0f766e']
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
                         y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                    }
-                }
-            });
-
-            // Pest Trend Line Chart
-            if (trendChartObj) trendChartObj.destroy();
-            const ctxTrend = document.getElementById('trendChart').getContext('2d');
-            const trendLabels = data.dashboard_payload && Array.isArray(data.dashboard_payload.trend_labels) && data.dashboard_payload.trend_labels.length ? data.dashboard_payload.trend_labels : ['No data'];
-            const trendDatasets = data.dashboard_payload && Array.isArray(data.dashboard_payload.trend_datasets) && data.dashboard_payload.trend_datasets.length ? data.dashboard_payload.trend_datasets : [{
-                label: 'No reports yet',
-                data: [0],
-                borderColor: '#94a3b8',
-                backgroundColor: 'rgba(148, 163, 184, 0.15)',
-                borderWidth: 2,
-                tension: 0.2,
-                pointRadius: 3,
-                fill: true
-            }];
-
-            trendChartObj = new Chart(ctxTrend, {
-                type: 'line',
-                data: {
-                    labels: trendLabels,
-                    datasets: trendDatasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            onClick: function (e, legendItem, legend) {
-                                const index = legendItem.datasetIndex;
-                                const ci = legend.chart;
-                                if (ci.isDatasetVisible(index)) {
-                                    ci.hide(index);
-                                } else {
-                                    ci.show(index);
-                                }
-                            },
-                            labels: {
-                                boxWidth: 10,
-                                font: { size: 10, weight: '600' },
-                                generateLabels: function (chart) {
-                                    const datasets = chart.data.datasets;
-                                    return datasets.map((dataset, i) => {
-                                        const isVisible = chart.isDatasetVisible(i);
-                                        return {
-                                            text: dataset.label,
-                                            datasetIndex: i,
-                                            fillStyle: isVisible ? dataset.borderColor : 'rgba(203, 213, 225, 0.4)',
-                                            strokeStyle: isVisible ? dataset.borderColor : 'rgba(203, 213, 225, 0.4)',
-                                            fontColor: isVisible ? '#64748b' : 'rgba(100, 116, 139, 0.4)',
-                                            lineWidth: dataset.borderWidth,
-                                            hidden: false
-                                        };
-                                    });
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { stepSize: 1 } },
-                        x: { grid: { display: false } }
                     }
                 }
             });

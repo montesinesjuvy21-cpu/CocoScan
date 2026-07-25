@@ -149,6 +149,32 @@
         color: #065f46;
         font-weight: 600;
     }
+
+    /* --- PAGINATION SYSTEM --- */
+    .pagination-container {
+        display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;
+        width: 100%;
+    }
+    .page-btn {
+        min-width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-light);
+        background-color: var(--bg-card); color: var(--text-dark); font-size: 0.85rem;
+        font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .page-btn:hover:not(:disabled) {
+        background-color: #eef5f2;
+        color: var(--brand-dark);
+    }
+    .page-btn.active-page { background-color: #1a4d32; color: #ffffff; border-color: #1a4d32; }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .pagination-meta {
+        width: 100%;
+        text-align: center;
+        margin-top: 10px;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
 </style>
 
 <div class="search-controls-row">
@@ -204,6 +230,8 @@
             <!-- Populated dynamically by javascript -->
         </tbody>
     </table>
+    <div class="pagination-meta" id="pagination-summary"></div>
+    <div class="pagination-container" id="pagination-wrapper" style="display: none;"></div>
 </div>
 
 {% include 'components/report_modal.html' %}
@@ -221,6 +249,8 @@
         let activeBarangayFilter = "all";
         let activeStatusFilter = "all";
         let activeDateFilter = "";
+        let currentPage = 1;
+        const recordsPerPage = 10;
 
         function getFilteredReports() {
             return allReportsData.filter(item => {
@@ -275,11 +305,17 @@
                         <p style="color: #64748b; margin: 0; font-size: 0.92rem; max-width: 400px; display: inline-block; line-height: 1.5;">We couldn't find any records matching your criteria. Try adjustments to your text search or filters.</p>
                     </div>
                 </td></tr>`;
+                updatePaginationController(0);
                 updateFilterUI();
                 return;
             }
 
-            filtered.forEach(report => {
+            // Apply pagination
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = startIndex + recordsPerPage;
+            const paginatedRecords = filtered.slice(startIndex, endIndex);
+
+            paginatedRecords.forEach(report => {
                 const tr = document.createElement('tr');
                 tr.style.cssText = "border-bottom: 1px solid var(--bg-base, #f1f5f9); transition: background-color 0.2s;";
                 const bg = report.badge_style?.backgroundColor || "#f1f5f9";
@@ -299,6 +335,8 @@
                 `;
                 tbody.appendChild(tr);
             });
+
+            updatePaginationController(filtered.length);
 
             document.querySelectorAll('.view-report-btn').forEach(btn => {
                 btn.addEventListener('click', function () {
@@ -330,6 +368,7 @@
         if (searchInput) {
             searchInput.addEventListener("input", function () {
                 activeSearchQuery = this.value.trim().toLowerCase();
+                currentPage = 1;
                 renderReportsTable();
             });
         }
@@ -342,6 +381,7 @@
             });
             dateInput.addEventListener("change", function () {
                 activeDateFilter = this.value;
+                currentPage = 1;
                 renderReportsTable();
             });
         }
@@ -376,6 +416,7 @@
                 const item = e.target.closest(".dropdown-item");
                 if (!item) return;
                 activeBarangayFilter = item.getAttribute("data-value");
+                currentPage = 1;
                 brgyPanel.style.display = "none";
                 brgyPanel.querySelectorAll(".dropdown-item").forEach(i => i.classList.toggle("selected", i.getAttribute("data-value") === activeBarangayFilter));
                 renderReportsTable();
@@ -408,6 +449,7 @@
                 const item = e.target.closest(".dropdown-item");
                 if (!item) return;
                 activeStatusFilter = item.getAttribute("data-value");
+                currentPage = 1;
                 statusPanel.style.display = "none";
                 statusPanel.querySelectorAll(".dropdown-item").forEach(i => i.classList.toggle("selected", i.getAttribute("data-value") === activeStatusFilter));
                 renderReportsTable();
@@ -419,6 +461,62 @@
                 document.querySelectorAll(".filter-dropdown-panel").forEach(p => p.style.display = "none");
             }
         });
+
+        // Pagination system
+        function updatePaginationController(totalMatchedCount) {
+            const paginationWrapper = document.getElementById("pagination-wrapper");
+            const paginationMeta = document.getElementById("pagination-summary");
+            
+            if (!paginationWrapper || !paginationMeta) return;
+            
+            const totalPagesCalculated = Math.ceil(totalMatchedCount / recordsPerPage);
+            
+            if (totalMatchedCount === 0 || totalPagesCalculated <= 1) {
+                paginationWrapper.style.display = "none";
+                paginationMeta.textContent = "";
+                return;
+            }
+            
+            paginationWrapper.innerHTML = "";
+            paginationWrapper.style.display = "flex";
+            
+            // Previous button
+            const leftBtn = document.createElement("button");
+            leftBtn.className = "page-btn";
+            leftBtn.textContent = "← Previous";
+            leftBtn.disabled = (currentPage === 1);
+            leftBtn.onclick = () => { if(currentPage > 1) { currentPage--; renderReportsTable(); }};
+            paginationWrapper.appendChild(leftBtn);
+            
+            // Page number buttons
+            for (let i = 1; i <= totalPagesCalculated; i++) {
+                const pageBtn = document.createElement("button");
+                pageBtn.className = `page-btn ${i === currentPage ? 'active-page' : ''}`;
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => { currentPage = i; renderReportsTable(); };
+                paginationWrapper.appendChild(pageBtn);
+            }
+            
+            // Next button
+            const rightBtn = document.createElement("button");
+            rightBtn.className = "page-btn";
+            rightBtn.textContent = "Next →";
+            rightBtn.disabled = (currentPage === totalPagesCalculated);
+            rightBtn.onclick = () => { if(currentPage < totalPagesCalculated) { currentPage++; renderReportsTable(); }};
+            paginationWrapper.appendChild(rightBtn);
+            
+            // Update summary text
+            const startRec = (currentPage - 1) * recordsPerPage + 1;
+            const endRec = Math.min(currentPage * recordsPerPage, totalMatchedCount);
+            paginationMeta.textContent = `Showing ${startRec}–${endRec} of ${totalMatchedCount} reports`;
+        }
+
+        // Reset pagination when filters change
+        const originalClearAllActiveFilters = window.clearAllActiveFilters;
+        window.clearAllActiveFilters = function () {
+            currentPage = 1;
+            originalClearAllActiveFilters.call(this);
+        };
 
         // Initial render
         renderReportsTable();

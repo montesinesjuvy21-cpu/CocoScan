@@ -875,6 +875,68 @@ def _format_report_confidence(value):
     return f"{round(numeric_value)}%"
 
 
+def _parse_report_timestamp(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+
+    value_str = str(value).strip()
+    if not value_str:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(value_str.replace("Z", "+00:00"))
+        if parsed.tzinfo is not None:
+            return parsed.astimezone().replace(tzinfo=None)
+        return parsed
+    except ValueError:
+        try:
+            return datetime.strptime(value_str, "%Y-%m-%d")
+        except ValueError:
+            return None
+
+
+def _filter_reports_by_date_window(reports, start_date_str=None, end_date_str=None):
+    if not reports:
+        return []
+
+    if not start_date_str and not end_date_str:
+        return list(reports)
+
+    start_day = None
+    end_day = None
+
+    if start_date_str:
+        try:
+            start_day = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            start_day = None
+
+    if end_date_str:
+        try:
+            end_day = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            end_day = None
+
+    filtered_reports = []
+    for report in reports:
+        created_at = report.get("created_at") or report.get("submitted_at") or report.get("photo_taken_at")
+        parsed_time = _parse_report_timestamp(created_at)
+        if parsed_time is None:
+            continue
+
+        report_day = parsed_time.date()
+        if start_day and report_day < start_day:
+            continue
+        if end_day and report_day > end_day:
+            continue
+
+        filtered_reports.append(report)
+
+    return filtered_reports
+
+
 def _normalize_string_list(value):
     """Normalize recommendations: parse JSON strings, clean list items"""
     if isinstance(value, str):
@@ -1567,8 +1629,8 @@ def api_analytics():
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
     try:
-        from dateutil.parser import parse
         import calendar
+
         month_str = request.args.get('month')
         week_str = request.args.get('week')
 
@@ -1591,39 +1653,37 @@ def api_analytics():
             except ValueError:
                 pass
 
-        query = supabase.table('reports').select('*')
-        if start_date_str:
-            query = query.gte('created_at', start_date_str)
-        if end_date_str:
-            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
+        try:
+            reports_response = supabase.table('reports').select('*').order('created_at', desc=True).execute()
+            reports = getattr(reports_response, 'data', []) or []
+        except Exception as db_error:
+            logger.warning(f"Unable to fetch analytics reports: {db_error}")
+            reports = []
 
-        reports_response = query.order('created_at', desc=True).execute()
-        reports = getattr(reports_response, 'data', []) or []
-        pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
-        
-        print("API_ANALYTICS: month_str=", month_str, "week_str=", week_str, "start=", start_date_str, "end=", end_date_str, "num_reports=", len(reports), "num_pest_reports=", len(pest_reports))
-        with open("api_analytics.log", "a") as f:
-            f.write(f"API_ANALYTICS called! month={month_str} week={week_str} reports={len(pest_reports)}\n")
-        
+        reports = _filter_reports_by_date_window(reports, start_date_str, end_date_str)
+
+        status_totals = {'pending': 0, 'in_progress': 0, 'resolved': 0}
         status_breakdown = {
+            'total': status_totals,
             'rhinoceros beetle': {'pending': 0, 'in_progress': 0, 'resolved': 0},
             'brontispa': {'pending': 0, 'in_progress': 0, 'resolved': 0}
         }
 
-        for r in pest_reports:
-            pest_raw = str(r.get('pest_type') or '').strip().lower()
+        for r in reports:
             status = str(r.get('status') or '').strip().lower()
-            
             mapped_status = 'in_progress'
             if is_pending_report_status(status):
                 mapped_status = 'pending'
             elif is_resolved_report_status(status):
                 mapped_status = 'resolved'
+
+            status_totals[mapped_status] += 1
+
+            pest_raw = str(r.get('pest_type') or '').strip().lower()
             if pest_raw in status_breakdown:
                 status_breakdown[pest_raw][mapped_status] += 1
-                
-        # Generate chart payload using existing dashboard logic
-        dashboard_payload = build_dashboard_chart_payload(pest_reports, group_by_day=bool(month_str))
+
+        dashboard_payload = build_dashboard_chart_payload(reports, group_by_day=bool(month_str))
 
         return jsonify({
             'success': True,
@@ -1640,7 +1700,8 @@ def report_summary():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role not in ['lgu', 'admin']:
+    # Allow LGU, Admin, and Agriculturist roles to generate reports
+    if not user_id or user_role not in ['lgu', 'admin', 'agri_expert']:
         flash("Unauthorized access.", "error")
         return redirect(url_for('login'))
 
@@ -1673,18 +1734,16 @@ def report_summary():
             except ValueError:
                 pass
 
-        query = supabase.table('reports').select('*')
-        if start_date_str:
-            query = query.gte('created_at', start_date_str)
-        if end_date_str:
-            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
+        try:
+            reports_response = supabase.table('reports').select('*').order('created_at', desc=True).execute()
+            reports = getattr(reports_response, 'data', []) or []
+        except Exception as db_error:
+            logger.warning(f"Unable to fetch report summary reports: {db_error}")
+            reports = []
 
-        reports_response = query.order('created_at', desc=True).execute()
-        reports = getattr(reports_response, 'data', []) or []
+        reports = _filter_reports_by_date_window(reports, start_date_str, end_date_str)
         pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
 
-        print("REPORT_SUMMARY: month_str=", month_str, "week_str=", week_str, "start=", start_date_str, "end=", end_date_str, "num_reports=", len(reports), "num_pest_reports=", len(pest_reports))
-        
         rhino_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'rhinoceros beetle')
         brontispa_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'brontispa')
 
@@ -1702,6 +1761,18 @@ def report_summary():
 
         from datetime import datetime
         generated_at = datetime.now().strftime("%B %d, %Y %I:%M %p")
+
+        # Human-friendly period labels for the report header
+        start_label = start_date_str or 'Beginning'
+        end_label = end_date_str or 'Present'
+        try:
+            if start_date_str:
+                start_label = datetime.strptime(start_date_str, '%Y-%m-%d').strftime('%b %d, %Y')
+            if end_date_str:
+                end_label = datetime.strptime(end_date_str.split('T')[0], '%Y-%m-%d').strftime('%b %d, %Y')
+        except Exception:
+            # leave raw strings if parsing fails
+            pass
         
         # Generate chart payload using existing dashboard logic
         dashboard_payload = build_dashboard_chart_payload(pest_reports, group_by_day=bool(month_str))
@@ -1709,6 +1780,8 @@ def report_summary():
         data = {
             'explanation': explanation,
             'generated_at': generated_at,
+            'start_date': start_label,
+            'end_date': end_label,
             'total_reports': len(pest_reports),
             'rhino_count': rhino_count,
             'brontispa_count': brontispa_count,
