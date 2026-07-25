@@ -405,26 +405,42 @@ def normalize_submission_error(error_str: str) -> str:
 
 def reverse_geocode_latlng(latitude, longitude):
     try:
+        api_key = os.getenv('GEOAPIFY_API_KEY')
+        if not api_key:
+            logger.warning("GEOAPIFY_API_KEY is not set.")
+            return {}
+
         response = requests.get(
-            "https://nominatim.openstreetmap.org/reverse",
+            "https://api.geoapify.com/v1/geocode/reverse",
             params={
-                "format": "jsonv2",
                 "lat": latitude,
                 "lon": longitude,
-                "addressdetails": 1,
+                "apiKey": api_key,
             },
-            headers={"User-Agent": "CocoScan/1.0"},
             timeout=15,
         )
         if not response.ok:
             logger.warning(f"Reverse geocode failed: {response.status_code}")
             return {}
 
-        payload = response.json().get("address", {}) or {}
+        data = response.json()
+        features = data.get("features", [])
+        if not features:
+            return {}
+        
+        payload = features[0].get("properties", {})
+        
+        # In the Philippines, barangay is usually mapped to suburb, village, or neighbourhood in OSM/Geoapify
+        barangay = payload.get("suburb") or payload.get("village") or payload.get("neighbourhood") or payload.get("hamlet") or ""
+        municipality = payload.get("city") or payload.get("municipality") or payload.get("town") or payload.get("county") or ""
+        province = payload.get("state") or payload.get("province") or payload.get("region") or ""
+        formatted = payload.get("formatted", "")
+        
         return {
-            "barangay": payload.get("barangay") or payload.get("village") or payload.get("suburb") or payload.get("neighbourhood") or payload.get("city_district") or payload.get("hamlet") or "",
-            "municipality": payload.get("municipality") or payload.get("city") or payload.get("town") or payload.get("county") or "",
-            "province": payload.get("province") or payload.get("state") or payload.get("region") or "",
+            "barangay": barangay,
+            "municipality": municipality,
+            "province": province,
+            "formatted": formatted,
         }
     except Exception as geocode_err:
         logger.warning(f"Reverse geocode exception: {str(geocode_err)}")
@@ -2637,6 +2653,21 @@ def agriculturist_mark_resolved():
     except Exception as e:
         logger.error(f"Error marking report resolved: {str(e)}")
         return jsonify({'success': False, 'message': 'The resolution could not be saved.'}), 500
+
+@app.route('/api/geocode', methods=['GET'])
+def api_geocode():
+    lat = request.args.get('lat')
+    lon = request.args.get('lon')
+    if not lat or not lon:
+        return jsonify({"success": False, "error": "Missing coordinates"}), 400
+    
+    geo_data = reverse_geocode_latlng(lat, lon)
+    display_name = geo_data.get("formatted") or ", ".join(filter(None, [geo_data.get("barangay"), geo_data.get("municipality"), geo_data.get("province")]))
+    return jsonify({
+        "success": True,
+        "address": geo_data,
+        "display_name": display_name
+    })
     
 @app.route('/farmer/submit-report', methods=['POST'])
 def farmer_submit_report():

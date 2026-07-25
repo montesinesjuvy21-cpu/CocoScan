@@ -478,11 +478,11 @@
             li.style.flexDirection = "column";
             li.style.marginBottom = "4px";
             
-            let html = `<div style="display: flex; align-items: flex-start; gap: 6px;">`;
+            let html = `<div style="display: flex; align-items: flex-start; gap: 4px;">`;
             if (showIcon && !withTooltip) {
                 html += `<i class="fa-solid fa-circle-check" style="margin-top: 2px; color: var(--primary-green); flex-shrink: 0;"></i>`;
             } else if (showIcon && withTooltip) {
-                html += `<div style="font-weight: 700; color: var(--text-muted); font-size: 0.85rem; margin-top: 1px; flex-shrink: 0; min-width: 14px;">${index + 1}.</div>`;
+                html += `<div style="font-weight: 700; color: var(--text-muted); font-size: 0.85rem; margin-top: 0px; flex-shrink: 0; min-width: 14px; text-align: right; margin-right: 2px;">${index + 1}.</div>`;
             }
             html += `<span style="font-size: 0.85rem; line-height: 1.3; color: var(--text-dark); padding: 0;">${escapeHtml(item)}</span>`;
             

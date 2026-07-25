@@ -1179,18 +1179,11 @@
                 let locationStr = globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable';
                 if (globalPrimaryGPS) {
                     try {
-                        const geoResp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${globalPrimaryGPS.latitude}&lon=${globalPrimaryGPS.longitude}&zoom=14`);
+                        const geoResp = await fetch(`/api/geocode?lat=${globalPrimaryGPS.latitude}&lon=${globalPrimaryGPS.longitude}`);
                         if (geoResp.ok) {
                             const geoData = await geoResp.json();
-                            if (geoData && geoData.address) {
-                                const addr = geoData.address;
-                                const parts = [addr.village || addr.suburb || addr.barangay || addr.hamlet, addr.city || addr.town || addr.municipality, addr.state || addr.province];
-                                const shortAddress = parts.filter(Boolean).join(", ");
-                                if (shortAddress) {
-                                    locationStr = shortAddress;
-                                } else if (geoData.display_name) {
-                                    locationStr = geoData.display_name;
-                                }
+                            if (geoData.success && geoData.display_name) {
+                                locationStr = geoData.display_name;
                             }
                         }
                     } catch (e) {
