@@ -285,7 +285,7 @@
             gap: 12px;
             width: 100%;
         }
-    
+
         .metrics-sub-split {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -427,6 +427,15 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 10px rgba(11, 37, 26, 0.15);
+        }
+
+        .btn-primary-scan:hover {
+            background-color: #1e5c3f;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(30, 92, 63, 0.25);
         }
 
         /* ==========================================================================
@@ -600,7 +609,8 @@
                 style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-bottom: 12px; position: relative;">
                 <div>
                     {% block page_header %}
-                    <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">Dashboard</h1>
+                    <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">
+                        Dashboard</h1>
                     <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview</p>
                     {% endblock %}
                 </div>
@@ -722,7 +732,7 @@
             } catch (e) {
                 console.error("Failed to parse chart data", e);
             }
-            
+
             const trendEl = document.getElementById('trendChart');
             if (trendEl) {
                 const ctxTrend = trendEl.getContext('2d');

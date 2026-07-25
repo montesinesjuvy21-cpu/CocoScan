@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CocoScan - Saved Drafts</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <style>
         /* ==========================================================================
            1. VARIABLES & BASE STYLES
@@ -20,14 +22,17 @@
             --text-muted: #64748b;
             --border-light: rgba(0, 0, 0, 0.05);
         }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Inter', sans-serif;
         }
+
         body {
-            background-color: var(--brand-dark); /* Prevents white flashes on load */
+            background-color: var(--brand-dark);
+            /* Prevents white flashes on load */
             color: var(--text-dark);
             min-height: 100vh;
             overflow-x: hidden;
@@ -42,44 +47,50 @@
             background-color: var(--brand-dark);
             color: #ffffff;
             position: fixed;
-            top: 0; left: 0;
+            top: 0;
+            left: 0;
             z-index: 1000;
-            padding: 0 max(16px, calc((100% - 1400px) / 2 + 24px)); 
+            padding: 0 max(16px, calc((100% - 1400px) / 2 + 24px));
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
-        .logo-group { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .logo-img-fallback { 
-            width: 32px; 
-            height: 32px; 
-            background: var(--bg-card); 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+
+        .logo-img-fallback {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-card);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .mobile-header h2 { 
-            font-size: 1.15rem; 
-            margin-bottom: 0; 
+
+        .mobile-header h2 {
+            font-size: 1.15rem;
+            margin-bottom: 0;
             font-weight: 800;
         }
-        .mobile-header p { 
-            font-size: 0.7rem; 
-            color: rgba(255,255,255,0.7); 
-            margin: 0; 
+
+        .mobile-header p {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0;
         }
-        .hamburger-btn { 
-            background: none; 
-            border: none; 
-            color: #ffffff; 
-            font-size: 1.35rem; 
-            cursor: pointer; 
+
+        .hamburger-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.35rem;
+            cursor: pointer;
         }
 
         /* ==========================================================================
@@ -93,88 +104,108 @@
             flex-direction: column;
             justify-content: space-between;
             position: fixed;
-            top: 64px; bottom: 0; right: 0;
+            top: 64px;
+            bottom: 0;
+            right: 0;
             z-index: 999;
             transform: translateX(100%);
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: -5px 0 25px rgba(0,0,0,0.25);
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.25);
         }
-        .sidebar-wrapper.show-mobile { 
-            transform: translateX(0); 
+
+        .sidebar-wrapper.show-mobile {
+            transform: translateX(0);
         }
-        .menu-label { 
-            font-size: 0.7rem; 
-            text-transform: uppercase; 
-            letter-spacing: 0.1em; 
-            color: rgba(255,255,255,0.5); 
-            padding: 24px 20px 12px; 
-            font-weight: 700; 
+
+        .menu-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 24px 20px 12px;
+            font-weight: 700;
         }
-        .sidebar-menu-list { 
-            list-style: none; 
-            padding: 0 10px; 
+
+        .sidebar-menu-list {
+            list-style: none;
+            padding: 0 10px;
         }
-        .menu-item-link { 
-            display: flex; 
-            align-items: center; 
-            gap: 14px; 
-            padding: 14px 16px; 
-            color: rgba(255,255,255,0.75); 
-            text-decoration: none; 
-            border-radius: 10px; 
-            margin-bottom: 6px; 
-            font-size: 0.95rem; 
-            font-weight: 500; 
+
+        .menu-item-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            color: rgba(255, 255, 255, 0.75);
+            text-decoration: none;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+            font-weight: 500;
         }
-        .menu-item-link:hover, 
-        .menu-item-link.active { 
-            background: rgba(255,255,255,0.08); 
-            color: #ffffff; 
+
+        .menu-item-link:hover,
+        .menu-item-link.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
         }
-        .sidebar-user-footer { 
-            padding: 20px; 
-            background: rgba(0,0,0,0.2); 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            border-top: 1px solid rgba(255,255,255,0.08); 
+
+        .sidebar-user-footer {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .user-meta-box { 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
+
+        .user-meta-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        .user-avatar-circle { 
-            width: 42px; 
-            height: 42px; 
-            border-radius: 50%; 
-            background: rgba(255,255,255,0.12); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+
+        .user-avatar-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .user-identity-text h4 { 
-            font-size: 0.9rem; 
-            margin: 0; 
+
+        .user-identity-text h4 {
+            font-size: 0.9rem;
+            margin: 0;
         }
-        .user-identity-text p { 
-            font-size: 0.75rem; 
-            color: rgba(255,255,255,0.6); 
-            margin: 0; 
+
+        .user-identity-text p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0;
         }
-        .btn-logout-trigger { 
-            color: rgba(255,255,255,0.6); 
-            font-size: 1.2rem; 
+
+        .btn-logout-trigger {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.2rem;
+            transition: color 0.2s ease;
+            padding: 4px;
         }
-        .sidebar-backdrop { 
-            display: none; 
-            position: fixed; 
-            inset: 0; 
-            background: rgba(11,37,26,0.4); 
-            z-index: 950; 
+        .btn-logout-trigger:hover {
+            color: #ef4444 !important;
         }
-        .sidebar-backdrop.active { 
-            display: block; 
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 37, 26, 0.4);
+            z-index: 950;
+        }
+
+        .sidebar-backdrop.active {
+            display: block;
         }
 
         /* ==========================================================================
@@ -188,31 +219,35 @@
             flex-direction: column;
             position: relative;
         }
-        .main-content-layout { 
-            flex: 1; 
-            width: 100%; 
+
+        .main-content-layout {
+            flex: 1;
+            width: 100%;
             max-width: 1400px;
             margin: 0 auto;
-            padding: 88px 24px 24px 24px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 24px; 
+            padding: 88px 24px 24px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
         }
-        .section-title-wrap { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            gap: 16px; 
+
+        .section-title-wrap {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
         }
-        .section-title-wrap h1 { 
-            font-size: 1.45rem; 
-            font-weight: 800; 
-            color: var(--brand-dark); 
+
+        .section-title-wrap h1 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: var(--brand-dark);
         }
-        .section-title-wrap p { 
-            font-size: 0.85rem; 
-            color: var(--text-muted); 
-            margin-top: 4px; 
+
+        .section-title-wrap p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
         }
 
         .btn-icon-refresh {
@@ -230,12 +265,14 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
         .btn-icon-refresh:hover {
             background-color: var(--primary-green);
             color: #ffffff;
             transform: rotate(45deg);
             box-shadow: 0 6px 14px rgba(82, 130, 101, 0.15);
         }
+
         .btn-icon-refresh:active {
             transform: rotate(90deg) scale(0.95);
         }
@@ -243,106 +280,119 @@
         /* ==========================================================================
            5. DRAFTS GRID & CARDS (OPTIMIZED & ENHANCED)
            ========================================================================== */
-        .drafts-board { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 16px; 
+        .drafts-board {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
         }
-        .draft-card { 
-            background: var(--bg-card); 
-            border-radius: 20px; 
-            border: 1px solid var(--border-light); 
-            overflow: hidden; 
-            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.02); 
+
+        .draft-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.02);
             display: flex;
             flex-direction: column;
             gap: 12px;
             padding: 16px;
         }
-        .draft-card-header { 
-            display: grid; 
-            grid-template-columns: 84px 1fr; 
-            gap: 14px; 
-            align-items: center; 
+
+        .draft-card-header {
+            display: grid;
+            grid-template-columns: 84px 1fr;
+            gap: 14px;
+            align-items: center;
         }
-        .draft-thumb { 
-            width: 84px; 
-            height: 84px; 
-            border-radius: 14px; 
-            background: #f8fafb; 
-            overflow: hidden; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            border: 1px solid rgba(0,0,0,0.02);
+
+        .draft-thumb {
+            width: 84px;
+            height: 84px;
+            border-radius: 14px;
+            background: #f8fafb;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(0, 0, 0, 0.02);
         }
-        .draft-thumb img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
+
+        .draft-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
-        .draft-meta { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 3px; 
+
+        .draft-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
         }
-        .draft-meta h3 { 
-            font-size: 1.05rem; 
-            margin: 0; 
-            color: var(--brand-dark); 
+
+        .draft-meta h3 {
+            font-size: 1.05rem;
+            margin: 0;
+            color: var(--brand-dark);
             font-weight: 700;
         }
-        .draft-meta p { 
-            margin: 0; 
-            color: var(--text-muted); 
-            font-size: 0.8rem; 
-            line-height: 1.4; 
+
+        .draft-meta p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            line-height: 1.4;
         }
-        .draft-card-body { 
-            display: flex; 
+
+        .draft-card-body {
+            display: flex;
             flex-direction: column;
-            gap: 8px; 
+            gap: 8px;
         }
-        .draft-stat { 
-            background: #f8faf9; 
-            border-radius: 12px; 
-            padding: 10px 14px; 
-            display: flex; 
+
+        .draft-stat {
+            background: #f8faf9;
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
             justify-content: space-between;
-            align-items: center; 
-            border: 1px solid rgba(0,0,0,0.01);
+            align-items: center;
+            border: 1px solid rgba(0, 0, 0, 0.01);
         }
-        .draft-stat strong { 
-            font-size: 0.82rem; 
-            color: var(--text-muted); 
+
+        .draft-stat strong {
+            font-size: 0.82rem;
+            color: var(--text-muted);
             font-weight: 500;
         }
-        .draft-stat span { 
-            font-size: 0.85rem; 
-            color: var(--brand-dark); 
+
+        .draft-stat span {
+            font-size: 0.85rem;
+            color: var(--brand-dark);
             font-weight: 600;
         }
 
         /* --- IMMACULATE BUTTON CONSOLE PANEL (FIXED REDESIGN) --- */
-        .draft-actions { 
-            display: flex; 
+        .draft-actions {
+            display: flex;
             flex-direction: column;
-            gap: 10px; 
+            gap: 10px;
             margin-top: 4px;
             width: 100%;
         }
+
         .main-actions-row {
             display: flex;
             gap: 10px;
             width: 100%;
         }
-        .btn-control { 
-            padding: 12px 14px; 
-            border-radius: 12px; 
-            font-size: 0.9rem; 
-            font-weight: 700; 
-            cursor: pointer; 
-            border: none; 
+
+        .btn-control {
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -350,36 +400,39 @@
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             width: 100%;
         }
-        
+
         /* Submit: High Highlight Weight */
-        .btn-control.btn-submit { 
-            background: #164630; 
-            color: #ffffff; 
+        .btn-control.btn-submit {
+            background: #164630;
+            color: #ffffff;
         }
+
         .btn-control.btn-submit:hover {
             background-color: #1e5c3f;
             transform: translateY(-1px);
         }
 
         /* Continue/Edit: Balanced Outlined Outline */
-        .btn-control.btn-edit { 
-            background: #ffffff; 
-            color: var(--brand-dark); 
-            border: 1px solid rgba(82, 130, 101, 0.25); 
+        .btn-control.btn-edit {
+            background: #ffffff;
+            color: var(--brand-dark);
+            border: 1px solid rgba(82, 130, 101, 0.25);
         }
+
         .btn-control.btn-edit:hover {
             background-color: #e8f2f0;
             border-color: var(--primary-green);
         }
 
         /* Delete: Subtle Alert Design block to remove overwhelming vertical block stacking */
-        .btn-control.btn-delete { 
+        .btn-control.btn-delete {
             background-color: #fff5f5;
             border: 1px solid rgba(239, 68, 68, 0.12);
             color: #e53e3e;
             padding: 10px;
             font-size: 0.85rem;
         }
+
         .btn-control.btn-delete:hover {
             background-color: #fee2e2;
             color: #9b1c1c;
@@ -389,21 +442,21 @@
         /* ==========================================================================
            6. ENHANCED PROPORTIONAL EMPTY STATE VIEW
            ========================================================================== */
-        .empty-state { 
-            background: var(--bg-card); 
-            border: 1px solid var(--border-light); 
-            border-radius: 24px; 
-            padding: 60px 32px; 
-            text-align: center; 
+        .empty-state {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            padding: 60px 32px;
+            text-align: center;
             color: var(--text-muted);
-            width: 100%; 
-            margin: 0 auto; 
+            width: 100%;
+            margin: 0 auto;
             box-shadow: 0 10px 30px rgba(15, 23, 42, 0.03);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            grid-column: 1 / -1; 
+            grid-column: 1 / -1;
         }
 
         .empty-state-icon-box {
@@ -420,16 +473,17 @@
             position: relative;
         }
 
-        .empty-state h2 { 
-            font-size: 1.35rem; 
+        .empty-state h2 {
+            font-size: 1.35rem;
             font-weight: 800;
-            margin-bottom: 10px; 
-            color: var(--brand-dark); 
+            margin-bottom: 10px;
+            color: var(--brand-dark);
             letter-spacing: -0.3px;
         }
-        .empty-state p { 
-            font-size: 0.92rem; 
-            line-height: 1.6; 
+
+        .empty-state p {
+            font-size: 0.92rem;
+            line-height: 1.6;
             color: var(--text-muted);
             max-width: 440px;
         }
@@ -438,54 +492,63 @@
            7. RESPONSIVE MEDIA QUERIES (DESKTOP ENHANCEMENTS)
            ========================================================================== */
         @media (max-width: 500px) {
-            .main-content-layout { 
-                padding: 88px 16px 24px; 
+            .main-content-layout {
+                padding: 88px 16px 24px;
             }
         }
 
         @media (min-width: 1024px) {
             .main-content-layout {
-                padding: 108px 32px 32px 32px; 
-                gap: 24px; 
+                padding: 108px 32px 32px 32px;
+                gap: 24px;
             }
+
             .mobile-header {
-                height: 72px; 
+                height: 72px;
                 padding: 0 max(32px, calc((100% - 1400px) / 2 + 32px));
             }
+
             .sidebar-wrapper {
                 top: 72px;
             }
-            .section-title-wrap h1 { 
-                font-size: 1.95rem; 
+
+            .section-title-wrap h1 {
+                font-size: 1.95rem;
             }
-            .section-title-wrap p { 
-                font-size: 0.98rem; 
+
+            .section-title-wrap p {
+                font-size: 0.98rem;
                 margin-top: 4px;
             }
-            .drafts-board { 
-                grid-template-columns: repeat(2, 1fr); 
-                gap: 20px; 
+
+            .drafts-board {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
             }
+
             @media (min-width: 1400px) {
-                .drafts-board { 
-                    grid-template-columns: repeat(3, 1fr); 
+                .drafts-board {
+                    grid-template-columns: repeat(3, 1fr);
                 }
             }
         }
     </style>
 </head>
+
 <body>
 
     <div class="mobile-viewport-container">
         <header class="mobile-header">
             <div class="logo-group">
-                <div class="logo-img-fallback"><i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i></div>
+                <div class="logo-img-fallback"><i class="fa-solid fa-tree-city"
+                        style="color: var(--primary-green); font-size: 0.95rem;"></i></div>
                 <div>
                     <h2>CocoScan</h2>
                     <p>Saved Drafts</p>
                 </div>
             </div>
-            <button class="hamburger-btn" onclick="toggleSidebarMenu()"><i class="fa-solid fa-bars" id="toggleIcon"></i></button>
+            <button class="hamburger-btn" onclick="toggleSidebarMenu()"><i class="fa-solid fa-bars"
+                    id="toggleIcon"></i></button>
         </header>
 
         <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
@@ -493,15 +556,20 @@
             <div>
                 <div class="menu-label">Main Menu</div>
                 <ul class="sidebar-menu-list">
-                    <li><a href="/farmer/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-                    <li><a href="/farmer/scan" class="menu-item-link"><i class="fa-solid fa-camera"></i> Scan Pest</a></li>
-                    <li><a href="/farmer/drafts" class="menu-item-link active"><i class="fa-solid fa-file-pen"></i> Drafts</a></li>
-                    <li><a href="/farmer/reports" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> My Reports</a></li>
+                    <li><a href="/farmer/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i>
+                            Dashboard</a></li>
+                    <li><a href="/farmer/scan" class="menu-item-link"><i class="fa-solid fa-camera"></i> Scan Pest</a>
+                    </li>
+                    <li><a href="/farmer/drafts" class="menu-item-link active"><i class="fa-solid fa-file-pen"></i>
+                            Drafts</a></li>
+                    <li><a href="/farmer/reports" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> My
+                            Reports</a></li>
                 </ul>
             </div>
             <div class="sidebar-user-footer">
                 <div class="user-meta-box">
-                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user"
+                            style="color:#fff; font-size: 0.95rem;"></i></div>
                     <div class="user-identity-text">
                         <h4>{{ user_name }}</h4>
                         <p>Farmer</p>
@@ -518,13 +586,14 @@
                     <p>Resume, submit, or remove your saved field scan reports.</p>
                 </div>
                 <div>
-                    <button class="btn-icon-refresh" onclick="spinAndLoadDrafts(this)" title="Refresh Layout"><i class="fa-solid fa-arrows-rotate"></i></button>
+                    <button class="btn-icon-refresh" onclick="spinAndLoadDrafts(this)" title="Refresh Layout"><i
+                            class="fa-solid fa-arrows-rotate"></i></button>
                 </div>
             </header>
 
             <!-- Dito ipapasok ang grid at empty view module layouts -->
             <div id="drafts-list" class="drafts-board"></div>
-            
+
             <div id="empty-state" class="empty-state" style="display:none;">
                 <div class="empty-state-icon-box">
                     <i class="fa-solid fa-file-signature"></i>
@@ -606,7 +675,7 @@
             const list = document.getElementById('drafts-list');
             if (show) {
                 list.innerHTML = '';
-                empty.style.display = 'flex'; 
+                empty.style.display = 'flex';
                 if (message) empty.querySelector('p').textContent = message;
             } else {
                 empty.style.display = 'none';
@@ -780,4 +849,5 @@
         });
     </script>
 </body>
+
 </html>

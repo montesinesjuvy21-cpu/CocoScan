@@ -95,7 +95,8 @@
         .user-avatar-circle { width: 42px; height: 42px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; }
         .user-identity-text h4 { font-size: 0.9rem; color: #ffffff; }
         .user-identity-text p { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
-        .btn-logout-trigger { color: rgba(255, 255, 255, 0.4); font-size: 1.2rem; }
+        .btn-logout-trigger { color: rgba(255, 255, 255, 0.4); font-size: 1.2rem; transition: color 0.2s ease; padding: 4px; }
+        .btn-logout-trigger:hover { color: #ef4444 !important; }
         .sidebar-backdrop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 37, 26, 0.4); backdrop-filter: blur(4px); z-index: 950; }
         .sidebar-backdrop.active { display: block; }
 
@@ -213,9 +214,16 @@
             font-size: 0.92rem;
             color: var(--text-dark);
             border-radius: 8px;
+            transition: all 0.15s ease;
         }
         .filter-dropdown .dropdown-item:hover {
-            background: rgba(82,130,101,0.06);
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .filter-dropdown .dropdown-item.selected {
+            background-color: #ecfdf5;
+            color: #065f46;
+            font-weight: 600;
         }
 
         /* --- FILTERS ENHANCEMENTS --- */
@@ -231,6 +239,10 @@
             color: var(--text-muted); cursor: pointer; white-space: nowrap;
             display: inline-flex; align-items: center; gap: 6px;
             transition: all 0.2s ease;
+        }
+        .chip-filter-btn:hover {
+            border-color: #1a4d32;
+            color: #1a4d32;
         }
         .chip-filter-btn.active-chip {
             background-color: #1a4d32; color: #ffffff; border-color: #1a4d32;
@@ -365,7 +377,8 @@
             <div>
                 <div class="menu-label">Main Menu</div>
                 <ul class="sidebar-menu-list">
-                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
+                    <li><a href="/agriculturist/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
                     <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i> Active Reports</a></li>
                     <li><a href="/agriculturist/reviewed" class="menu-item-link active"><i class="fa-solid fa-check-double"></i> Resolved</a></li>
                     <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
@@ -406,11 +419,11 @@
                         <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
                     </button>
                 </div>
-                <div id="barangay-dropdown" class="filter-dropdown" style="position:relative; margin-top:8px;">
-                    <div class="filter-dropdown-panel" style="display:none; position:fixed; z-index:80; background:var(--bg-card); border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:8px; padding:8px; min-width:220px; max-height:320px; overflow:auto;"></div>
+                <div id="barangay-dropdown" class="filter-dropdown" style="position:absolute; width:0; height:0; margin:0; padding:0; pointer-events:none;">
+                    <div class="filter-dropdown-panel" style="display:none; position:fixed; z-index:80; background:var(--bg-card); border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:8px; padding:8px; min-width:220px; max-height:320px; overflow:auto; pointer-events:auto;"></div>
                 </div>
-                <div id="status-dropdown" class="filter-dropdown" style="position:relative; margin-top:8px;">
-                    <div class="filter-dropdown-panel" style="display:none; position:fixed; z-index:80; background:var(--bg-card); border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:8px; padding:8px; min-width:220px; max-height:240px; overflow:auto;"></div>
+                <div id="status-dropdown" class="filter-dropdown" style="position:absolute; width:0; height:0; margin:0; padding:0; pointer-events:none;">
+                    <div class="filter-dropdown-panel" style="display:none; position:fixed; z-index:80; background:var(--bg-card); border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:8px; padding:8px; min-width:220px; max-height:240px; overflow:auto; pointer-events:auto;"></div>
                 </div>
             </div>
 
@@ -462,7 +475,7 @@
             const barangayPanel = document.querySelector('#barangay-dropdown .filter-dropdown-panel');
             const statusPanel = document.querySelector('#status-dropdown .filter-dropdown-panel');
 
-            const barangays = [
+            const barangays = window.COCOSCAN_BARANGAYS || [
 "Bagong Bayan II-A","Bagong Pook VI-C","Barangay I-A","Barangay I-B","Barangay II-A","Barangay II-B","Barangay II-C","Barangay II-D","Barangay II-E","Barangay II-F","Barangay III-A","Barangay III-B","Barangay III-C","Barangay III-D","Barangay III-E","Barangay III-F","Barangay IV-A","Barangay IV-B","Barangay IV-C","Barangay V-A","Barangay V-B","Barangay V-C","Barangay V-D","Barangay VI-A","Barangay VI-B","Bautista","Concepcion","Del Remedio","Dolores","San Antonio 1","San Antonio 2","San Bartolome","San Buenaventura","San Crispin","San Cristobal","San Diego","San Francisco","San Gabriel","San Gregorio","San Ignacio","San Isidro","San Joaquin","San Jose","San Juan","San Lorenzo","San Lucas 1","San Lucas 2","San Marcos","San Mateo","San Miguel","San Nicolas","San Pedro","San Rafael","San Roque","San Vicente","Santa Ana","Santa Catalina","Santa Cruz","Santa Elena","Santa Filomena","Santa Isabel","Santa Maria","Santa Maria Magdalena","Santa Monica","Santa Veronica","Santiago I","Santiago II","Santisimo Rosario","Santo Angel","Santo Cristo","Santo Niño","Soledad","Atisan","Balagtas","Dapdap","Dolores","Sta. Catalina","Sta. Cruz","Sta. Elena"
             ];
 
@@ -483,9 +496,17 @@
 
             if (barangayPanel) {
                 barangayPanel.innerHTML = '';
+                const allBrgyBtn = document.createElement('button');
+                allBrgyBtn.className = `dropdown-item ${activeBarangayFilter === 'all' ? 'selected' : ''}`;
+                allBrgyBtn.setAttribute('data-value', 'all');
+                allBrgyBtn.textContent = 'All Barangays';
+                allBrgyBtn.onclick = () => { activeBarangayFilter = 'all'; currentPage = 1; closeAllDropdowns(); updateFilterButtonStates(); evaluateClearFilterButtonState(); renderReportsGrid(); };
+                barangayPanel.appendChild(allBrgyBtn);
+
                 barangays.forEach(b => {
                     const btn = document.createElement('button');
-                    btn.className = 'dropdown-item';
+                    btn.className = `dropdown-item ${activeBarangayFilter === b ? 'selected' : ''}`;
+                    btn.setAttribute('data-value', b);
                     btn.textContent = b;
                     btn.onclick = () => { activeBarangayFilter = b; currentPage = 1; closeAllDropdowns(); updateFilterButtonStates(); evaluateClearFilterButtonState(); renderReportsGrid(); };
                     barangayPanel.appendChild(btn);
@@ -503,9 +524,17 @@
             ];
             if (statusPanel) {
                 statusPanel.innerHTML = '';
+                const allStatBtn = document.createElement('button');
+                allStatBtn.className = `dropdown-item ${activeStatusFilter === 'all' ? 'selected' : ''}`;
+                allStatBtn.setAttribute('data-value', 'all');
+                allStatBtn.textContent = 'All Statuses';
+                allStatBtn.onclick = () => { activeStatusFilter = 'all'; currentPage = 1; closeAllDropdowns(); updateFilterButtonStates(); evaluateClearFilterButtonState(); renderReportsGrid(); };
+                statusPanel.appendChild(allStatBtn);
+
                 statuses.forEach(s => {
                     const btn = document.createElement('button');
-                    btn.className = 'dropdown-item';
+                    btn.className = `dropdown-item ${activeStatusFilter === s ? 'selected' : ''}`;
+                    btn.setAttribute('data-value', s);
                     btn.textContent = s;
                     btn.onclick = () => { activeStatusFilter = s; currentPage = 1; closeAllDropdowns(); updateFilterButtonStates(); evaluateClearFilterButtonState(); renderReportsGrid(); };
                     statusPanel.appendChild(btn);
@@ -611,6 +640,15 @@
                 calendarBtn.innerHTML = formattedDate;
             } else {
                 calendarBtn.innerHTML = '<i class="fa-solid fa-calendar-days"></i>';
+            }
+
+            const brgyPanel = document.querySelector('#barangay-dropdown .filter-dropdown-panel');
+            if (brgyPanel) {
+                brgyPanel.querySelectorAll('.dropdown-item').forEach(i => i.classList.toggle('selected', i.getAttribute('data-value') === activeBarangayFilter));
+            }
+            const statPanel = document.querySelector('#status-dropdown .filter-dropdown-panel');
+            if (statPanel) {
+                statPanel.querySelectorAll('.dropdown-item').forEach(i => i.classList.toggle('selected', i.getAttribute('data-value') === activeStatusFilter));
             }
         }
 
@@ -758,7 +796,7 @@
                 const endRecord = Math.min(totalMatchedCount, currentPage * recordsPerPage);
                 paginationSummary.textContent = totalMatchedCount > 0
                     ? `Showing ${startRecord}–${endRecord} of ${totalMatchedCount}`
-                    : "No records to display.";
+                    : "";
             }
 
             if (totalPagesCalculated <= 1) {

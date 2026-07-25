@@ -3,22 +3,25 @@
 {% block title %}CocoScan - All Reports{% endblock %}
 
 {% block sidebar_menu %}
-  {% if session.get('user_role') == 'admin' %}
-    <li><a href="/admin/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
-    <li><a href="/admin/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
-    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link active"><i class="fa-solid fa-file-lines"></i> Reports</a></li>
-    <li><a href="/admin/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
-    <li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i> User Management</a></li>
-  {% else %}
-    <li><a href="/lgu/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-    <li><a href="/lgu/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
-    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link active"><i class="fa-solid fa-folder-open"></i> Reports</a></li>
-    <li><a href="/lgu/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
-  {% endif %}
+{% if session.get('user_role') == 'admin' %}
+<li><a href="/admin/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
+<li><a href="/admin/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+<li><a href="{{ url_for('overview_reports') }}" class="menu-item-link active"><i class="fa-solid fa-file-lines"></i>
+        Reports</a></li>
+<li><a href="/admin/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+<li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i> User Management</a>
+</li>
+{% else %}
+<li><a href="/lgu/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
+<li><a href="/lgu/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+<li><a href="{{ url_for('overview_reports') }}" class="menu-item-link active"><i class="fa-solid fa-folder-open"></i>
+        Reports</a></li>
+<li><a href="/lgu/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+{% endif %}
 {% endblock %}
 
 {% block user_role %}
-  {% if session.get('user_role') == 'admin' %}PCA Administrator{% else %}LGU Officer{% endif %}
+{% if session.get('user_role') == 'admin' %}PCA Administrator{% else %}LGU Officer{% endif %}
 {% endblock %}
 
 {% block page_header %}
@@ -27,49 +30,181 @@
 {% endblock %}
 
 {% block main_content %}
-<div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--border-light); overflow-x: auto;">
+<style>
+    /* --- SEARCH AND RESPONSIVE CONTROLS --- */
+    .search-controls-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .search-bar-box {
+        position: relative;
+        flex: 1;
+        min-width: 240px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 14px 16px 14px 44px;
+        border-radius: 32px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background-color: var(--bg-card, #ffffff);
+        font-size: 0.92rem;
+        outline: none;
+        color: var(--text-dark, #0f172a);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-input:focus {
+        border-color: rgba(82, 130, 101, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .search-bar-box i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+        font-size: 1rem;
+    }
+
+    .chip-filter-btn {
+        background-color: var(--bg-card, #ffffff);
+        color: var(--text-muted, #64748b);
+        border: 1px solid var(--border-light, #e2e8f0);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .chip-filter-btn:hover {
+        border-color: #1a4d32;
+        color: #1a4d32;
+    }
+
+    .chip-filter-btn.active-chip {
+        background-color: #1a4d32;
+        color: #ffffff;
+        border-color: #1a4d32;
+        box-shadow: 0 2px 6px rgba(26, 77, 50, 0.2);
+    }
+
+    .btn-clear-filters {
+        background-color: #eb5757;
+        color: #ffffff;
+        border: none;
+        padding: 8px 14px;
+        min-width: 120px;
+        border-radius: 28px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2);
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .btn-clear-filters:hover {
+        background-color: #d84343;
+        transform: translateY(-1px);
+    }
+
+    .filter-dropdown .dropdown-item {
+        display: block;
+        width: 100%;
+        padding: 10px 14px;
+        text-align: left;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: #334155;
+        border-radius: 6px;
+        transition: background-color 0.15s;
+    }
+
+    .filter-dropdown .dropdown-item:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .filter-dropdown .dropdown-item.selected {
+        background-color: #ecfdf5;
+        color: #065f46;
+        font-weight: 600;
+    }
+</style>
+
+<div class="search-controls-row">
+    <div class="search-bar-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="report-search" class="search-input" type="search" placeholder="Search location, pest, status..."
+            aria-label="Search reports">
+    </div>
+    <div class="filter-buttons-row"
+        style="display:flex; gap:8px; align-items:center; width:100%; position:relative; z-index:70; flex-wrap:wrap; justify-content:space-between;">
+        <div class="filter-button-group" style="display:flex; gap:8px; flex:1 1 220px; min-width:0; flex-wrap:wrap;">
+            <button id="filter-all-btn" class="chip-filter-btn active-chip">All</button>
+            <button id="filter-barangay-btn" class="chip-filter-btn">Barangay ▾</button>
+            <button id="filter-status-btn" class="chip-filter-btn">Status ▾</button>
+            <button id="filter-calendar-btn" class="chip-filter-btn" title="Filter by date"><i
+                    class="fa-solid fa-calendar-days"></i></button>
+            <input type="date" id="report-date-filter" aria-label="Filter by date" style="display:none;">
+        </div>
+        <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
+            <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+        </button>
+    </div>
+    <div id="barangay-dropdown" class="filter-dropdown"
+        style="position:absolute; width:0; height:0; margin:0; padding:0; pointer-events:none;">
+        <div class="filter-dropdown-panel"
+            style="display:none; position:fixed; z-index:80; background:white; border:1px solid #e2e8f0; box-shadow:0 6px 18px rgba(0,0,0,0.08); border-radius:8px; padding:8px; min-width:220px; max-height:320px; overflow:auto; pointer-events:auto;">
+        </div>
+    </div>
+    <div id="status-dropdown" class="filter-dropdown"
+        style="position:absolute; width:0; height:0; margin:0; padding:0; pointer-events:none;">
+        <div class="filter-dropdown-panel"
+            style="display:none; position:fixed; z-index:80; background:white; border:1px solid #e2e8f0; box-shadow:0 6px 18px rgba(0,0,0,0.08); border-radius:8px; padding:8px; min-width:220px; max-height:240px; overflow:auto; pointer-events:auto;">
+        </div>
+    </div>
+</div>
+
+<div
+    style="background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--border-light); overflow-x: auto;">
     <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
         <thead>
             <tr style="border-bottom: 2px solid var(--bg-base); text-align: left;">
                 <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Date</th>
                 <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Location</th>
-                <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Pest Type</th>
+                <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Pest Type
+                </th>
                 <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Status</th>
-                <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-align: center;">Action</th>
+                <th
+                    style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-align: center;">
+                    Action</th>
             </tr>
         </thead>
         <tbody>
-            {% for report in reports %}
-            <tr style="border-bottom: 1px solid var(--bg-base); transition: background-color 0.2s;">
-                <td style="padding: 16px 12px; font-size: 0.9rem;">{{ report.formatted_date }}</td>
-                <td style="padding: 16px 12px; font-size: 0.9rem; font-weight: 500;">{{ report.formatted_location }}</td>
-                <td style="padding: 16px 12px; font-size: 0.9rem;">{{ report.pest_type }}</td>
-                <td style="padding: 16px 12px; font-size: 0.9rem;">
-                    <span class="report-status-badge" data-bg="{{ report.badge_style.backgroundColor }}" data-color="{{ report.badge_style.color }}" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
-                        {{ report.normalized_status }}
-                    </span>
-                </td>
-                <td style="padding: 16px 12px; text-align: center;">
-                    <button type="button" class="view-report-btn" data-report-id="{{ report.id }}" style="cursor: pointer; border: none; display: inline-block; text-decoration: none; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; background-color: var(--brand-accent); color: white; transition: opacity 0.2s;">View</button>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="5" style="padding: 30px; text-align: center; color: var(--text-muted); font-size: 0.95rem;">No reports found.</td>
-            </tr>
-            {% endfor %}
+            <!-- Populated dynamically by javascript -->
         </tbody>
     </table>
 </div>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        document.querySelectorAll('.report-status-badge').forEach(function(badge) {
-            badge.style.backgroundColor = badge.getAttribute('data-bg');
-            badge.style.color = badge.getAttribute('data-color');
-        });
-    });
-</script>
 
 {% include 'components/report_modal.html' %}
 
@@ -77,20 +212,216 @@
     {{ reports | tojson | safe }}
 </script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         const dataElement = document.getElementById("reports-data");
-        const allReportsData = JSON.parse(dataElement.textContent);
-        const userRole = dataElement.getAttribute("data-role");
-        
-        document.querySelectorAll('.view-report-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const reportId = parseInt(this.getAttribute('data-report-id'), 10);
-                const report = allReportsData.find(r => r.id === reportId);
-                if (report && typeof window.openReportModal === "function") {
-                    window.openReportModal(report, userRole);
-                }
+        const allReportsData = JSON.parse(dataElement.textContent || "[]");
+        const userRole = dataElement.getAttribute("data-role") || "lgu";
+
+        let activeSearchQuery = "";
+        let activeBarangayFilter = "all";
+        let activeStatusFilter = "all";
+        let activeDateFilter = "";
+
+        function getFilteredReports() {
+            return allReportsData.filter(item => {
+                const searchStr = `${item.formatted_date || ""} ${item.formatted_location || ""} ${item.pest_type || ""} ${item.normalized_status || ""} ${item.barangay || ""} ${item.municipality || ""}`.toLowerCase();
+                const matchesSearch = !activeSearchQuery || searchStr.includes(activeSearchQuery);
+                const matchesBarangay = activeBarangayFilter === "all" || String(item.barangay || "").toLowerCase() === activeBarangayFilter.toLowerCase();
+                const matchesStatus = activeStatusFilter === "all" || String(item.status || "").toLowerCase() === activeStatusFilter.toLowerCase() || String(item.normalized_status || "").toLowerCase() === activeStatusFilter.toLowerCase();
+                const matchesDate = !activeDateFilter || String(item.formatted_date || item.created_at || "").includes(activeDateFilter) || String(item.date || "").includes(activeDateFilter);
+                return matchesSearch && matchesBarangay && matchesStatus && matchesDate;
             });
+        }
+
+        function updateFilterUI() {
+            const hasFilter = Boolean(activeSearchQuery || activeBarangayFilter !== "all" || activeStatusFilter !== "all" || activeDateFilter);
+            const clearBtn = document.getElementById("clear-filters-btn");
+            if (clearBtn) {
+                clearBtn.style.display = hasFilter ? "inline-flex" : "none";
+            }
+            const allBtn = document.getElementById("filter-all-btn");
+            if (allBtn) {
+                allBtn.classList.toggle("active-chip", !hasFilter);
+            }
+            const brgyBtn = document.getElementById("filter-barangay-btn");
+            if (brgyBtn) {
+                brgyBtn.classList.toggle("active-chip", activeBarangayFilter !== "all");
+                brgyBtn.textContent = activeBarangayFilter !== "all" ? `Brgy: ${activeBarangayFilter} ▾` : "Barangay ▾";
+            }
+            const statusBtn = document.getElementById("filter-status-btn");
+            if (statusBtn) {
+                statusBtn.classList.toggle("active-chip", activeStatusFilter !== "all");
+                statusBtn.textContent = activeStatusFilter !== "all" ? `${activeStatusFilter} ▾` : "Status ▾";
+            }
+            const calBtn = document.getElementById("filter-calendar-btn");
+            if (calBtn) {
+                calBtn.classList.toggle("active-chip", Boolean(activeDateFilter));
+            }
+        }
+
+        function renderReportsTable() {
+            const tbody = document.querySelector('table tbody');
+            if (!tbody) return;
+            const filtered = getFilteredReports();
+            tbody.innerHTML = "";
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="padding: 0; border: none; background: white;">
+                    <div style="text-align:center; padding: 60px 20px; background: white; border-radius: 16px; margin: 10px 0;">
+                        <div style="width: 68px; height: 68px; background: #eef5f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                            <i class="fa-solid fa-folder-open" style="font-size: 28px; color: #1a4d32;"></i>
+                        </div>
+                        <h3 style="color: #0f172a; margin: 0 0 8px; font-size: 1.25rem; font-weight: 700;">No Reports Found</h3>
+                        <p style="color: #64748b; margin: 0; font-size: 0.92rem; max-width: 400px; display: inline-block; line-height: 1.5;">We couldn't find any records matching your criteria. Try adjustments to your text search or filters.</p>
+                    </div>
+                </td></tr>`;
+                updateFilterUI();
+                return;
+            }
+
+            filtered.forEach(report => {
+                const tr = document.createElement('tr');
+                tr.style.cssText = "border-bottom: 1px solid var(--bg-base, #f1f5f9); transition: background-color 0.2s;";
+                const bg = report.badge_style?.backgroundColor || "#f1f5f9";
+                const col = report.badge_style?.color || "#334155";
+                tr.innerHTML = `
+                    <td style="padding: 16px 12px; font-size: 0.9rem;">${report.formatted_date || ""}</td>
+                    <td style="padding: 16px 12px; font-size: 0.9rem; font-weight: 500;">${report.formatted_location || ""}</td>
+                    <td style="padding: 16px 12px; font-size: 0.9rem;">${report.pest_type || ""}</td>
+                    <td style="padding: 16px 12px; font-size: 0.9rem;">
+                        <span class="report-status-badge" style="background-color: ${bg}; color: ${col}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+                            ${report.normalized_status || report.status || ""}
+                        </span>
+                    </td>
+                    <td style="padding: 16px 12px; text-align: center;">
+                        <button type="button" class="view-report-btn" data-report-id="${report.id}" style="cursor: pointer; border: none; display: inline-block; text-decoration: none; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; background-color: var(--brand-accent, #10b981); color: white; transition: opacity 0.2s;">View</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.querySelectorAll('.view-report-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const reportId = parseInt(this.getAttribute('data-report-id'), 10);
+                    const report = allReportsData.find(r => r.id === reportId);
+                    if (report && typeof window.openReportModal === "function") {
+                        const modalReport = typeof window.normalizeReportData === "function" ? window.normalizeReportData(report) : report;
+                        window.openReportModal(modalReport, userRole);
+                    }
+                });
+            });
+
+            updateFilterUI();
+        }
+
+        window.clearAllActiveFilters = function () {
+            activeSearchQuery = "";
+            activeBarangayFilter = "all";
+            activeStatusFilter = "all";
+            activeDateFilter = "";
+            const searchInput = document.getElementById("report-search");
+            if (searchInput) searchInput.value = "";
+            const dateInput = document.getElementById("report-date-filter");
+            if (dateInput) dateInput.value = "";
+            renderReportsTable();
+        };
+
+        const searchInput = document.getElementById("report-search");
+        if (searchInput) {
+            searchInput.addEventListener("input", function () {
+                activeSearchQuery = this.value.trim().toLowerCase();
+                renderReportsTable();
+            });
+        }
+
+        const dateInput = document.getElementById("report-date-filter");
+        const calBtn = document.getElementById("filter-calendar-btn");
+        if (calBtn && dateInput) {
+            calBtn.addEventListener("click", function () {
+                try { dateInput.showPicker(); } catch (e) { dateInput.click(); }
+            });
+            dateInput.addEventListener("change", function () {
+                activeDateFilter = this.value;
+                renderReportsTable();
+            });
+        }
+
+        const allBtn = document.getElementById("filter-all-btn");
+        if (allBtn) {
+            allBtn.addEventListener("click", window.clearAllActiveFilters);
+        }
+
+        // Build Barangay Dropdown
+        const brgyBtn = document.getElementById("filter-barangay-btn");
+        const brgyPanel = document.querySelector("#barangay-dropdown .filter-dropdown-panel");
+        const uniqueBarangays = window.COCOSCAN_BARANGAYS || Array.from(new Set(allReportsData.map(r => String(r.barangay || "").trim()).filter(Boolean))).sort();
+        if (brgyBtn && brgyPanel) {
+            let brgyHtml = `<button type="button" class="dropdown-item ${activeBarangayFilter === 'all' ? 'selected' : ''}" data-value="all">All Barangays</button>`;
+            uniqueBarangays.forEach(b => {
+                brgyHtml += `<button type="button" class="dropdown-item" data-value="${b}">${b}</button>`;
+            });
+            brgyPanel.innerHTML = brgyHtml;
+
+            brgyBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                const rect = brgyBtn.getBoundingClientRect();
+                brgyPanel.style.top = `${rect.bottom + 6}px`;
+                brgyPanel.style.left = `${rect.left}px`;
+                const isVisible = brgyPanel.style.display === "block";
+                document.querySelectorAll(".filter-dropdown-panel").forEach(p => p.style.display = "none");
+                brgyPanel.style.display = isVisible ? "none" : "block";
+            });
+
+            brgyPanel.addEventListener("click", function (e) {
+                const item = e.target.closest(".dropdown-item");
+                if (!item) return;
+                activeBarangayFilter = item.getAttribute("data-value");
+                brgyPanel.style.display = "none";
+                brgyPanel.querySelectorAll(".dropdown-item").forEach(i => i.classList.toggle("selected", i.getAttribute("data-value") === activeBarangayFilter));
+                renderReportsTable();
+            });
+        }
+
+        // Build Status Dropdown
+        const statusBtn = document.getElementById("filter-status-btn");
+        const statusPanel = document.querySelector("#status-dropdown .filter-dropdown-panel");
+        const statusOptions = ["all", "Under Review", "Assessment Issued", "Recommendation Issued", "Visit Requested", "Visit Scheduled", "Visit Completed", "Resolved"];
+        if (statusBtn && statusPanel) {
+            let statusHtml = "";
+            statusOptions.forEach(s => {
+                const label = s === "all" ? "All Statuses" : s;
+                statusHtml += `<button type="button" class="dropdown-item ${activeStatusFilter === s ? 'selected' : ''}" data-value="${s}">${label}</button>`;
+            });
+            statusPanel.innerHTML = statusHtml;
+
+            statusBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                const rect = statusBtn.getBoundingClientRect();
+                statusPanel.style.top = `${rect.bottom + 6}px`;
+                statusPanel.style.left = `${rect.left}px`;
+                const isVisible = statusPanel.style.display === "block";
+                document.querySelectorAll(".filter-dropdown-panel").forEach(p => p.style.display = "none");
+                statusPanel.style.display = isVisible ? "none" : "block";
+            });
+
+            statusPanel.addEventListener("click", function (e) {
+                const item = e.target.closest(".dropdown-item");
+                if (!item) return;
+                activeStatusFilter = item.getAttribute("data-value");
+                statusPanel.style.display = "none";
+                statusPanel.querySelectorAll(".dropdown-item").forEach(i => i.classList.toggle("selected", i.getAttribute("data-value") === activeStatusFilter));
+                renderReportsTable();
+            });
+        }
+
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".filter-dropdown") && !e.target.closest(".chip-filter-btn")) {
+                document.querySelectorAll(".filter-dropdown-panel").forEach(p => p.style.display = "none");
+            }
         });
+
+        // Initial render
+        renderReportsTable();
     });
 </script>
 

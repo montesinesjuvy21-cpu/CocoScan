@@ -1,4 +1,8 @@
 (function () {
+    window.COCOSCAN_BARANGAYS = [
+        "Bagong Bayan II-A","Bagong Pook VI-C","Barangay I-A","Barangay I-B","Barangay II-A","Barangay II-B","Barangay II-C","Barangay II-D","Barangay II-E","Barangay II-F","Barangay III-A","Barangay III-B","Barangay III-C","Barangay III-D","Barangay III-E","Barangay III-F","Barangay IV-A","Barangay IV-B","Barangay IV-C","Barangay V-A","Barangay V-B","Barangay V-C","Barangay V-D","Barangay VI-A","Barangay VI-B","Bautista","Concepcion","Del Remedio","Dolores","San Antonio 1","San Antonio 2","San Bartolome","San Buenaventura","San Crispin","San Cristobal","San Diego","San Francisco","San Gabriel","San Gregorio","San Ignacio","San Isidro","San Joaquin","San Jose","San Juan","San Lorenzo","San Lucas 1","San Lucas 2","San Marcos","San Mateo","San Miguel","San Nicolas","San Pedro","San Rafael","San Roque","San Vicente","Santa Ana","Santa Catalina","Santa Cruz","Santa Elena","Santa Filomena","Santa Isabel","Santa Maria","Santa Maria Magdalena","Santa Monica","Santa Veronica","Santiago I","Santiago II","Santisimo Rosario","Santo Angel","Santo Cristo","Santo Niño","Soledad","Atisan","Balagtas","Dapdap","Dolores","Sta. Catalina","Sta. Cruz","Sta. Elena"
+    ];
+
     const SUPABASE_REPORT_IMAGE_BASE_URL =
         "https://utvltqgxqnpcqrphuojc.supabase.co/storage/v1/object/public/reports/";
 
@@ -175,6 +179,9 @@
             additionalImages,
             initialRecommendations: normalizeList(reportData.initial_recommendations || reportData.recommendations),
             expertRecommendations: normalizeList(reportData.expert_recommendations || reportData.expert_recommendation),
+            reviewer_name: reportData.reviewer_name || reportData.reviewerName || "PCA Agriculturist",
+            reviewer_position: reportData.reviewer_position || reportData.position_title || "Agriculturist",
+            reviewer_office: reportData.reviewer_office || reportData.agency_office || "",
             farmerFeedbackReason: feedbackData.reason,
             farmerFeedbackConfirmation: feedbackData.confirmation,
             farmerSchedules: feedbackData.schedules,
@@ -731,6 +738,17 @@
             }
             report.expertRecommendations.push(assessment);
             renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert assessment available yet.", false);
+            const issuerNote = document.getElementById("expert-assessment-issuer-note");
+            if (issuerNote) {
+                const name = data.reviewer_name || report.reviewer_name || "PCA Agriculturist";
+                const pos = data.reviewer_position || report.reviewer_position || "Agriculturist";
+                const off = data.reviewer_office || report.reviewer_office || "";
+                let html = `Issued by ${escapeHtml(name)}<br>${escapeHtml(pos)}`;
+                if (off) html += `<br>${escapeHtml(off)}`;
+                issuerNote.innerHTML = html;
+                issuerNote.style.lineHeight = "1.4";
+                setDisplay(issuerNote, true, "block");
+            }
             applyStatusStyle(report);
             renderWorkflowActions(currentReportModalMode, report);
             // Refresh lists on the page if available and close modal for agriculturists
@@ -2060,6 +2078,17 @@
             }
             report.expertRecommendations.push(assessment);
             renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert assessment available yet.", false);
+            const issuerNote = document.getElementById("expert-assessment-issuer-note");
+            if (issuerNote) {
+                const name = data.reviewer_name || report.reviewer_name || "PCA Agriculturist";
+                const pos = data.reviewer_position || report.reviewer_position || "Agriculturist";
+                const off = data.reviewer_office || report.reviewer_office || "";
+                let html = `Issued by ${escapeHtml(name)}<br>${escapeHtml(pos)}`;
+                if (off) html += `<br>${escapeHtml(off)}`;
+                issuerNote.innerHTML = html;
+                issuerNote.style.lineHeight = "1.4";
+                setDisplay(issuerNote, true, "block");
+            }
             applyStatusStyle(report);
             renderWorkflowActions(currentReportModalMode, report);
             alert(data.message || "Assessment notes saved successfully.");
@@ -2227,10 +2256,25 @@
             const expertInput = document.getElementById("expert-notes-input");
             const expertHelp = document.getElementById("expert-notes-help");
             const agriSubmitBtn = document.getElementById("report-agri-submit-btn");
+            const issuerNote = document.getElementById("expert-assessment-issuer-note");
             const showExpertControls = currentReportModalMode === "agriculturist" && !assessmentAlreadyIssued;
             setDisplay(expertInput, showExpertControls, "block");
             setDisplay(expertHelp, showExpertControls, "block");
             if (agriSubmitBtn) setDisplay(agriSubmitBtn, showExpertControls, "block");
+            if (issuerNote) {
+                if (assessmentAlreadyIssued) {
+                    const name = report.reviewer_name || "PCA Agriculturist";
+                    const pos = report.reviewer_position || "Agriculturist";
+                    const off = report.reviewer_office || "";
+                    let html = `Issued by ${escapeHtml(name)}<br>${escapeHtml(pos)}`;
+                    if (off) html += `<br>${escapeHtml(off)}`;
+                    issuerNote.innerHTML = html;
+                    issuerNote.style.lineHeight = "1.4";
+                    setDisplay(issuerNote, true, "block");
+                } else {
+                    setDisplay(issuerNote, false);
+                }
+            }
         }
 
         // Render any farmer schedules into a dedicated display area for agriculturists
@@ -2253,6 +2297,7 @@
                     row.style.alignItems = 'center';
                     row.style.gap = '8px';
                     row.style.fontSize = '0.95rem';
+                    row.style.color = '#64748b';
                     row.innerHTML = `<input type="radio" name="agri-selected-schedule" value="${idx}" style="accent-color:#1d4ed8;"> ${escapeHtml(s.display)}`;
                     wrapper.appendChild(row);
                 });

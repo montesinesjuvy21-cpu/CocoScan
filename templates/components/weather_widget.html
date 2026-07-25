@@ -13,18 +13,22 @@
 
     <div class="weather-stats-grid">
         <div class="weather-stat-node">
+            <div class="stat-icon-wrap"><i class="fa-solid fa-temperature-half"></i></div>
             <h6>Temperature</h6>
             <p>{{ weather.temp }}{% if weather.temp != '--' %}<span>°C</span>{% endif %}</p>
         </div>
         <div class="weather-stat-node">
+            <div class="stat-icon-wrap"><i class="fa-solid fa-droplet"></i></div>
             <h6>Humidity</h6>
             <p>{{ weather.humidity }}{% if weather.humidity != '--' %}<span>%</span>{% endif %}</p>
         </div>
         <div class="weather-stat-node">
+            <div class="stat-icon-wrap"><i class="fa-solid fa-cloud-showers-heavy"></i></div>
             <h6>Rainfall</h6>
             <p>{{ weather.rainfall }}{% if weather.rainfall != '--' %}<span>mm</span>{% endif %}</p>
         </div>
         <div class="weather-stat-node">
+            <div class="stat-icon-wrap"><i class="fa-solid fa-wind"></i></div>
             <h6>Wind</h6>
             <p>{{ weather.wind }}{% if weather.wind != '--' %}<span>km/h</span>{% endif %}</p>
         </div>

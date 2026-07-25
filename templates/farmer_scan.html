@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CocoScan - Detect Pest</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <style>
         :root {
@@ -41,7 +43,10 @@
             align-items: center;
             justify-content: center;
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: radial-gradient(circle at center, #0e3021 0%, #04120c 100%);
             color: #ffffff;
             z-index: 10000;
@@ -60,13 +65,16 @@
             max-width: 420px;
             width: 100%;
             box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
             position: relative;
         }
 
         .glow-effect {
             position: absolute;
-            top: -20%; left: -20%; right: -20%; bottom: -20%;
+            top: -20%;
+            left: -20%;
+            right: -20%;
+            bottom: -20%;
             background: radial-gradient(circle at center, rgba(74, 198, 143, 0.08) 0%, transparent 60%);
             z-index: -1;
             pointer-events: none;
@@ -94,7 +102,10 @@
 
         .ripple-ring {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             border-radius: 50%;
             border: 1px solid rgba(74, 198, 143, 0.4);
             animation: rippleEffect 2.5s infinite cubic-bezier(0.25, 0, 0, 1);
@@ -102,11 +113,20 @@
             z-index: 1;
         }
 
-        .ring-2 { animation-delay: 0.8s; }
+        .ring-2 {
+            animation-delay: 0.8s;
+        }
 
         @keyframes rippleEffect {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.4); opacity: 0; }
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.4);
+                opacity: 0;
+            }
         }
 
         .desktop-card-prompt h2 {
@@ -116,7 +136,7 @@
             letter-spacing: -0.5px;
             background: linear-gradient(120deg, #ffffff 40%, #c3eede 100%);
             -webkit-background-clip: text;
-            background-clip: text; 
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -143,7 +163,8 @@
             background-color: var(--brand-dark);
             color: #ffffff;
             position: fixed;
-            top: 0; left: 0;
+            top: 0;
+            left: 0;
             z-index: 1000;
             padding: 0 16px;
             display: flex;
@@ -194,13 +215,17 @@
             flex-direction: column;
             justify-content: space-between;
             position: fixed;
-            top: 64px; bottom: 0; right: 0;
+            top: 64px;
+            bottom: 0;
+            right: 0;
             z-index: 999;
             transform: translateX(100%);
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .sidebar-wrapper.show-mobile { transform: translateX(0); }
+        .sidebar-wrapper.show-mobile {
+            transform: translateX(0);
+        }
 
         .menu-label {
             font-size: 0.7rem;
@@ -229,7 +254,8 @@
             margin-bottom: 6px;
         }
 
-        .menu-item-link:hover, .menu-item-link.active {
+        .menu-item-link:hover,
+        .menu-item-link.active {
             color: #ffffff;
             background-color: rgba(255, 255, 255, 0.06);
         }
@@ -259,21 +285,40 @@
             justify-content: center;
         }
 
-        .user-identity-text h4 { font-size: 0.9rem; color: #ffffff; }
-        .user-identity-text p { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
+        .user-identity-text h4 {
+            font-size: 0.9rem;
+            color: #ffffff;
+        }
 
-        .btn-logout-trigger { color: rgba(255, 255, 255, 0.4); font-size: 1.2rem; }
-        .btn-logout-trigger:hover { color: #ef4444 !important; }
+        .user-identity-text p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-logout-trigger {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.2rem;
+        }
+
+        .btn-logout-trigger:hover {
+            color: #ef4444 !important;
+        }
 
         .sidebar-backdrop {
             display: none;
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: rgba(11, 37, 26, 0.4);
             backdrop-filter: blur(4px);
             z-index: 950;
         }
-        .sidebar-backdrop.active { display: block; }
+
+        .sidebar-backdrop.active {
+            display: block;
+        }
 
         /* --- MAIN DYNAMIC CONTENT BOXES --- */
         .main-content-layout {
@@ -310,7 +355,9 @@
             width: 100%;
         }
 
-        .workflow-step-view.active-view { display: flex; }
+        .workflow-step-view.active-view {
+            display: flex;
+        }
 
         /* --- LOADING SCREEN SPINNER --- */
         #step-loading-view {
@@ -331,8 +378,13 @@
         }
 
         @keyframes spinAnimation {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* --- SCAN UPLOAD AREA --- */
@@ -398,7 +450,11 @@
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
         }
 
-        .btn-action-trigger.camera { background-color: var(--brand-dark); color: #ffffff; }
+        .btn-action-trigger.camera {
+            background-color: var(--brand-dark);
+            color: #ffffff;
+        }
+
         .btn-action-trigger.camera:hover,
         .btn-action-trigger.camera:active,
         .btn-action-trigger.camera:focus-visible {
@@ -474,7 +530,9 @@
             gap: 6px;
         }
 
-        .panel-header-inline i { color: var(--primary-green); }
+        .panel-header-inline i {
+            color: var(--primary-green);
+        }
 
         .scans-history-list {
             display: flex;
@@ -492,10 +550,22 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
-        
-        .history-item-node:hover { background-color: #f8faf9; }
-        .history-info-meta h5 { font-size: 0.85rem; font-weight: 600; color: var(--text-dark); }
-        .history-info-meta p { font-size: 0.72rem; color: var(--text-muted); margin-top: 1px; }
+
+        .history-item-node:hover {
+            background-color: #f8faf9;
+        }
+
+        .history-info-meta h5 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .history-info-meta p {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
 
         /* --- EMPTY HISTORY STATE CONTAINER --- */
         .history-empty-state-card {
@@ -507,6 +577,7 @@
             justify-content: center;
             color: var(--text-muted);
         }
+
         .history-empty-icon-circle {
             width: 54px;
             height: 54px;
@@ -519,12 +590,14 @@
             margin-bottom: 12px;
             font-size: 1.25rem;
         }
+
         .history-empty-state-card h4 {
             font-size: 0.95rem;
             font-weight: 700;
             color: var(--brand-dark);
             margin-bottom: 4px;
         }
+
         .history-empty-state-card p {
             font-size: 0.78rem;
             line-height: 1.4;
@@ -539,19 +612,34 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
 
-        .badge-main h3 { font-size: 1.2rem; font-weight: 700; color: #ffffff; letter-spacing: -0.2px; }
-        .badge-main p { font-size: 0.82rem; opacity: 0.95; margin-top: 2px; }
-        .badge-side-meta { font-size: 0.82rem; text-align: right; opacity: 0.95; }
+        .badge-main h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+        }
+
+        .badge-main p {
+            font-size: 0.82rem;
+            opacity: 0.95;
+            margin-top: 2px;
+        }
+
+        .badge-side-meta {
+            font-size: 0.82rem;
+            text-align: right;
+            opacity: 0.95;
+        }
 
         .preview-media-frame {
             width: 100%;
             border-radius: 16px;
             overflow: hidden;
             background-color: #eaeaea;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
         .preview-media-frame img {
@@ -583,10 +671,10 @@
             gap: 16px;
         }
 
-        .premium-reco-card h4 { 
-            font-size: 1.02rem; 
-            font-weight: 700; 
-            color: var(--brand-dark); 
+        .premium-reco-card h4 {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--brand-dark);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -602,7 +690,8 @@
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 4px; /* Mas maluwag na padding space para madaling basahin */
+            gap: 4px;
+            /* Mas maluwag na padding space para madaling basahin */
             padding: 2px 0;
         }
 
@@ -617,9 +706,11 @@
 
         /* Soft, professional check icon indicator */
         .premium-reco-card li i {
-            color: #2e7d32; /* Rich agricultural check green */
+            color: #2e7d32;
+            /* Rich agricultural check green */
             font-size: 0.95rem;
-            margin-top: 3px; /* Perpektong vertical alignment sa unang linya ng teksto */
+            margin-top: 3px;
+            /* Perpektong vertical alignment sa unang linya ng teksto */
             flex-shrink: 0;
         }
 
@@ -629,8 +720,10 @@
 
         /* --- MODERN DISCLAIMER CALLOUT BOX --- */
         .modern-disclaimer-box {
-            background-color: #fef8f2; /* Soft alert sand/amber hue tint wash */
-            border: 1px solid #f973161c; /* Soft transparent warm border line */
+            background-color: #fef8f2;
+            /* Soft alert sand/amber hue tint wash */
+            border: 1px solid #f973161c;
+            /* Soft transparent warm border line */
             border-radius: 12px;
             padding: 12px 14px;
             display: flex;
@@ -640,7 +733,8 @@
         }
 
         .modern-disclaimer-box i {
-            color: #d97706; /* Notice attention indicator warning color */
+            color: #d97706;
+            /* Notice attention indicator warning color */
             font-size: 0.95rem;
             margin-top: 2px;
             flex-shrink: 0;
@@ -648,7 +742,8 @@
 
         .disclaimer-text-note {
             font-size: 0.78rem;
-            color: #b45309; /* Deep cohesive amber text line entry */
+            color: #b45309;
+            /* Deep cohesive amber text line entry */
             line-height: 1.45;
             margin: 0;
         }
@@ -695,11 +790,11 @@
             outline: none;
             transition: all 0.2s ease;
         }
-        
+
         .notes-input-box:focus {
             border-color: rgba(82, 130, 101, 0.4);
             background-color: #ffffff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
         }
 
         /* Modernized Micro Upload Drag-Drop Box for Supporting Photos */
@@ -747,7 +842,7 @@
 
         .supporting-preview-card {
             background: #f8fafb;
-            border: 1px solid rgba(0,0,0,0.08);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: 12px;
             overflow: hidden;
             position: relative;
@@ -778,15 +873,17 @@
             font-size: 0.75rem;
         }
 
-        #supporting-photos-input { display: none; }
+        #supporting-photos-input {
+            display: none;
+        }
 
-       /* --- PRECISE HIERARCHY BUTTON CONSOLE PANEL --- */
+        /* --- PRECISE HIERARCHY BUTTON CONSOLE PANEL --- */
         .control-action-bar {
             display: flex;
             flex-direction: column;
             gap: 12px;
             width: 100%;
-            margin-top: 16px; 
+            margin-top: 16px;
         }
 
         .main-actions-row {
@@ -805,71 +902,91 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px; 
+            gap: 6px;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             width: 100%;
         }
-        
+
         @media (max-width: 500px) {
             .btn-control {
                 padding: 10px 12px;
                 font-size: 0.8rem;
             }
+
             .control-action-bar {
                 gap: 8px;
             }
+
             .date-filter-box input {
                 padding: 11px 14px;
                 font-size: 0.85rem;
             }
         }
 
-        .btn-control.submit-primary { 
-            background-color: #164630; 
-            color: #ffffff; 
+        .btn-control.submit-primary {
+            background-color: #164630;
+            color: #ffffff;
             box-shadow: 0 4px 12px rgba(22, 70, 48, 0.18);
         }
-        .btn-control.submit-primary:hover { 
-            background-color: #1e5c3f; 
+
+        .btn-control.submit-primary:hover {
+            background-color: #1e5c3f;
             transform: translateY(-1px);
             box-shadow: 0 6px 16px rgba(30, 92, 63, 0.25);
         }
 
         /* Secondary Actions: Sophisticated Ghost Borders Outlines Buttons */
-        .btn-control.draft-secondary { 
-            background-color: #ffffff; 
-            border: 1px solid rgba(82, 130, 101, 0.25); 
-            color: #0b251a; 
+        .btn-control.draft-secondary {
+            background-color: #ffffff;
+            border: 1px solid rgba(82, 130, 101, 0.25);
+            color: #0b251a;
         }
-        .btn-control.draft-secondary:hover { 
-            background-color: #e8f2f0; 
+
+        .btn-control.draft-secondary:hover {
+            background-color: #e8f2f0;
             border-color: #528265;
         }
 
-       
-        .btn-control.cancel-secondary { 
-            background-color: #fff5f5; 
-            border: 1px solid rgba(239, 68, 68, 0.15); 
-            color: #e53e3e; 
+
+        .btn-control.cancel-secondary {
+            background-color: #fff5f5;
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            color: #e53e3e;
         }
-        .btn-control.cancel-secondary:hover { 
-            background-color: #fee2e2; 
-            color: #9b1c1c; 
+
+        .btn-control.cancel-secondary:hover {
+            background-color: #fee2e2;
+            color: #9b1c1c;
             border-color: rgba(239, 68, 68, 0.35);
         }
-        #hidden-camera-input { display: none; }
+
+        #hidden-camera-input {
+            display: none;
+        }
 
         /* --- RESPONSIVE WORKSPACE MEDIA TETHER --- */
         @media (min-width: 501px) {
-            .desktop-restriction-overlay { display: flex; }
-            .mobile-viewport-container { display: none; }
+            .desktop-restriction-overlay {
+                display: flex;
+            }
+
+            .mobile-viewport-container {
+                display: none;
+            }
         }
+
         @media (max-width: 500px) {
-            .desktop-restriction-overlay { display: none; }
-            .mobile-viewport-container { display: flex; }
+            .desktop-restriction-overlay {
+                display: none;
+            }
+
+            .mobile-viewport-container {
+                display: flex;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <div class="desktop-restriction-overlay">
@@ -881,7 +998,8 @@
                 <i class="fa-solid fa-mobile-screen-button"></i>
             </div>
             <h2>Mobile Access Required</h2>
-           <p>You can view your dashboard on any device, but <strong>Launch Scanner</strong> requires a mobile smartphone to utilize its camera for capturing real-time leaf images directly in the field.</p>
+            <p>You can view your dashboard on any device, but <strong>Launch Scanner</strong> requires a mobile
+                smartphone to utilize its camera for capturing real-time leaf images directly in the field.</p>
         </div>
     </div>
 
@@ -907,15 +1025,20 @@
             <div>
                 <div class="menu-label">Main Menu</div>
                 <ul class="sidebar-menu-list">
-                    <li><a href="/farmer/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-                    <li><a href="/farmer/scan" class="menu-item-link active"><i class="fa-solid fa-camera"></i> Scan Pest</a></li>
-                    <li><a href="/farmer/drafts" class="menu-item-link"><i class="fa-solid fa-file-pen"></i> Drafts</a></li>
-                    <li><a href="/farmer/reports" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> My Reports</a></li>
+                    <li><a href="/farmer/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i>
+                            Dashboard</a></li>
+                    <li><a href="/farmer/scan" class="menu-item-link active"><i class="fa-solid fa-camera"></i> Scan
+                            Pest</a></li>
+                    <li><a href="/farmer/drafts" class="menu-item-link"><i class="fa-solid fa-file-pen"></i> Drafts</a>
+                    </li>
+                    <li><a href="/farmer/reports" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> My
+                            Reports</a></li>
                 </ul>
             </div>
             <div class="sidebar-user-footer">
                 <div class="user-meta-box">
-                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user"
+                            style="color:#fff; font-size: 0.95rem;"></i></div>
                     <div class="user-identity-text">
                         <h4>{{ user_name }}</h4>
                         <p>Farmer</p>
@@ -932,20 +1055,24 @@
                         <h1>Detect Pest</h1>
                         <p>Powered by Image Recognition</p>
                     </div>
-                    
+
                 </header>
 
                 <div class="upload-drop-zone">
                     <div class="upload-cloud-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
-                    <p>Drop your coconut leaf image here<br><span style="font-size: 0.72rem; color: var(--text-muted);">or click the buttons below to upload</span></p>
+                    <p>Drop your coconut leaf image here<br><span
+                            style="font-size: 0.72rem; color: var(--text-muted);">or click the buttons below to
+                            upload</span></p>
                     <div class="upload-action-row">
                         <button class="btn-action-trigger camera" onclick="triggerNativeCamera()">
                             <i class="fa-solid fa-camera"></i> Scan Coconut Leaf
                         </button>
                     </div>
                     <div id="gps-status-banner" class="gps-status-banner" role="status" aria-live="polite"></div>
-                    <p style="font-size:0.75rem; color: var(--text-muted); margin-top: 6px;"> Allow location permissions to enable scanning.</p>
-                    <input type="file" id="hidden-camera-input" accept="image/*" capture="environment" onchange="handleImagePipeline(event)">
+                    <p style="font-size:0.75rem; color: var(--text-muted); margin-top: 6px;"> Allow location permissions
+                        to enable scanning.</p>
+                    <input type="file" id="hidden-camera-input" accept="image/*" capture="environment"
+                        onchange="handleImagePipeline(event)">
                 </div>
 
                 <div class="guidance-tips-card">
@@ -959,14 +1086,16 @@
                 </div>
 
                 <div class="recent-scans-panel">
-                    <div class="panel-header-inline"><i class="fa-solid fa-clock-rotate-left"></i> Recent History Logs</div>
+                    <div class="panel-header-inline"><i class="fa-solid fa-clock-rotate-left"></i> Recent History Logs
+                    </div>
                     <div class="scans-history-list" id="historical-log-target"></div>
                 </div>
             </div>
 
             <div id="step-loading-view" class="workflow-step-view">
                 <div class="spinner-element"></div>
-                <h4 style="color: var(--brand-dark); font-weight: 700; font-size: 1rem;">Analyzing Image Spectrum...</h4>
+                <h4 style="color: var(--brand-dark); font-weight: 700; font-size: 1rem;">Analyzing Image Spectrum...
+                </h4>
                 <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px;">Running inference rules</p>
             </div>
 
@@ -983,7 +1112,7 @@
         let globalPrimaryGPS = null;
         let supportingImages = [];
         let activeReportSubmissionController = null;
-        let recentReports = (function(){
+        let recentReports = (function () {
             try {
                 const node = document.getElementById('recent-reports-data');
                 if (!node) return [];
@@ -993,10 +1122,10 @@
                 return [];
             }
         })();
-        
-        
+
+
         const defaultImages = {
-            "Rhinoceros Beetle": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", 
+            "Rhinoceros Beetle": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
             "Brontispa": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
         };
 
@@ -1030,7 +1159,7 @@
             logTargetContainer.innerHTML = '';
 
             const historyDataset = Array.isArray(recentReports) ? recentReports : [];
-        const recentHistory = historyDataset.slice(0, 5);
+            const recentHistory = historyDataset.slice(0, 5);
 
             if (!recentHistory || recentHistory.length === 0) {
                 logTargetContainer.innerHTML = `
@@ -1083,7 +1212,7 @@
                 globalActiveImageFile = input.files[0];
 
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = function (e) {
                     globalActiveImagePayload = e.target.result;
                     gatherCameraLocation((position, error, status) => {
                         if (error || !position) {
@@ -1163,74 +1292,74 @@
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
-            .then(async data => {
-                if (!data.success) {
-                    alert(`Error: ${data.error || 'Failed to process image'}`);
+                .then(response => response.json())
+                .then(async data => {
+                    if (!data.success) {
+                        alert(`Error: ${data.error || 'Failed to process image'}`);
+                        document.getElementById('step-loading-view').classList.remove('active-view');
+                        document.getElementById('step-upload-view').classList.add('active-view');
+                        return;
+                    }
+
+                    const activeDate = new Date();
+                    const captureTimestamp = globalPrimaryGPS?.timestamp ? new Date(globalPrimaryGPS.timestamp) : activeDate;
+                    const formattedTimestamp = formatTimestampInManila(isNaN(captureTimestamp.getTime()) ? activeDate : captureTimestamp);
+
+                    let locationStr = globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable';
+                    if (globalPrimaryGPS) {
+                        try {
+                            const geoResp = await fetch(`/api/geocode?lat=${globalPrimaryGPS.latitude}&lon=${globalPrimaryGPS.longitude}`);
+                            if (geoResp.ok) {
+                                const geoData = await geoResp.json();
+                                if (geoData.success && geoData.display_name) {
+                                    locationStr = geoData.display_name;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("Reverse geocoding failed", e);
+                        }
+                    }
+
+                    window.currentPrediction = {
+                        ...data,
+                        pest: data.pest,
+                        confidence: `${data.pest_confidence}%`,
+                        timestamp: formattedTimestamp,
+                        location_text: locationStr,
+                        gps: globalPrimaryGPS ? {
+                            latitude: globalPrimaryGPS.latitude,
+                            longitude: globalPrimaryGPS.longitude,
+                            accuracy: globalPrimaryGPS.accuracy,
+                            source: 'camera_gps'
+                        } : {},
+                        notes: document.getElementById('field-notes-capture').value.trim(),
+                        farmer: '{{ user_name|default("Farmer") }}',
+                        primary_image: globalActiveImagePayload || defaultImages[data.pest],
+                        additional_images: supportingImages.map((file) => URL.createObjectURL(file)),
+                        initial_recommendations: Array.isArray(data.recommendations) ? data.recommendations : [],
+                        status: 'Ready to Submit'
+                    };
+
+                    renderSupportingPreviews();
+                    if (typeof window.openReportModal === 'function') {
+                        window.openReportModal(window.currentPrediction, 'scan');
+                    } else {
+                        setTimeout(() => {
+                            if (typeof window.openReportModal === 'function') window.openReportModal(window.currentPrediction, 'scan');
+                            else console.warn('openReportModal not available after inference');
+                        }, 150);
+                    }
+
+                    document.getElementById('step-loading-view').classList.remove('active-view');
+                    document.getElementById('step-results-view').classList.add('active-view');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(`Error: ${error.message || 'Failed to process image'}`);
                     document.getElementById('step-loading-view').classList.remove('active-view');
                     document.getElementById('step-upload-view').classList.add('active-view');
-                    return;
-                }
-                
-                const activeDate = new Date();
-                const captureTimestamp = globalPrimaryGPS?.timestamp ? new Date(globalPrimaryGPS.timestamp) : activeDate;
-                const formattedTimestamp = formatTimestampInManila(isNaN(captureTimestamp.getTime()) ? activeDate : captureTimestamp);
-                
-                let locationStr = globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable';
-                if (globalPrimaryGPS) {
-                    try {
-                        const geoResp = await fetch(`/api/geocode?lat=${globalPrimaryGPS.latitude}&lon=${globalPrimaryGPS.longitude}`);
-                        if (geoResp.ok) {
-                            const geoData = await geoResp.json();
-                            if (geoData.success && geoData.display_name) {
-                                locationStr = geoData.display_name;
-                            }
-                        }
-                    } catch (e) {
-                        console.warn("Reverse geocoding failed", e);
-                    }
-                }
-                
-                window.currentPrediction = {
-                    ...data,
-                    pest: data.pest,
-                    confidence: `${data.pest_confidence}%`,
-                    timestamp: formattedTimestamp,
-                    location_text: locationStr,
-                    gps: globalPrimaryGPS ? {
-                        latitude: globalPrimaryGPS.latitude,
-                        longitude: globalPrimaryGPS.longitude,
-                        accuracy: globalPrimaryGPS.accuracy,
-                        source: 'camera_gps'
-                    } : {},
-                    notes: document.getElementById('field-notes-capture').value.trim(),
-                    farmer: '{{ user_name|default("Farmer") }}',
-                    primary_image: globalActiveImagePayload || defaultImages[data.pest],
-                    additional_images: supportingImages.map((file) => URL.createObjectURL(file)),
-                    initial_recommendations: Array.isArray(data.recommendations) ? data.recommendations : [],
-                    status: 'Ready to Submit'
-                };
-
-                renderSupportingPreviews();
-                if (typeof window.openReportModal === 'function') {
-                    window.openReportModal(window.currentPrediction, 'scan');
-                } else {
-                    setTimeout(() => {
-                        if (typeof window.openReportModal === 'function') window.openReportModal(window.currentPrediction, 'scan');
-                        else console.warn('openReportModal not available after inference');
-                    }, 150);
-                }
-
-                document.getElementById('step-loading-view').classList.remove('active-view');
-                document.getElementById('step-results-view').classList.add('active-view');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(`Error: ${error.message || 'Failed to process image'}`);
-                document.getElementById('step-loading-view').classList.remove('active-view');
-                document.getElementById('step-upload-view').classList.add('active-view');
-            });
+                });
         }
 
         function abortReportSubmission() {
@@ -1300,43 +1429,43 @@
                 body: formData,
                 signal: activeReportSubmissionController.signal
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`SUCCESS: Report for ${compiledPest} has been submitted successfully.`);
-                    window.location.reload();
-                    return;
-                }
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`SUCCESS: Report for ${compiledPest} has been submitted successfully.`);
+                        window.location.reload();
+                        return;
+                    }
 
-                const shouldSaveDraft = confirm('The report could not be synced right now. Save this scan as a draft instead?');
-                if (shouldSaveDraft) {
-                    saveDraftToIndexedDB(false);
-                } else {
-                    alert(`Warning: ${data.message || 'Unknown error'}`);
-                }
-                resetWorkflowStateToHome();
-            })
-            .catch(error => {
-                if (error && error.name === 'AbortError') {
-                    return;
-                }
-                console.error('Error submitting report:', error);
-                const shouldSaveDraft = confirm('The report could not be synced right now. Save this scan as a draft instead?');
-                if (shouldSaveDraft) {
-                    saveDraftToIndexedDB(false);
-                } else {
-                    alert(`Report could not be synced: ${error.message}`);
-                }
-                resetWorkflowStateToHome();
-            })
-            .finally(() => {
-                if (activeReportSubmissionController) {
-                    activeReportSubmissionController = null;
-                }
-                if (typeof window.setReportModalSubmissionState === 'function') {
-                    window.setReportModalSubmissionState(false);
-                }
-            });
+                    const shouldSaveDraft = confirm('The report could not be synced right now. Save this scan as a draft instead?');
+                    if (shouldSaveDraft) {
+                        saveDraftToIndexedDB(false);
+                    } else {
+                        alert(`Warning: ${data.message || 'Unknown error'}`);
+                    }
+                    resetWorkflowStateToHome();
+                })
+                .catch(error => {
+                    if (error && error.name === 'AbortError') {
+                        return;
+                    }
+                    console.error('Error submitting report:', error);
+                    const shouldSaveDraft = confirm('The report could not be synced right now. Save this scan as a draft instead?');
+                    if (shouldSaveDraft) {
+                        saveDraftToIndexedDB(false);
+                    } else {
+                        alert(`Report could not be synced: ${error.message}`);
+                    }
+                    resetWorkflowStateToHome();
+                })
+                .finally(() => {
+                    if (activeReportSubmissionController) {
+                        activeReportSubmissionController = null;
+                    }
+                    if (typeof window.setReportModalSubmissionState === 'function') {
+                        window.setReportModalSubmissionState(false);
+                    }
+                });
         }
 
         function saveDraftToIndexedDB(isOfflineSubmit = false) {
@@ -1461,7 +1590,7 @@
             document.getElementById('step-results-view').classList.remove('active-view');
             document.getElementById('step-loading-view').classList.remove('active-view');
             document.getElementById('step-upload-view').classList.add('active-view');
-            
+
             document.getElementById('hidden-camera-input').value = "";
             document.getElementById('field-notes-capture').value = "";
             document.getElementById('supporting-photos-input').value = "";
@@ -1542,12 +1671,13 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-                loadDraftFromSession();
-                loadAndRenderRecentHistoryLogs();
-            });
+            loadDraftFromSession();
+            loadAndRenderRecentHistoryLogs();
+        });
 
-        
+
     </script>
     <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
 </body>
+
 </html>

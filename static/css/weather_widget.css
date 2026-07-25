@@ -1,9 +1,10 @@
 .weather-analytics-card {
-    background: linear-gradient(135deg, #528265 0%, #3b604a 100%);
+    background: linear-gradient(135deg, #1e5c3f 0%, #13422a 60%, #0b251a 100%);
     border-radius: 18px;
     padding: 20px;
     color: #ffffff;
-    box-shadow: 0 8px 20px rgba(59, 96, 74, 0.15);
+    box-shadow: 0 10px 25px rgba(11, 37, 26, 0.25);
+    border: 1px solid rgba(74, 198, 143, 0.2);
     width: 100%;
 }
 
@@ -42,33 +43,56 @@
 }
 
 .weather-stat-node {
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 12px;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 18px 12px;
+    border-radius: 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
+    min-height: 125px;
+    transition: transform 0.25s ease, background-color 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.weather-stat-node:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.stat-icon-wrap {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .weather-stat-node h6 {
-    font-size: 0.75rem;
-    opacity: 0.7;
-    font-weight: 400;
+    font-size: 0.82rem;
+    opacity: 0.85;
+    font-weight: 500;
+    letter-spacing: 0.3px;
 }
 
 .weather-stat-node p {
-    font-size: 1.45rem;
+    font-size: 1.55rem;
     font-weight: 800;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 
 .weather-stat-node p span {
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     font-weight: 500;
-    margin-left: 1px;
+    margin-left: 2px;
 }
 
 .weather-alert-banner {
@@ -139,17 +163,34 @@
     }
 
     .weather-stat-node {
-        padding: 18px 12px;
-        min-height: 100px;
+        padding: 24px 16px;
+        min-height: 160px;
+        border-radius: 20px;
+    }
+
+    .stat-icon-wrap {
+        width: 46px;
+        height: 46px;
+        font-size: 1.25rem;
+        margin-bottom: 12px;
     }
 
     .weather-stat-node h6 {
-        font-size: 0.85rem;
-        margin-bottom: 4px;
+        font-size: 0.92rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+        letter-spacing: 0.4px;
+        opacity: 0.9;
     }
 
     .weather-stat-node p {
-        font-size: 1.95rem;
+        font-size: 2.15rem;
+        font-weight: 800;
         line-height: 1.2;
+    }
+
+    .weather-stat-node p span {
+        font-size: 1.05rem;
+        margin-left: 3px;
     }
 }

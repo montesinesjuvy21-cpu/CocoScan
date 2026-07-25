@@ -140,9 +140,14 @@ def validate_signup_data(form_data: dict, role: str) -> dict:
         last_name = validate_name(form_data.get('last_name', ''), "Last Name")
         email = validate_email_format(form_data.get('email', ''))
         age = validate_age(form_data.get('age', ''))
-        barangay = validate_barangay(form_data.get('barangay', ''))
-        municipality = "San Pablo City"
-        province = "Laguna"
+        raw_barangay = form_data.get('barangay', '') or form_data.get('farmer_barangay', '')
+        if role == 'farmer' or raw_barangay:
+            barangay = validate_barangay(raw_barangay)
+        else:
+            barangay = form_data.get('lgu_jurisdiction', '') or form_data.get('agri_jurisdiction', '') or "N/A"
+            
+        municipality = form_data.get('municipality', '') or form_data.get('lgu_jurisdiction', '') or form_data.get('agri_jurisdiction', '') or "San Pablo City"
+        province = form_data.get('province', '') or "Laguna"
         
         # Optional fields
         middle_name = form_data.get('middle_name', '').strip() or None

@@ -1004,6 +1004,41 @@ def _fetch_weather_snapshot(latitude, longitude):
         }
 
 
+def _enrich_reports_with_reviewer_info(reports):
+    if not reports:
+        return reports
+    reviewer_ids = list({str(r.get('reviewed_by_id')) for r in reports if r.get('reviewed_by_id')})
+    profiles_map = {}
+    users_map = {}
+    if reviewer_ids:
+        try:
+            prof_res = supabase.table('profiles').select('user_id, position_title, agency_office').in_('user_id', reviewer_ids).execute()
+            if prof_res and getattr(prof_res, 'data', None):
+                for p in prof_res.data:
+                    profiles_map[str(p.get('user_id'))] = {
+                        'position': p.get('position_title') or '',
+                        'office': p.get('agency_office') or ''
+                    }
+            user_res = supabase.table('users').select('id, first_name, last_name').in_('id', reviewer_ids).execute()
+            if user_res and getattr(user_res, 'data', None):
+                for u in user_res.data:
+                    users_map[str(u.get('id'))] = f"{u.get('first_name', '')} {u.get('last_name', '')}".strip()
+        except Exception as e:
+            logger.warning(f"Error fetching reviewer profiles: {e}")
+            
+    for r in reports:
+        rev_id = str(r.get('reviewed_by_id')) if r.get('reviewed_by_id') else None
+        if rev_id:
+            r['reviewer_name'] = users_map.get(rev_id) or r.get('reviewer_name') or 'PCA Agriculturist'
+            r['reviewer_position'] = (profiles_map.get(rev_id, {}).get('position') or r.get('reviewer_position') or 'Agriculturist').strip()
+            r['reviewer_office'] = (profiles_map.get(rev_id, {}).get('office') or r.get('reviewer_office') or '').strip()
+        else:
+            r['reviewer_name'] = r.get('reviewer_name') or 'PCA Agriculturist'
+            r['reviewer_position'] = r.get('reviewer_position') or 'Agriculturist'
+            r['reviewer_office'] = r.get('reviewer_office') or ''
+    return reports
+
+
 def _build_report_modal_payload(item, *, supporting_images=None, weather=None, default_status="Under Review"):
     if supporting_images is None:
         supporting_images = []
@@ -1056,6 +1091,9 @@ def _build_report_modal_payload(item, *, supporting_images=None, weather=None, d
         "additional_images": [img for img in supporting_images if img],
         "initial_recommendations": _normalize_string_list(raw_initial_recommendations),
         "expert_recommendations": _normalize_string_list(raw_expert_recommendations),
+        "reviewer_name": item.get("reviewer_name") or "PCA Agriculturist",
+        "reviewer_position": item.get("reviewer_position") or "Agriculturist",
+        "reviewer_office": item.get("reviewer_office") or "",
         "weather": weather,
         "weather_status": "down" if weather.get("is_down") else "ready",
     }
@@ -1267,6 +1305,7 @@ def farmer_reports():
         logger.info(f"[FARMER_REPORTS] User {user_id}: Query returned {len(report_rows)} reports")
         for idx, r in enumerate(report_rows[:3]):
             logger.info(f"[FARMER_REPORTS]   [{idx}] ID={r.get('id')}, user_id={r.get('user_id')}, pest={r.get('pest_type')}")
+        report_rows = _enrich_reports_with_reviewer_info(report_rows)
         supporting_map = _fetch_report_supporting_images([item.get("id") for item in report_rows])
 
         for item in report_rows:
@@ -1377,6 +1416,17 @@ def agri_dashboard():
     except Exception as e:
         logger.error(f"Agriculturist dashboard routing exception: {str(e)}")
         return redirect(url_for('logout'))
+
+@app.route('/agriculturist/analytics')
+def agriculturist_analytics():
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role != 'agri_expert':
+        return redirect(url_for('login'))
+
+    user_name = session.get('user_name', 'Agriculturist')
+    return render_template('shared_analytics.html', user_name=user_name, user_role=user_role)
 
 @app.route('/lgu/dashboard')
 def lgu_dashboard():
@@ -1513,7 +1563,7 @@ def api_analytics():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role not in ['lgu', 'admin']:
+    if not user_id or user_role not in ['lgu', 'admin', 'agri_expert']:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
     try:
@@ -1912,6 +1962,7 @@ def agri_active_reports():
             logger.info(f"[ACTIVE] Report: id={r.get('id')}, status={r.get('status')}, pest={r.get('pest_type')}")
         
         supporting_map = _fetch_report_supporting_images([item.get("id") for item in raw_reports])
+        raw_reports = _enrich_reports_with_reviewer_info(raw_reports)
         active_reports_list = []
         
         for item in raw_reports:
@@ -1970,6 +2021,7 @@ def agri_resolved_reports():
             
         raw_reports = reports_response.data or []
         supporting_map = _fetch_report_supporting_images([item.get("id") for item in raw_reports])
+        raw_reports = _enrich_reports_with_reviewer_info(raw_reports)
         reviewed_reports_list = []
         
         for item in raw_reports:
@@ -2168,8 +2220,35 @@ def agriculturist_submit_assessment():
             logger.error(f"Assessment update failed: {update_response.error}")
             return jsonify({'success': False, 'message': 'The assessment could not be saved.'}), 500
 
+        reviewer_name = session.get('user_name', '')
+        if not reviewer_name:
+            try:
+                u_res = supabase.table('users').select('first_name, last_name').eq('id', user_id).execute()
+                if u_res and getattr(u_res, 'data', None) and len(u_res.data) > 0:
+                    reviewer_name = f"{u_res.data[0].get('first_name', '')} {u_res.data[0].get('last_name', '')}".strip()
+            except Exception as e:
+                logger.warning(f"Error fetching reviewer name: {e}")
+        if not reviewer_name:
+            reviewer_name = "PCA Agriculturist"
+
+        position = "Agriculturist"
+        office = ""
+        try:
+            profile_res = supabase.table('profiles').select('position_title, agency_office').eq('user_id', user_id).execute()
+            if profile_res and getattr(profile_res, 'data', None) and len(profile_res.data) > 0:
+                position = (profile_res.data[0].get('position_title') or position).strip()
+                office = (profile_res.data[0].get('agency_office') or office).strip()
+        except Exception as e:
+            logger.warning(f"Error fetching reviewer profile: {e}")
+
         logger.info(f"Report ID #{report_id} assessment logged by expert #{user_id}.")
-        return jsonify({'success': True, 'message': 'Assessment notes saved successfully.'})
+        return jsonify({
+            'success': True,
+            'message': 'Assessment notes saved successfully.',
+            'reviewer_name': reviewer_name,
+            'reviewer_position': position,
+            'reviewer_office': office,
+        })
     except Exception as e:
         logger.error(f"Error saving assessment: {str(e)}")
         return jsonify({'success': False, 'message': 'The assessment could not be saved.'}), 500
@@ -3060,6 +3139,7 @@ def overview_reports():
     try:
         reports_response = supabase.table('reports').select('*, visit_chats(count)').order('created_at', desc=True).execute()
         reports = getattr(reports_response, 'data', []) or []
+        reports = _enrich_reports_with_reviewer_info(reports)
         
         # Format the date properly for the template
         for report in reports:

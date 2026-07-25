@@ -78,7 +78,7 @@ class ReportStorageTests(unittest.TestCase):
 
     def test_format_report_timestamp_converts_utc_to_manila_time(self):
         utc_value = "2026-07-08T00:30:00+00:00"
-        self.assertEqual(format_report_timestamp(utc_value), "Jul 08, 2026 • 08:30 AM")
+        self.assertEqual(format_report_timestamp(utc_value), "Jul 08, 2026  08:30 AM")
         self.assertEqual(format_report_date(utc_value), "2026-07-08")
 
 

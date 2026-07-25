@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CocoScan - Map View</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
     <!-- Leaflet Map Engine Infrastructure -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
@@ -27,7 +29,7 @@
             --text-dark: #1e293b;
             --text-muted: #64748b;
             --border-light: rgba(0, 0, 0, 0.05);
-            
+
             /* Pest Color-Mapping Configurations derived from user requirements */
             --color-rhinoceros: #164630;
             --color-brontispa: #d97706;
@@ -64,7 +66,8 @@
             background-color: var(--brand-dark);
             color: #ffffff;
             position: fixed;
-            top: 0; left: 0;
+            top: 0;
+            left: 0;
             z-index: 1000;
             padding: 0 16px;
             display: flex;
@@ -79,82 +82,217 @@
             justify-content: space-between;
         }
 
-        .logo-group { display: flex; align-items: center; gap: 10px; }
-        .logo-img-fallback {
-            width: 32px; height: 32px; background: var(--bg-card); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .mobile-header h2 { font-size: 1.15rem; font-weight: 800; }
-        .mobile-header p { font-size: 0.65rem; color: rgba(255, 255, 255, 0.5); }
-        .hamburger-btn { background: none; border: none; color: #ffffff; font-size: 1.35rem; cursor: pointer; }
+
+        .logo-img-fallback {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-card);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-header h2 {
+            font-size: 1.15rem;
+            font-weight: 800;
+        }
+
+        .mobile-header p {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .hamburger-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.35rem;
+            cursor: pointer;
+        }
 
         /* --- SIDEBAR MENU SYSTEM --- */
         .sidebar-wrapper {
-            width: 290px; background-color: var(--brand-dark); color: #ffffff;
-            display: flex; flex-direction: column; justify-content: space-between;
-            position: fixed; top: 64px; bottom: 0; right: 0; z-index: 999;
-            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 290px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            top: 64px;
+            bottom: 0;
+            right: 0;
+            z-index: 999;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .sidebar-wrapper.show-mobile { transform: translateX(0); }
-        .menu-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.4); padding: 24px 20px 12px 20px; font-weight: 700; }
-        .sidebar-menu-list { list-style: none; padding: 0 10px; }
-        .menu-item-link { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 0.95rem; font-weight: 500; border-radius: 10px; margin-bottom: 6px; }
-        .menu-item-link:hover, .menu-item-link.active { color: #ffffff; background-color: rgba(255, 255, 255, 0.06); }
-        .sidebar-user-footer { padding: 20px; background-color: rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-        .user-meta-box { display: flex; align-items: center; gap: 12px; }
-        .user-avatar-circle { width: 42px; height: 42px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; }
-        .user-identity-text h4 { font-size: 0.9rem; color: #ffffff; }
-        .user-identity-text p { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
-        .btn-logout-trigger { color: rgba(255, 255, 255, 0.4); font-size: 1.2rem; }
-        .sidebar-backdrop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 37, 26, 0.4); backdrop-filter: blur(4px); z-index: 950; }
-        .sidebar-backdrop.active { display: block; }
+
+        .sidebar-wrapper.show-mobile {
+            transform: translateX(0);
+        }
+
+        .menu-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.4);
+            padding: 24px 20px 12px 20px;
+            font-weight: 700;
+        }
+
+        .sidebar-menu-list {
+            list-style: none;
+            padding: 0 10px;
+        }
+
+        .menu-item-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 10px;
+            margin-bottom: 6px;
+        }
+
+        .menu-item-link:hover,
+        .menu-item-link.active {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .sidebar-user-footer {
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .user-meta-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-identity-text h4 {
+            font-size: 0.9rem;
+            color: #ffffff;
+        }
+
+        .user-identity-text p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-logout-trigger {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.2rem;
+            transition: color 0.2s ease;
+            padding: 4px;
+        }
+        .btn-logout-trigger:hover {
+            color: #ef4444 !important;
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(11, 37, 26, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 950;
+        }
+
+        .sidebar-backdrop.active {
+            display: block;
+        }
 
         /* --- MAIN VIEWPORTS LAYOUT --- */
         .main-content-layout {
-            flex: 1; 
-            width: 100%; 
+            flex: 1;
+            width: 100%;
             max-width: 1400px;
             margin: 0 auto;
             padding: 88px 24px 24px 24px;
-            display: flex; 
-            flex-direction: column; 
+            display: flex;
+            flex-direction: column;
             gap: 16px;
         }
 
-        .section-title-wrap { display: flex; justify-content: space-between; align-items: flex-start; }
-        .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
-        .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); }
+        .section-title-wrap {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .section-title-wrap h1 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: var(--brand-dark);
+        }
+
+        .section-title-wrap p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
 
         /* --- SEARCH AND CONTROLS --- */
         .search-controls-row {
-            display: flex; 
+            display: flex;
             flex-wrap: wrap;
-            gap: 12px; 
+            gap: 12px;
             align-items: center;
             width: 100%;
         }
+
         .search-bar-box {
-            position: relative; 
+            position: relative;
             flex: 1;
             min-width: 240px;
         }
+
         .search-input {
-            width: 100%; 
-            padding: 14px 16px 14px 44px; 
+            width: 100%;
+            padding: 14px 16px 14px 44px;
             border-radius: 32px;
-            border: 1px solid rgba(0,0,0,0.05); 
+            border: 1px solid rgba(0, 0, 0, 0.05);
             background-color: var(--bg-card);
-            font-size: 0.92rem; 
-            outline: none; 
+            font-size: 0.92rem;
+            outline: none;
             color: var(--text-dark);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
         }
+
         .search-bar-box i {
-            position: absolute; 
-            left: 18px; 
-            top: 50%; 
+            position: absolute;
+            left: 18px;
+            top: 50%;
             transform: translateY(-50%);
-            color: var(--text-muted); 
+            color: var(--text-muted);
             font-size: 1rem;
         }
 
@@ -168,12 +306,13 @@
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            display: none; 
+            display: none;
             align-items: center;
             gap: 6px;
             box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2);
             transition: all 0.2s ease;
         }
+
         .btn-clear-filters:hover {
             background-color: #d84343;
             transform: translateY(-1px);
@@ -181,19 +320,44 @@
 
         /* --- FILTERS CHIPS ROW --- */
         .filter-chips-scrollrow {
-            display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;
-            scrollbar-width: none; -webkit-overflow-scrolling: touch;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
         }
-        .filter-chips-scrollrow::-webkit-scrollbar { display: none; }
-        
+
+        .filter-chips-scrollrow::-webkit-scrollbar {
+            display: none;
+        }
+
         .chip-filter-btn {
-            background-color: var(--bg-card); border: 1px solid var(--border-light);
-            padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;
-            color: var(--text-muted); cursor: pointer; white-space: nowrap;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-light);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             transition: all 0.2s ease;
         }
+
+        .chip-filter-btn:hover {
+            border-color: #1a4d32;
+            color: #1a4d32;
+        }
+
         .chip-filter-btn.active-chip {
-            background-color: #1a4d32; color: #ffffff; border-color: #1a4d32;
+            background-color: #1a4d32;
+            color: #ffffff;
+            border-color: #1a4d32;
+            box-shadow: 0 2px 6px rgba(26, 77, 50, 0.2);
         }
 
         /* ==========================================================================
@@ -204,7 +368,7 @@
             border-radius: 20px;
             padding: 16px;
             border: 1px solid var(--border-light);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
             position: relative;
             width: 100%;
         }
@@ -227,9 +391,10 @@
             height: 36px;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
-            box-shadow: -2px 2px 4px rgba(0,0,0,0.25);
+            box-shadow: -2px 2px 4px rgba(0, 0, 0, 0.25);
             border: 2px solid #ffffff;
         }
+
         .custom-map-marker-pin i {
             transform: rotate(45deg);
             color: #ffffff;
@@ -245,6 +410,7 @@
             margin-top: 12px;
             padding-right: 4px;
         }
+
         .legend-item {
             display: flex;
             align-items: center;
@@ -253,6 +419,7 @@
             color: var(--text-muted);
             font-weight: 500;
         }
+
         .legend-dot {
             width: 8px;
             height: 8px;
@@ -274,7 +441,7 @@
             border-radius: 18px;
             padding: 20px;
             border: 1px solid var(--border-light);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
             display: flex;
             flex-direction: column;
             gap: 14px;
@@ -289,6 +456,7 @@
             align-items: center;
             gap: 8px;
         }
+
         .panel-heading i {
             color: var(--primary-green);
         }
@@ -299,9 +467,10 @@
             flex-direction: column;
             gap: 10px;
         }
+
         .location-node-row {
             background-color: #f8faf9;
-            border: 1px solid rgba(0,0,0,0.03);
+            border: 1px solid rgba(0, 0, 0, 0.03);
             border-radius: 12px;
             padding: 12px 14px;
             display: flex;
@@ -310,19 +479,23 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
+
         .location-node-row:hover {
             background-color: #edf2ef;
         }
+
         .location-node-info h4 {
             font-size: 0.88rem;
             font-weight: 700;
             color: var(--text-dark);
         }
+
         .location-node-info p {
             font-size: 0.75rem;
             color: var(--text-muted);
             margin-top: 2px;
         }
+
         .pest-indicator-pill {
             width: 12px;
             height: 12px;
@@ -341,10 +514,12 @@
             color: var(--text-muted);
             gap: 10px;
         }
+
         .empty-details-view i {
             font-size: 2rem;
             color: #cbd5e1;
         }
+
         .empty-details-view p {
             font-size: 0.88rem;
         }
@@ -357,17 +532,20 @@
             justify-content: space-between;
             flex: 1;
         }
+
         .detail-meta-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             gap: 12px;
         }
+
         .detail-meta-header h3 {
             font-size: 1.15rem;
             font-weight: 800;
             color: var(--brand-dark);
         }
+
         .detail-meta-header p {
             font-size: 0.82rem;
             color: var(--text-muted);
@@ -381,15 +559,23 @@
             flex-direction: column;
             gap: 10px;
         }
+
         .data-table-row {
             display: flex;
             justify-content: space-between;
             font-size: 0.85rem;
             padding-bottom: 8px;
-            border-bottom: 1px dashed rgba(0,0,0,0.05);
+            border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
         }
-        .data-table-row span:first-child { color: var(--text-muted); }
-        .data-table-row span:last-child { font-weight: 600; color: var(--text-dark); }
+
+        .data-table-row span:first-child {
+            color: var(--text-muted);
+        }
+
+        .data-table-row span:last-child {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
 
         .btn-view-action {
             width: 100%;
@@ -408,6 +594,7 @@
             margin-top: 16px;
             transition: background-color 0.2s;
         }
+
         .btn-view-action:hover {
             background-color: #1e5c3f;
         }
@@ -416,7 +603,10 @@
            4. RESPONSIVE UP-SCALING (DESKTOP GRID PARITY)
            ========================================================================== */
         @media (max-width: 500px) {
-            .btn-clear-filters { width: 100%; justify-content: center; }
+            .btn-clear-filters {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         @media (min-width: 1024px) {
@@ -435,12 +625,23 @@
                 top: 72px;
             }
 
-            .header-content-wrapper { max-width: 1400px; margin: 0 auto; }
+            .header-content-wrapper {
+                max-width: 1400px;
+                margin: 0 auto;
+            }
 
-            .section-title-wrap h1 { font-size: 1.95rem; }
-            .section-title-wrap p { font-size: 0.98rem; margin-top: 4px; }
+            .section-title-wrap h1 {
+                font-size: 1.95rem;
+            }
 
-            .map-viewport-frame { height: 420px; }
+            .section-title-wrap p {
+                font-size: 0.98rem;
+                margin-top: 4px;
+            }
+
+            .map-viewport-frame {
+                height: 420px;
+            }
 
             /* Grid layout deployment pattern reflecting layout columns in image_e8e7f6.png */
             .map-split-grid {
@@ -451,10 +652,11 @@
         }
     </style>
 </head>
+
 <body>
 
     <div class="mobile-viewport-container">
-        
+
         <!-- HEADER APPARATUS -->
         <header class="mobile-header">
             <div class="header-content-wrapper">
@@ -481,31 +683,48 @@
                 <div class="menu-label">Main Menu</div>
                 <ul class="sidebar-menu-list">
                     {% if user_role == 'admin' %}
-                    <li><a href="/admin/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
-                    <li><a href="/admin/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
-                    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i class="fa-solid fa-file-lines"></i> Reports</a></li>
-                    <li><a href="/admin/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
-                    <li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i> User Management</a></li>
+                    <li><a href="/admin/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i>
+                            Dashboard</a></li>
+                    <li><a href="/admin/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i>
+                            Analytics</a></li>
+                    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i
+                                class="fa-solid fa-file-lines"></i> Reports</a></li>
+                    <li><a href="/admin/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i>
+                            Map View</a></li>
+                    <li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i>
+                            User Management</a></li>
                     {% elif user_role == 'lgu' %}
-                    <li><a href="/lgu/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-                    <li><a href="/lgu/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
-                    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> Reports</a></li>
-                    <li><a href="/lgu/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                    <li><a href="/lgu/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i>
+                            Dashboard</a></li>
+                    <li><a href="/lgu/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i>
+                            Analytics</a></li>
+                    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i
+                                class="fa-solid fa-folder-open"></i> Reports</a></li>
+                    <li><a href="/lgu/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i>
+                            Map View</a></li>
                     {% else %}
-                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
-                    <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i> Active Reports</a></li>
-                    <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Resolved</a></li>
-                    <li><a href="/agriculturist/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i>
+                            Dashboard</a></li>
+                    <li><a href="/agriculturist/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i>
+                            Analytics</a></li>
+                    <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i>
+                            Active Reports</a></li>
+                    <li><a href="/agriculturist/reviewed" class="menu-item-link"><i
+                                class="fa-solid fa-check-double"></i> Resolved</a></li>
+                    <li><a href="/agriculturist/map" class="menu-item-link active"><i
+                                class="fa-solid fa-map-location-dot"></i> Map View</a></li>
                     {% endif %}
                 </ul>
             </div>
 
             <div class="sidebar-user-footer">
                 <div class="user-meta-box">
-                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user"
+                            style="color:#fff; font-size: 0.95rem;"></i></div>
                     <div class="user-identity-text">
                         <h4>{{user_name}}</h4>
-                        <p>{% if user_role == 'admin' %}PCA Administrator{% elif user_role == 'lgu' %}LGU Officer{% else %}PCA Agriculturist{% endif %}</p>
+                        <p>{% if user_role == 'admin' %}PCA Administrator{% elif user_role == 'lgu' %}LGU Officer{% else
+                            %}PCA Agriculturist{% endif %}</p>
                     </div>
                 </div>
                 <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
@@ -514,7 +733,7 @@
 
         <!-- MAIN CANVAS WORKSPACE -->
         <main class="main-content-layout">
-            
+
             <header class="section-title-wrap">
                 <div>
                     <h1>Map View</h1>
@@ -526,7 +745,8 @@
             <div class="search-controls-row">
                 <div class="search-bar-box">
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="map-search-input" class="search-input" placeholder="Search locations here...">
+                    <input type="text" id="map-search-input" class="search-input"
+                        placeholder="Search locations here...">
                 </div>
                 <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
                     <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
@@ -542,7 +762,7 @@
             <!-- GEOSPATIAL MAP HOUSING -->
             <section class="map-card-container">
                 <div id="map-canvas" class="map-viewport-frame"></div>
-                
+
                 <!-- Color-mapped Pest Identification Legend Elements replacing Severity colors -->
                 <div class="map-legend-row">
                     <div class="legend-item">
@@ -558,7 +778,7 @@
 
             <!-- DETAIL SPLIT GRIDS -->
             <div class="map-split-grid">
-                
+
                 <!-- LEFT COLUMN PANEL: RECENT VIEWS -->
                 <section class="content-panel-card">
                     <div class="panel-heading">
@@ -611,12 +831,105 @@
         let markersLayerGroup = null;
         let activePestFilter = "all";
         let searchPhrase = "";
+        let mapSearchTimeout = null;
+        let lastZoomedSearchPhrase = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             initLeafletMapCanvas();
             initFiltersAndSearch();
             renderMapDashboardComponents();
+            if (searchPhrase !== "") {
+                triggerMapViewportUpdate(searchPhrase, getCurrentFilteredRecords(), true);
+            }
         });
+
+        function getCurrentFilteredRecords() {
+            return geoReportsDataset.filter(item => {
+                const locationString = `${item.barangay} ${item.municipality} ${item.province}`.toLowerCase();
+                const pestString = String(item.pest_type || "").toLowerCase();
+                const matchesSearch = !searchPhrase || locationString.includes(searchPhrase) || pestString.includes(searchPhrase);
+                const matchesPest = (activePestFilter === "all" || item.pest_type === activePestFilter);
+                return matchesSearch && matchesPest;
+            });
+        }
+
+        function syncUrlSearchParameter() {
+            const params = new URLSearchParams(window.location.search);
+            if (searchPhrase) {
+                params.set("search", searchPhrase);
+            } else {
+                params.delete("search");
+            }
+            const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+            window.history.replaceState({}, "", nextUrl);
+        }
+
+        function triggerMapViewportUpdate(query, records, immediate = false) {
+            if (mapSearchTimeout) clearTimeout(mapSearchTimeout);
+
+            const normalizedQuery = (query || "").toLowerCase().trim();
+            if (!normalizedQuery) {
+                if (lastZoomedSearchPhrase === "") return;
+                lastZoomedSearchPhrase = "";
+                if (geoReportsDataset && geoReportsDataset.length > 0) {
+                    const bounds = L.latLngBounds(geoReportsDataset.map(r => [r.latitude, r.longitude]));
+                    if (!bounds.getNorthEast().equals(bounds.getSouthWest())) {
+                        mapInstance.flyToBounds(bounds, { padding: [50, 50], maxZoom: 13, duration: 1.0 });
+                    } else {
+                        mapInstance.flyTo([geoReportsDataset[0].latitude, geoReportsDataset[0].longitude], 13, { duration: 1.0 });
+                    }
+                } else {
+                    mapInstance.flyTo([14.0708, 121.3256], 13, { duration: 1.0 });
+                }
+                return;
+            }
+            if (normalizedQuery === lastZoomedSearchPhrase && !immediate) return;
+
+            const executeZoom = () => {
+                lastZoomedSearchPhrase = normalizedQuery;
+                if (records && records.length > 0) {
+                    if (records.length === 1) {
+                        mapInstance.flyTo([records[0].latitude, records[0].longitude], 15, { duration: 1.2 });
+                    } else {
+                        const bounds = L.latLngBounds(records.map(r => [r.latitude, r.longitude]));
+                        if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
+                            mapInstance.flyTo([records[0].latitude, records[0].longitude], 15, { duration: 1.2 });
+                        } else {
+                            mapInstance.flyToBounds(bounds, { padding: [60, 60], maxZoom: 15, duration: 1.2 });
+                        }
+                    }
+                } else {
+                    // Fallback to OpenStreetMap Nominatim API if searched location is not in dataset reports
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(normalizedQuery + ', Laguna, Philippines')}&limit=1`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.length > 0) {
+                                const lat = parseFloat(data[0].lat);
+                                const lon = parseFloat(data[0].lon);
+                                mapInstance.flyTo([lat, lon], 14, { duration: 1.2 });
+                            } else {
+                                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(normalizedQuery + ', Philippines')}&limit=1`)
+                                    .then(res2 => res2.json())
+                                    .then(data2 => {
+                                        if (data2 && data2.length > 0) {
+                                            const lat2 = parseFloat(data2[0].lat);
+                                            const lon2 = parseFloat(data2[0].lon);
+                                            mapInstance.flyTo([lat2, lon2], 14, { duration: 1.2 });
+                                        }
+                                    })
+                                    .catch(e => console.error("Geocoding retry error:", e));
+                            }
+                        })
+                        .catch(e => console.error("Geocoding error:", e));
+                }
+            };
+
+            if (immediate) {
+                executeZoom();
+            } else {
+                mapSearchTimeout = setTimeout(executeZoom, 600);
+            }
+        }
 
         function initLeafletMapCanvas() {
             // Instantiate map canvas center coordinate metrics pointing near San Pablo City, Laguna
@@ -651,23 +964,21 @@
 
                 searchBar.addEventListener("input", (e) => {
                     searchPhrase = e.target.value.toLowerCase().trim();
+                    syncUrlSearchParameter();
                     evaluateClearFilterButtonState();
                     renderMapDashboardComponents();
+                    triggerMapViewportUpdate(searchPhrase, getCurrentFilteredRecords(), false);
                 });
 
                 searchBar.addEventListener("keydown", (e) => {
                     if (e.key === "Enter") {
                         e.preventDefault();
-                        const nextQuery = searchBar.value.trim();
-                        const nextParams = new URLSearchParams(window.location.search);
-                        if (nextQuery) {
-                            nextParams.set("search", nextQuery);
-                        } else {
-                            nextParams.delete("search");
-                        }
-
-                        const nextUrl = `${window.location.pathname}${nextParams.toString() ? `?${nextParams.toString()}` : ""}`;
-                        window.location.href = nextUrl;
+                        searchBar.blur();
+                        searchPhrase = searchBar.value.toLowerCase().trim();
+                        syncUrlSearchParameter();
+                        evaluateClearFilterButtonState();
+                        renderMapDashboardComponents();
+                        triggerMapViewportUpdate(searchPhrase, getCurrentFilteredRecords(), true);
                     }
                 });
             }
@@ -696,16 +1007,29 @@
 
         function clearAllActiveFilters() {
             document.getElementById("map-search-input").value = "";
-            
+
             document.querySelectorAll(".chip-filter-btn").forEach(c => c.classList.remove("active-chip"));
             const allChip = document.querySelector('.chip-filter-btn[data-pest="all"]');
             if (allChip) allChip.classList.add("active-chip");
 
             searchPhrase = "";
             activePestFilter = "all";
+            lastZoomedSearchPhrase = null;
 
+            syncUrlSearchParameter();
             evaluateClearFilterButtonState();
             renderMapDashboardComponents();
+
+            if (geoReportsDataset.length > 0) {
+                const bounds = L.latLngBounds(geoReportsDataset.map(r => [r.latitude, r.longitude]));
+                if (!bounds.getNorthEast().equals(bounds.getSouthWest())) {
+                    mapInstance.flyToBounds(bounds, { padding: [50, 50], maxZoom: 13, duration: 1.0 });
+                } else {
+                    mapInstance.flyTo([geoReportsDataset[0].latitude, geoReportsDataset[0].longitude], 13, { duration: 1.0 });
+                }
+            } else {
+                mapInstance.flyTo([14.0708, 121.3256], 13, { duration: 1.0 });
+            }
         }
 
         function getPestHexColorCode(pestName) {
@@ -721,13 +1045,7 @@
             if (listContainer) listContainer.innerHTML = "";
 
             // Filter context validation - search by pest name AND location
-            let filteredRecords = geoReportsDataset.filter(item => {
-                const locationString = `${item.barangay} ${item.municipality} ${item.province}`.toLowerCase();
-                const pestString = String(item.pest_type || "").toLowerCase();
-                const matchesSearch = !searchPhrase || locationString.includes(searchPhrase) || pestString.includes(searchPhrase);
-                const matchesPest = (activePestFilter === "all" || item.pest_type === activePestFilter);
-                return matchesSearch && matchesPest;
-            });
+            let filteredRecords = getCurrentFilteredRecords();
 
             // Update label metrics counter
             const labelCount = document.getElementById("chip-count-label");
@@ -805,7 +1123,7 @@
             window._currentActiveMapRecord = record;
             const emptyState = document.getElementById("details-empty-state");
             const activeState = document.getElementById("details-active-state");
-            
+
             if (!activeState || !emptyState) return;
 
             emptyState.style.display = "none";
@@ -881,14 +1199,15 @@
             const icon = document.getElementById('toggleIcon');
             sidebar.classList.toggle('show-mobile');
             if (backdrop) backdrop.classList.toggle('active');
-            
+
             if (icon) {
                 icon.className = sidebar.classList.contains('show-mobile') ? "fa-solid fa-xmark" : "fa-solid fa-bars";
             }
         }
     </script>
-    
+
     {% include 'components/report_modal.html' %}
     <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
 </body>
+
 </html>

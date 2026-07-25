@@ -132,7 +132,7 @@
                 margin: 0;
                 padding: 0;
                 min-height: 0;
-                color: #0f172a;
+                color: #64748b;
                 font-size: 0.95rem;
                 line-height: 1.6;
             }
@@ -511,7 +511,7 @@
         <div class="premium-form-card" id="report-notes-card">
             <h4><i class="fa-solid fa-pen-to-square"></i> Farmer Notes</h4>
             <textarea class="notes-input-box" id="field-notes-capture" placeholder="Describe what you observed on your coconut tree (e.g., yellowing leaves, damaged fruits, unusual insects, or other signs)."></textarea>
-            <p id="report-notes-display" style="font-size: 0.88rem; color: var(--text-dark); line-height: 1.5; padding: 2px 0; display: none;">--</p>
+            <p id="report-notes-display" style="font-size: 0.88rem; color: #64748b; line-height: 1.5; padding: 2px 0; display: none;">--</p>
         </div>
 
         <div class="premium-form-card" data-scan-only>
@@ -540,6 +540,7 @@
             <button class="btn-control submit-primary" id="report-agri-submit-btn" type="button" onclick="window.submitExpertValidation()" style="display:none; width:100%; margin-top:12px;">
                 <i class="fa-solid fa-paper-plane"></i> Submit Assessment
             </button>
+            <p id="expert-assessment-issuer-note" style="font-size:0.78rem; color:#64748b; font-style:italic; margin:14px 0 0; padding-top:10px; border-top:1px dashed #cbd5e1; display:none; text-align:right;"></p>
         </div>
 
         <div class="premium-form-card" id="report-farmer-feedback-card" style="display:none;">
