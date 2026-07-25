@@ -423,14 +423,14 @@
 
     function getRecommendationTooltip(text) {
         const lower = String(text).toLowerCase();
-        if (lower.includes("sanitation")) return "Step 1: Collect all dead leaves, rotting trunks, and fallen fruits. Step 2: Burn them or bury them deep away from healthy trees to destroy hidden pest breeding grounds.";
-        if (lower.includes("trap") && lower.includes("pheromone")) return "Step 1: Hang the trap 1.5 to 2 meters high on a pole. Step 2: Place it at least 20-30 meters away from your healthy trees so it lures pests AWAY from your farm, not into it.";
+        if (lower.includes("sanitation")) return "<strong>Step 1:</strong> Collect all dead leaves, rotting trunks, and fallen fruits.<br><strong>Step 2:</strong> Burn them or bury them deep away from healthy trees to destroy hidden pest breeding grounds.";
+        if (lower.includes("trap") && lower.includes("pheromone")) return "<strong>Step 1:</strong> Hang the trap 1.5 to 2 meters high on a pole.<br><strong>Step 2:</strong> Place it at least 20-30 meters away from your healthy trees so it lures pests AWAY from your farm, not into it.";
         if (lower.includes("fungus") || lower.includes("muscardine")) return "Mix the recommended Green Muscardine fungus with water and spray directly onto compost pits, rotting logs, or traps where adult beetles lay eggs.";
         if (lower.includes("biological")) return "Introduce natural predators like earwigs or use organic biocontrol agents recommended by the local agriculture office.";
         if (lower.includes("light trap")) return "Set up a bright light bulb over a basin of soapy water at night. Flying pests will be attracted to the light and drown in the water.";
         if (lower.includes("prun") || lower.includes("cut")) return "Use a clean, sharp bolo to cut off heavily infested fronds. Burn or bury the cut pieces immediately so pests don't spread to other leaves.";
         if (lower.includes("fertiliz")) return "Apply the recommended nitrogen or potassium fertilizers around the base of the tree (about 1 meter away from the trunk) to help the tree recover faster.";
-        if (lower.includes("chemical") || lower.includes("insecticide")) return "WARNING: Only use chemicals as a final option. Wear gloves and a mask, follow the exact dosage on the bottle, and spray only on affected areas.";
+        if (lower.includes("chemical") || lower.includes("insecticide")) return "<strong>WARNING:</strong> Only use chemicals as a final option. Wear gloves and a mask, follow the exact dosage on the bottle, and spray only on affected areas.<br><br><i>Note: If you are unsure about what chemical to use, ask the agriculturist by putting it in your Farmer Notes below before submitting.</i>";
         if (lower.includes("monitor")) return "Visit your farm every 3-5 days. Check the crown and young leaves of the affected trees for any new boreholes, chewed leaves, or pest droppings.";
         return "Please follow this recommendation carefully. For exact measurements or detailed guidance, wait for the agriculturist's expert assessment.";
     }
@@ -478,17 +478,17 @@
             li.style.flexDirection = "column";
             li.style.marginBottom = "4px";
             
-            let html = `<div style="display: flex; align-items: flex-start; gap: 8px;">`;
+            let html = `<div style="display: flex; align-items: flex-start; gap: 6px;">`;
             if (showIcon && !withTooltip) {
-                html += `<i class="fa-solid fa-circle-check" style="margin-top: 3px; color: var(--primary-green); flex-shrink: 0;"></i>`;
+                html += `<i class="fa-solid fa-circle-check" style="margin-top: 2px; color: var(--primary-green); flex-shrink: 0;"></i>`;
             } else if (showIcon && withTooltip) {
-                html += `<div style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--text-muted); margin-top: 8px; flex-shrink: 0;"></div>`;
+                html += `<div style="width: 5px; height: 5px; border-radius: 50%; background-color: var(--text-muted); margin-top: 6px; flex-shrink: 0;"></div>`;
             }
-            html += `<span style="font-size: 0.88rem; line-height: 1.5; color: var(--text-dark); padding: 2px 0;">${escapeHtml(item)}</span>`;
+            html += `<span style="font-size: 0.85rem; line-height: 1.3; color: var(--text-dark); padding: 0;">${escapeHtml(item)}</span>`;
             
             const tooltipText = withTooltip ? getRecommendationTooltip(item) : "";
             if (withTooltip) {
-                html += `<i class="fa-solid fa-circle-question reco-tooltip-icon" style="color: rgba(56, 189, 248, 0.7); cursor: pointer; margin-top: 3px; font-size: 1.1rem; transition: opacity 0.2s; flex-shrink: 0;" title="Click for details"></i>`;
+                html += `<i class="fa-solid fa-circle-question reco-tooltip-icon" style="color: rgba(56, 189, 248, 0.7); cursor: pointer; margin-top: 0px; font-size: 1.05rem; transition: opacity 0.2s; flex-shrink: 0;" title="Click for details"></i>`;
             }
             html += `</div>`;
             
@@ -497,15 +497,15 @@
             if (withTooltip) {
                 const dropdownDiv = document.createElement("div");
                 dropdownDiv.style.display = "none";
-                dropdownDiv.style.marginTop = "4px";
-                dropdownDiv.style.padding = "8px 10px";
+                dropdownDiv.style.marginTop = "2px";
+                dropdownDiv.style.padding = "6px 8px";
                 dropdownDiv.style.backgroundColor = "rgba(56, 189, 248, 0.1)";
                 dropdownDiv.style.borderLeft = "3px solid rgba(56, 189, 248, 0.7)";
                 dropdownDiv.style.borderRadius = "0 6px 6px 0";
-                dropdownDiv.style.fontSize = "0.85rem";
+                dropdownDiv.style.fontSize = "0.8rem";
                 dropdownDiv.style.color = "var(--text-dark)";
-                dropdownDiv.style.lineHeight = "1.4";
-                dropdownDiv.textContent = tooltipText;
+                dropdownDiv.style.lineHeight = "1.3";
+                dropdownDiv.innerHTML = tooltipText;
                 
                 li.appendChild(dropdownDiv);
                 
@@ -532,7 +532,9 @@
         node.innerHTML = "";
 
         if (!images || images.length === 0) {
-            node.innerHTML = '<div style="width:100%;"><p style="font-size: 0.82rem; color: var(--text-muted); margin: 0; text-align: left;">No additional images uploaded.</p></div>';
+            if (currentReportModalMode !== "scan") {
+                node.innerHTML = '<div style="width:100%;"><p style="font-size: 0.82rem; color: var(--text-muted); margin: 0; text-align: left;">No additional images uploaded.</p></div>';
+            }
             return;
         }
 
