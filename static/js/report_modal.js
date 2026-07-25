@@ -166,7 +166,7 @@
             farmer: String(reportData.farmer || reportData.farmer_name || "Farmer").trim(),
             notes: cleanNotes,
             rawNotes: rawNotes,
-            locationText: reportData.location_text || reportData.full_location || reportData.location || reportData.barangay || "No location logged",
+            locationText: reportData.location_text || reportData.full_location || reportData.location || [reportData.barangay, reportData.municipality, reportData.province].filter(Boolean).join(", ") || "No location logged",
             latitude: gps.latitude ?? reportData.latitude ?? "",
             longitude: gps.longitude ?? reportData.longitude ?? "",
             accuracy: gps.accuracy ?? reportData.gps_accuracy ?? "",
@@ -477,17 +477,17 @@
             li.style.flexDirection = "column";
             li.style.marginBottom = "4px";
             
-            let html = `<div style="display: flex; align-items: flex-start; gap: 8px; width: 100%;">`;
+            let html = `<div style="display: flex; align-items: flex-start; gap: 8px;">`;
             if (showIcon && !withTooltip) {
-                html += `<i class="fa-solid fa-circle-check" style="margin-top: 3px; color: var(--primary-green);"></i>`;
+                html += `<i class="fa-solid fa-circle-check" style="margin-top: 3px; color: var(--primary-green); flex-shrink: 0;"></i>`;
             } else if (showIcon && withTooltip) {
                 html += `<div style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--text-muted); margin-top: 8px; flex-shrink: 0;"></div>`;
             }
-            html += `<span style="flex: 1; font-size: 0.88rem; line-height: 1.5; color: var(--text-dark); padding: 2px 0;">${escapeHtml(item)}</span>`;
+            html += `<span style="font-size: 0.88rem; line-height: 1.5; color: var(--text-dark); padding: 2px 0;">${escapeHtml(item)}</span>`;
             
             const tooltipText = withTooltip ? getRecommendationTooltip(item) : "";
             if (withTooltip) {
-                html += `<i class="fa-solid fa-circle-question reco-tooltip-icon" style="color: rgba(56, 189, 248, 0.7); cursor: pointer; margin-top: 3px; font-size: 1.1rem; transition: opacity 0.2s;" title="Click for details"></i>`;
+                html += `<i class="fa-solid fa-circle-question reco-tooltip-icon" style="color: rgba(56, 189, 248, 0.7); cursor: pointer; margin-top: 3px; font-size: 1.1rem; transition: opacity 0.2s; flex-shrink: 0;" title="Click for details"></i>`;
             }
             html += `</div>`;
             
@@ -1588,8 +1588,50 @@
         }
 
         if (actions.length === 0) {
-            if (normalizedStatus === "resolved" && report.visit_summary) {
-                setDisplay(workflowCard, true, "block");
+            if (normalizedStatus === "resolved") {
+                if (mode === "agriculturist" && report.visit_summary) {
+                    setDisplay(workflowCard, true, "block");
+                } else if (mode === "lgu" || mode === "admin") {
+                    setDisplay(workflowCard, false, "block");
+                    if (feedbackContainer) {
+                        let visitSummaryBlock = "";
+                        if (report.visit_summary) {
+                            visitSummaryBlock = `
+                                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-top:12px;">
+                                    <h5 style="margin:0 0 8px 0; font-size:0.95rem; color:#0f172a; font-weight:600;">Visit Summary</h5>
+                                    <p style="margin:0; font-size:0.9rem; color:#475569; line-height:1.5;">${escapeHTML(report.visit_summary)}</p>
+                                    ${(report.visitImages && report.visitImages.length > 0) ? `
+                                        <div style="display:flex; gap:8px; overflow-x:auto; margin-top:12px; padding-bottom:4px;">
+                                            ${report.visitImages.map(url => `<img src="${url}" style="height:80px; width:120px; object-fit:cover; border-radius:8px; border:1px solid #cbd5e1; cursor:pointer;" onclick="window.open('${url}', '_blank')">`).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }
+                        
+                        const message = report.visit_summary 
+                                ? `<p style="font-size:0.92rem; color:#334155; margin:0;">The agriculturist has completed the visit and marked the issue as resolved.</p>${visitSummaryBlock}` 
+                                : `
+                                <div style="font-size: 0.8rem; color: #64748b; line-height: 1.3; display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                                    <div><strong style="color: #475569;">Outcome:</strong> Issue resolved by following expert assessment.</div>
+                                    <div><strong style="color: #475569;">Resolved On:</strong> ${formatTimestamp(report.updated_at || report.timestamp)}</div>
+                                </div>`;
+                        feedbackContainer.innerHTML = `
+                            <div style="margin-top:10px; display:grid; gap:12px;">
+                                ${message}
+                            </div>`;
+                        const feedbackCard = document.getElementById('report-farmer-feedback-card');
+                        if (feedbackCard) {
+                            setDisplay(feedbackCard, true, 'block');
+                            const h4 = feedbackCard.querySelector('h4');
+                            if (h4) {
+                                h4.innerHTML = `<i class="fa-solid fa-check-circle"></i> Resolution Details`;
+                            }
+                        }
+                    }
+                } else {
+                    setDisplay(workflowCard, false, "block");
+                }
             } else {
                 setDisplay(workflowCard, false, "block");
             }

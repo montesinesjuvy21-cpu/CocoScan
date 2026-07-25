@@ -19,7 +19,7 @@ def _parse_datetime(value: Any) -> datetime | None:
         return None
 
 
-def build_dashboard_chart_payload(reports: list[Mapping[str, Any]]) -> dict[str, Any]:
+def build_dashboard_chart_payload(reports: list[Mapping[str, Any]], group_by_day: bool = False) -> dict[str, Any]:
     """Build chart-friendly trend and distribution data from real reports."""
     if not reports:
         return {
@@ -49,9 +49,13 @@ def build_dashboard_chart_payload(reports: list[Mapping[str, Any]]) -> dict[str,
         if not dt:
             continue
 
-        month_key = dt.strftime("%b")
+        if group_by_day:
+            time_key = dt.strftime("%b %d")
+        else:
+            time_key = dt.strftime("%b")
+            
         pest_name = str(report.get("pest_type") or "Unknown Pest").strip() or "Unknown Pest"
-        monthly_counts[month_key][pest_name] += 1
+        monthly_counts[time_key][pest_name] += 1
         pest_counter[pest_name] += 1
 
     if not monthly_counts:
@@ -73,7 +77,11 @@ def build_dashboard_chart_payload(reports: list[Mapping[str, Any]]) -> dict[str,
             "distribution_data": [0],
         }
 
-    month_labels = sorted(monthly_counts.keys(), key=lambda item: datetime.strptime(item, "%b").month)
+    if group_by_day:
+        month_labels = sorted(monthly_counts.keys(), key=lambda item: datetime.strptime(item, "%b %d").timetuple().tm_yday)
+    else:
+        month_labels = sorted(monthly_counts.keys(), key=lambda item: datetime.strptime(item, "%b").month)
+        
     top_pests = [pest for pest, _ in pest_counter.most_common(3)] or ["Unknown Pest"]
 
     trend_datasets = []

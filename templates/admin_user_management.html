@@ -12,33 +12,66 @@
     }
     
     /* Search & Filter Bar */
-    .control-actions-form { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem; width: 100%; }
-    .search-input-row { display: flex; align-items: center; gap: 12px; width: 100%; }
-    .search-box-wrapper { position: relative; flex-grow: 1; }
-    .search-box-wrapper input { width: 100%; padding: 0.8rem 1rem 0.8rem 2.7rem; border: 1px solid #c4cbd4; border-radius: 30px; background-color: #ffffff; font-size: 0.95rem; box-sizing: border-box; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-    .search-box-wrapper input:focus { border-color: #2d6a4f; box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15); }
-    .search-box-wrapper i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #8a94a6; }
-    .btn-clear-filters { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; padding: 0.8rem 1.5rem; border-radius: 30px; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease; }
-    .btn-clear-filters:hover { background-color: #e5e7eb; color: #111827; }
-    .filter-pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
-    .pill-radio-label { cursor: pointer; }
-    .pill-radio-label input[type="radio"] { display: none; }
-    .pill-btn { display: inline-block; padding: 0.55rem 1.4rem; border-radius: 30px; border: 1px solid #d1d5db; background: #ffffff; font-size: 0.85rem; font-weight: 500; color: #4b5563; transition: all 0.2s ease; }
-    .pill-radio-label input[type="radio"]:checked + .pill-btn { background-color: #1b4332; color: #ffffff; border-color: #1b4332; }
-    mark.ux-highlight { background-color: #ffeb3b; color: #000000; padding: 0 2px; border-radius: 2px; font-weight: 600; }
+    .control-actions-form { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 2rem; width: 100%; }
+    .search-input-row { width: 100%; }
+    .search-box-wrapper { position: relative; width: 100%; }
+    .search-box-wrapper input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 1px solid rgba(0,0,0,0.08); border-radius: 30px; background-color: #ffffff; font-size: 0.95rem; box-sizing: border-box; outline: none; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .search-box-wrapper input:focus { border-color: rgba(27, 67, 50, 0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+    .search-box-wrapper i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #8a94a6; font-size: 1rem; }
+    
+    .filter-dropdowns { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; width: 100%; }
+    
+    .chip-filter-btn {
+        background-color: #ffffff;
+        border: 1px solid #e5e7eb;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        min-height: 36px;
+        min-width: 44px;
+        gap: 6px;
+    }
+    
+    .chip-filter-btn:hover { border-color: rgba(26, 77, 50, 0.3); outline: none; }
+    
+    .custom-select-chip.active-chip, .chip-filter-btn.active-chip {
+        background-color: #1a4d32;
+        color: #ffffff;
+        border-color: #1a4d32;
+    }
+    
+    .filter-dropdown-panel { display: none; position: absolute; top: 100%; left: 0; margin-top: 8px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); min-width: 180px; max-height: 240px; overflow: auto; z-index: 100; padding: 8px; }
+    .dropdown-item { display: block; width: 100%; padding: 8px 10px; text-align: left; background: transparent; border: none; cursor: pointer; font-size: 0.92rem; color: #1e293b; border-radius: 6px; }
+    .dropdown-item:hover { background: rgba(82,130,101,0.06); }
+    
+    .btn-clear-filters { background-color: #eb5757; color: #ffffff; border: none; padding: 8px 16px; border-radius: 28px; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2); transition: all 0.2s ease; white-space: nowrap; margin-left: auto; }
+    .btn-clear-filters:hover { background-color: #d64040; }
+
+    mark.ux-highlight { background: rgba(74, 198, 143, 0.28); color: #0b1315; padding: 0 2px; border-radius: 4px; font-weight: 700; }
     
     /* Table */
-    .table-scroll-container { width: 100%; overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 12px; }
-    .pca-data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-    .pca-data-table th { background-color: var(--table-header-bg); color: #ffffff; padding: 1rem 1.25rem; font-weight: 600; }
-    .pca-data-table tr { transition: background-color 0.15s ease; }
+    .table-scroll-container { background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--border-light); overflow-x: auto; }
+    .pca-data-table { width: 100%; border-collapse: collapse; min-width: 600px; text-align: left; font-size: 0.9rem; }
+    .pca-data-table thead tr { border-bottom: 2px solid var(--bg-base); text-align: left; }
+    .pca-data-table th { padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
+    .pca-data-table tbody tr { border-bottom: 1px solid var(--bg-base); transition: background-color 0.2s; }
     .pca-data-table tbody tr:hover { background-color: #f9fafb; }
-    .pca-data-table td { padding: 1.1rem 1.25rem; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+    .pca-data-table td { padding: 16px 12px; font-size: 0.9rem; vertical-align: middle; }
     .role-badge-cell { display: flex; align-items: center; gap: 8px; font-weight: 600; }
     .status-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
     .status-tag.pending { background-color: #fef3c7; color: #d97706; }
     .status-tag.approved { background-color: #d1fae5; color: #065f46; }
     .status-tag.rejected { background-color: #fee2e2; color: #991b1b; }
+    .status-tag.default { background-color: #edf2f7; color: #4a5568; }
     .btn-action-approve { background-color: #1b4332; color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: background-color 0.2s ease, transform 0.1s ease; }
     .btn-action-approve:hover { background-color: var(--btn-approve-hover); transform: translateY(-1px); }
     .btn-action-reject { background: transparent; color: #b70909; border: 1px solid #b70909; padding: 5px 13px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s ease, transform 0.1s ease; }
@@ -83,7 +116,7 @@
     <i class="fa-solid fa-chart-line"></i> Analytics
 </a></li>
 
-<li><a href="/admin/reports" class="menu-item-link">
+<li><a href="/reports/overview" class="menu-item-link">
     <i class="fa-solid fa-file-lines"></i> Reports
 </a></li>
 
@@ -105,36 +138,60 @@
 
 {% block main_content %}
 <form method="GET" action="{{ url_for('admin_user_management') }}" class="control-actions-form" id="filterForm">
+    <input type="hidden" name="status" id="statusFilter" value="{{ current_status }}">
+    <input type="hidden" name="role" id="roleFilter" value="{{ current_role }}">
+
     <div class="search-input-row">
         <div class="search-box-wrapper">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" name="search" id="searchInput" placeholder="Search users name or email..." value="{{ search }}" onchange="document.getElementById('filterForm').submit();">
+            <input type="text" name="search" id="searchInput" placeholder="Search users name or email..." value="{{ search }}" autocomplete="off">
         </div>
-        <a href="{{ url_for('admin_user_management', status='All', search='') }}" class="btn-clear-filters">
+    </div>
+    
+    <div class="filter-dropdowns">
+        <a href="{{ url_for('admin_user_management', status='All', role='All', search='') }}" class="chip-filter-btn {% if current_status == 'All' and current_role == 'All' and not search %}active-chip{% endif %}">
+            All ({{ total_records }})
+        </a>
+        
+        <div class="custom-dropdown" style="position:relative;">
+            <button type="button" class="chip-filter-btn {% if current_status != 'All' %}active-chip{% endif %}" onclick="toggleDropdown('statusMenu', event)">
+                {% if current_status == 'Under Review' %}Pending
+                {% elif current_status == 'Approved' %}Approved
+                {% elif current_status == 'Rejected' %}Rejected
+                {% else %}Status{% endif %} ▾
+            </button>
+            <div id="statusMenu" class="filter-dropdown-panel">
+                <button type="button" class="dropdown-item" onclick="updateFilter('statusFilter', 'All')">All</button>
+                <button type="button" class="dropdown-item" onclick="updateFilter('statusFilter', 'Under Review')">Pending</button>
+                <button type="button" class="dropdown-item" onclick="updateFilter('statusFilter', 'Approved')">Approved</button>
+                <button type="button" class="dropdown-item" onclick="updateFilter('statusFilter', 'Rejected')">Rejected</button>
+            </div>
+        </div>
+        
+        <div class="custom-dropdown" style="position:relative;">
+            <button type="button" class="chip-filter-btn {% if current_role != 'All' %}active-chip{% endif %}" onclick="toggleDropdown('roleMenu', event)">
+                {% if current_role == 'farmer' %}Farmer
+                {% elif current_role == 'lgu' %}LGU
+                {% elif current_role == 'agri_expert' %}Agri Expert
+                {% else %}Role{% endif %} ▾
+            </button>
+            <div id="roleMenu" class="filter-dropdown-panel">
+                <button type="button" class="dropdown-item" onclick="updateFilter('roleFilter', 'All')">All</button>
+                <button type="button" class="dropdown-item" onclick="updateFilter('roleFilter', 'farmer')">Farmer</button>
+                <button type="button" class="dropdown-item" onclick="updateFilter('roleFilter', 'lgu')">LGU</button>
+                <button type="button" class="dropdown-item" onclick="updateFilter('roleFilter', 'agri_expert')">Agri Expert</button>
+            </div>
+        </div>
+        
+        {% if current_status != 'All' or current_role != 'All' or search %}
+        <a href="{{ url_for('admin_user_management', status='All', role='All', search='') }}" class="btn-clear-filters">
             <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
         </a>
-    </div>
-
-    <div class="filter-pill-group">
-        <label class="pill-radio-label">
-            <input type="radio" name="status" value="All" {% if current_status == 'All' %}checked{% endif %} onchange="document.getElementById('filterForm').submit();">
-            <span class="pill-btn">All</span>
-        </label>
-        <label class="pill-radio-label">
-            <input type="radio" name="status" value="Under Review" {% if current_status == 'Under Review' %}checked{% endif %} onchange="document.getElementById('filterForm').submit();">
-            <span class="pill-btn">Pending</span>
-        </label>
-        <label class="pill-radio-label">
-            <input type="radio" name="status" value="Approved" {% if current_status == 'Approved' %}checked{% endif %} onchange="document.getElementById('filterForm').submit();">
-            <span class="pill-btn">Approved</span>
-        </label>
-        <label class="pill-radio-label">
-            <input type="radio" name="status" value="Rejected" {% if current_status == 'Rejected' %}checked{% endif %} onchange="document.getElementById('filterForm').submit();">
-            <span class="pill-btn">Rejected</span>
-        </label>
+        {% endif %}
     </div>
 </form>
 
+<div id="tableAndPagination">
 <div class="table-scroll-container">
     <table class="pca-data-table">
         <thead>
@@ -187,23 +244,20 @@
 
                     <td class="email-status-cell">
                         {% if user.email_status == 'Sent Successfully' %}
-                            <span style="color: #1b4332; background-color: #d8f3dc; border: 1px solid #b7e4c7; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-circle-check" style="color: #40916c; font-size: 0.85rem;"></i>
+                            <span class="status-tag approved">
                                 Email Sent
                             </span>
                         {% elif user.email_status == 'Delivery Failed' %}
-                            <span style="color: #7a1919; background-color: #ffe3e3; border: 1px solid #ffb3b3; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-circle-xmark" style="color: #c92a2a; font-size: 0.85rem;"></i>
+                            <span class="status-tag rejected">
                                 Delivery Failed
                             </span>
                             <div style="margin-top: 6px;">
-                                <button type="button" onclick="resendEmail('{{ user.id }}', this)" style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+                                <button type="button" onclick="resendEmail('{{ user.id }}', this)" style="background-color: #dc2626; color: #ffffff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
                                     <i class="fa-solid fa-rotate-right"></i> Resend
                                 </button>
                             </div>
                         {% else %}
-                            <span style="color: #4a5568; background-color: #edf2f7; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-circle-exclamation" style="color: #a0aec0; font-size: 0.85rem;"></i>
+                            <span class="status-tag default">
                                 Pending Action
                             </span>
                         {% endif %}
@@ -223,9 +277,14 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 3rem; color: #9ca3af;">
-                        <i class="fa-solid fa-users-slash" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
-                        No matching records found.
+                    <td colspan="7" style="padding: 0; border: none; background: white;">
+                        <div style="text-align:center; padding: 60px 20px; background: white; border-radius: 12px; border: 1px solid #e5e7eb; margin-top: 20px;">
+                            <div style="width: 64px; height: 64px; background: #f0fdf4; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                <i class="fa-solid fa-folder-open" style="font-size: 28px; color: #1a4d32;"></i>
+                            </div>
+                            <h3 style="color: #0b1315; margin: 0 0 10px; font-size: 1.2rem;">No matching records found</h3>
+                            <p style="color: #64748b; margin: 0; font-size: 0.95rem;">Try adjusting your search or filters to find what you're looking for.</p>
+                        </div>
                     </td>
                 </tr>
             {% endif %}
@@ -235,13 +294,72 @@
 
 {% if total_pages > 1 %}
 <div class="pagination-container">
-    <a href="{{ url_for('admin_user_management', page=current_page-1, status=current_status, search=search) }}" class="page-link-btn {% if current_page == 1 %}disabled{% endif %}">« Prev</a>
+    <a href="{{ url_for('admin_user_management', page=current_page-1, status=current_status, role=current_role, search=search) }}" class="page-link-btn {% if current_page == 1 %}disabled{% endif %}">« Prev</a>
     {% for p in range(1, total_pages + 1) %}
-        <a href="{{ url_for('admin_user_management', page=p, status=current_status, search=search) }}" class="page-link-btn {% if current_page == p %}active{% endif %}">{{ p }}</a>
+        <a href="{{ url_for('admin_user_management', page=p, status=current_status, role=current_role, search=search) }}" class="page-link-btn {% if current_page == p %}active{% endif %}">{{ p }}</a>
     {% endfor %}
-    <a href="{{ url_for('admin_user_management', page=current_page+1, status=current_status, search=search) }}" class="page-link-btn {% if current_page == total_pages %}disabled{% endif %}">Next »</a>
+    <a href="{{ url_for('admin_user_management', page=current_page+1, status=current_status, role=current_role, search=search) }}" class="page-link-btn {% if current_page == total_pages %}disabled{% endif %}">Next »</a>
 </div>
 {% endif %}
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.getElementById('searchInput');
+        const filterForm = document.getElementById('filterForm');
+        let debounceTimer;
+
+        // AJAX search function
+        window.triggerSearch = function() {
+            const url = new URL(filterForm.action, window.location.origin);
+            url.search = new URLSearchParams(new FormData(filterForm)).toString();
+            
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newContent = doc.getElementById('tableAndPagination');
+                if(newContent) {
+                    document.getElementById('tableAndPagination').innerHTML = newContent.innerHTML;
+                }
+                window.history.replaceState({}, '', url);
+            })
+            .catch(err => console.error("Live search error: ", err));
+        };
+
+        // Perform AJAX form submission for live search
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(window.triggerSearch, 400);
+        });
+
+        // Dropdown Logic
+        window.toggleDropdown = function(menuId, event) {
+            event.stopPropagation();
+            const menu = document.getElementById(menuId);
+            const isVisible = menu.style.display === 'block';
+            document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.style.display = 'none');
+            if (!isVisible) {
+                menu.style.display = 'block';
+            }
+        };
+
+        window.updateFilter = function(inputId, value) {
+            document.getElementById(inputId).value = value;
+            document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.style.display = 'none');
+            
+            // Full reload when changing dropdowns so the button labels/active state updates 
+            // OR we could update it dynamically, but full reload is safer for jinja state
+            filterForm.submit();
+        };
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.style.display = 'none');
+        });
+    });
+</script>
 
 <div class="modal-overlay-container" id="confirmationModal">
     <div class="modal-dialog-box">

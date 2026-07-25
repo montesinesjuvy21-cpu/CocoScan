@@ -422,7 +422,7 @@ def reverse_geocode_latlng(latitude, longitude):
 
         payload = response.json().get("address", {}) or {}
         return {
-            "barangay": payload.get("barangay") or payload.get("suburb") or payload.get("neighbourhood") or payload.get("hamlet") or "",
+            "barangay": payload.get("barangay") or payload.get("village") or payload.get("suburb") or payload.get("neighbourhood") or payload.get("city_district") or payload.get("hamlet") or "",
             "municipality": payload.get("municipality") or payload.get("city") or payload.get("town") or payload.get("county") or "",
             "province": payload.get("province") or payload.get("state") or payload.get("region") or "",
         }
@@ -897,6 +897,27 @@ def _format_report_location(item):
 
     return full_location or coordinate_label or "No location logged"
 
+
+def _get_status_badge_style(status):
+    if not status:
+        return {"backgroundColor": "#f8fafc", "color": "#475569"}
+    
+    normalized = str(status).strip().lower().replace(" ", "_").replace("-", "_")
+    palette = {
+        "under_review": {"backgroundColor": "#fef3c7", "color": "#92400e"},
+        "assessment_issued": {"backgroundColor": "#ecfdf5", "color": "#065f46"},
+        "awaiting_confirmed_schedule": {"backgroundColor": "#eff6ff", "color": "#1d4ed8"},
+        "visit_requested": {"backgroundColor": "#fdf2f8", "color": "#be185d"},
+        "waiting_for_agriculturist_confirmation": {"backgroundColor": "#eff6ff", "color": "#1d4ed8"},
+        "waiting_agriculturist_confirmation": {"backgroundColor": "#eff6ff", "color": "#1d4ed8"},
+        "visit_scheduled": {"backgroundColor": "#fefce8", "color": "#a16207"},
+        "visit_completed": {"backgroundColor": "#ecfeff", "color": "#0f766e"},
+        "final_remarks_issued": {"backgroundColor": "#ede9fe", "color": "#5b21b6"},
+        "recommendation_issued": {"backgroundColor": "#ecfdf5", "color": "#065f46"},
+        "resolved": {"backgroundColor": "#dcfce7", "color": "#166534"},
+        "closed": {"backgroundColor": "#dcfce7", "color": "#166534"},
+    }
+    return palette.get(normalized, {"backgroundColor": "#f8fafc", "color": "#475569"})
 
 def _fetch_report_supporting_images(report_ids):
     report_ids = [str(report_id) for report_id in report_ids if report_id is not None]
@@ -1465,11 +1486,375 @@ def lgu_analytics():
 
         risk = calculate_environmental_risk(weather["temp"], weather["humidity"], weather["rainfall"])
 
-        return render_template('lgu_analytics.html', user_name=user_name, metrics=metrics, weather=weather, risk=risk, chart_data=chart_data)
+        return render_template('shared_analytics.html', user_name=user_name, user_role=user_role)
 
     except Exception as e:
         logger.error(f"LGU analytics routing exception: {str(e)}")
         return redirect(url_for('logout'))
+
+@app.route('/api/analytics')
+def api_analytics():
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role not in ['lgu', 'admin']:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
+    try:
+        from dateutil.parser import parse
+        import calendar
+        month_str = request.args.get('month')
+        week_str = request.args.get('week')
+
+        start_date_str = None
+        end_date_str = None
+
+        if month_str:
+            try:
+                year, month = map(int, month_str.split('-'))
+                last_day = calendar.monthrange(year, month)[1]
+                if week_str:
+                    week = int(week_str)
+                    start_day = (week - 1) * 7 + 1
+                    end_day = min(week * 7, last_day) if week < 4 else last_day
+                    start_date_str = f"{year}-{month:02d}-{start_day:02d}"
+                    end_date_str = f"{year}-{month:02d}-{end_day:02d}"
+                else:
+                    start_date_str = f"{year}-{month:02d}-01"
+                    end_date_str = f"{year}-{month:02d}-{last_day:02d}"
+            except ValueError:
+                pass
+
+        query = supabase.table('reports').select('*')
+        if start_date_str:
+            query = query.gte('created_at', start_date_str)
+        if end_date_str:
+            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
+
+        reports_response = query.order('created_at', desc=True).execute()
+        reports = getattr(reports_response, 'data', []) or []
+        pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
+        
+        print("API_ANALYTICS: month_str=", month_str, "week_str=", week_str, "start=", start_date_str, "end=", end_date_str, "num_reports=", len(reports), "num_pest_reports=", len(pest_reports))
+        with open("api_analytics.log", "a") as f:
+            f.write(f"API_ANALYTICS called! month={month_str} week={week_str} reports={len(pest_reports)}\n")
+        
+        status_breakdown = {
+            'rhinoceros beetle': {'pending': 0, 'in_progress': 0, 'resolved': 0},
+            'brontispa': {'pending': 0, 'in_progress': 0, 'resolved': 0}
+        }
+
+        for r in pest_reports:
+            pest_raw = str(r.get('pest_type') or '').strip().lower()
+            status = str(r.get('status') or '').strip().lower()
+            
+            mapped_status = 'in_progress'
+            if is_pending_report_status(status):
+                mapped_status = 'pending'
+            elif is_resolved_report_status(status):
+                mapped_status = 'resolved'
+            if pest_raw in status_breakdown:
+                status_breakdown[pest_raw][mapped_status] += 1
+                
+        # Generate chart payload using existing dashboard logic
+        dashboard_payload = build_dashboard_chart_payload(pest_reports, group_by_day=bool(month_str))
+
+        return jsonify({
+            'success': True,
+            'status_breakdown': status_breakdown,
+            'dashboard_payload': dashboard_payload,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in analytics API: {str(e)}")
+        return jsonify({'success': False, 'message': 'Failed to load analytics data'}), 500
+
+@app.route('/report_summary')
+def report_summary():
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role not in ['lgu', 'admin']:
+        flash("Unauthorized access.", "error")
+        return redirect(url_for('login'))
+
+    try:
+        import calendar
+        from dateutil.parser import parse
+        month_str = request.args.get('month')
+        week_str = request.args.get('week')
+        
+        start_date_str = None
+        end_date_str = None
+        explanation = "This report covers all historical data across all active regions."
+        
+        if month_str:
+            try:
+                year, month = map(int, month_str.split('-'))
+                last_day = calendar.monthrange(year, month)[1]
+                month_name = calendar.month_name[month]
+                if week_str:
+                    week = int(week_str)
+                    start_day = (week - 1) * 7 + 1
+                    end_day = min(week * 7, last_day) if week < 4 else last_day
+                    start_date_str = f"{year}-{month:02d}-{start_day:02d}"
+                    end_date_str = f"{year}-{month:02d}-{end_day:02d}"
+                    explanation = f"This report covers data gathered during {month_name} {year}, specifically Week {week} ({month_name} {start_day} to {end_day})."
+                else:
+                    start_date_str = f"{year}-{month:02d}-01"
+                    end_date_str = f"{year}-{month:02d}-{last_day:02d}"
+                    explanation = f"This report covers data gathered for the entire month of {month_name} {year}."
+            except ValueError:
+                pass
+
+        query = supabase.table('reports').select('*')
+        if start_date_str:
+            query = query.gte('created_at', start_date_str)
+        if end_date_str:
+            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
+
+        reports_response = query.order('created_at', desc=True).execute()
+        reports = getattr(reports_response, 'data', []) or []
+        pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
+
+        print("REPORT_SUMMARY: month_str=", month_str, "week_str=", week_str, "start=", start_date_str, "end=", end_date_str, "num_reports=", len(reports), "num_pest_reports=", len(pest_reports))
+        
+        rhino_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'rhinoceros beetle')
+        brontispa_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'brontispa')
+
+        pending_count = sum(1 for r in pest_reports if is_pending_report_status(str(r.get('status') or '').strip().lower()))
+        resolved_count = sum(1 for r in pest_reports if is_resolved_report_status(str(r.get('status') or '').strip().lower()))
+        in_progress_count = len(pest_reports) - (pending_count + resolved_count)
+
+        location_counts = {}
+        for r in pest_reports:
+            loc = str(r.get('barangay') or '').strip()
+            if loc:
+                location_counts[loc] = location_counts.get(loc, 0) + 1
+            
+        locations = sorted([{'name': k, 'count': v} for k, v in location_counts.items()], key=lambda x: x['count'], reverse=True)
+
+        from datetime import datetime
+        generated_at = datetime.now().strftime("%B %d, %Y %I:%M %p")
+        
+        # Generate chart payload using existing dashboard logic
+        dashboard_payload = build_dashboard_chart_payload(pest_reports, group_by_day=bool(month_str))
+
+        data = {
+            'explanation': explanation,
+            'generated_at': generated_at,
+            'total_reports': len(pest_reports),
+            'rhino_count': rhino_count,
+            'brontispa_count': brontispa_count,
+            'pending_count': pending_count,
+            'resolved_count': resolved_count,
+            'in_progress_count': in_progress_count,
+            'locations': locations,
+            'dashboard_payload': dashboard_payload
+        }
+
+        return render_template('report_summary.html', data=data)
+    except Exception as e:
+        logger.error(f"Error generating report summary: {str(e)}")
+        flash("Failed to generate report.", "error")
+        return redirect(url_for('login'))
+
+    try:
+        import calendar
+        from dateutil.parser import parse
+        month_str = request.args.get('month')
+        week_str = request.args.get('week')
+        
+        start_date_str = None
+        end_date_str = None
+        explanation = "This report covers all historical data across all active regions."
+        
+        if month_str:
+            try:
+                year, month = map(int, month_str.split('-'))
+                last_day = calendar.monthrange(year, month)[1]
+                month_name = calendar.month_name[month]
+                if week_str:
+                    week = int(week_str)
+                    start_day = (week - 1) * 7 + 1
+                    end_day = min(week * 7, last_day) if week < 4 else last_day
+                    start_date_str = f"{year}-{month:02d}-{start_day:02d}"
+                    end_date_str = f"{year}-{month:02d}-{end_day:02d}"
+                    explanation = f"This report covers data gathered during {month_name} {year}, specifically Week {week} ({month_name} {start_day} to {end_day})."
+                else:
+                    start_date_str = f"{year}-{month:02d}-01"
+                    end_date_str = f"{year}-{month:02d}-{last_day:02d}"
+                    explanation = f"This report covers data gathered for the entire month of {month_name} {year}."
+            except ValueError:
+                pass
+
+        query = supabase.table('reports').select('*')
+        if start_date_str:
+            query = query.gte('created_at', start_date_str)
+        if end_date_str:
+            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
+
+        reports_response = query.order('created_at', desc=True).execute()
+        reports = getattr(reports_response, 'data', []) or []
+        pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
+        
+        rhino_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'rhinoceros beetle')
+        brontispa_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'brontispa')
+
+        pending_count = sum(1 for r in pest_reports if is_pending_report_status(str(r.get('status') or '').strip().lower()))
+        resolved_count = sum(1 for r in pest_reports if is_resolved_report_status(str(r.get('status') or '').strip().lower()))
+        in_progress_count = len(pest_reports) - (pending_count + resolved_count)
+
+        location_counts = {}
+        monthly_counts = {}
+        pest_counter = {}
+
+        for r in pest_reports:
+            loc = str(r.get('barangay') or '').strip()
+            if loc:
+                location_counts[loc] = location_counts.get(loc, 0) + 1
+            
+            created_at = r.get('created_at')
+            if not created_at: continue
+            
+            try:
+                dt = parse(created_at)
+                if month_str:
+                    time_key = dt.strftime('%b %d')
+                    sort_key = dt.strftime('%Y-%m-%d')
+                else:
+                    time_key = dt.strftime('%b')
+                    sort_key = str(dt.month).zfill(2)
+            except:
+                continue
+
+            pest_raw = str(r.get('pest_type') or '').strip().lower()
+            pest_name = 'Rhinoceros Beetle' if pest_raw == 'rhinoceros beetle' else 'Brontispa'
+            if (time_key, sort_key) not in monthly_counts:
+                monthly_counts[(time_key, sort_key)] = {}
+            monthly_counts[(time_key, sort_key)][pest_name] = monthly_counts[(time_key, sort_key)].get(pest_name, 0) + 1
+            pest_counter[pest_name] = pest_counter.get(pest_name, 0) + 1
+
+        sorted_time_keys = sorted(monthly_counts.keys(), key=lambda x: x[1])
+        time_labels = [k[0] for k in sorted_time_keys]
+        
+        top_pests = ['Rhinoceros Beetle', 'Brontispa']
+        trend_datasets = []
+        for i, pest_name in enumerate(top_pests):
+            color = "#164630" if i == 0 else "#d97706"
+            bg = "rgba(22, 70, 48, 0.15)" if i == 0 else "rgba(217, 119, 6, 0.15)"
+            trend_datasets.append({
+                "label": pest_name,
+                "data": [monthly_counts[k].get(pest_name, 0) for k in sorted_time_keys],
+                "borderColor": color,
+                "backgroundColor": bg,
+                "borderWidth": 2,
+                "tension": 0.2,
+                "pointRadius": 3,
+                "fill": True,
+            })
+            
+        if not time_labels:
+            time_labels = ["No data"]
+            trend_datasets = [{
+                "label": "No reports yet",
+                "data": [0],
+                "borderColor": "#94a3b8",
+                "backgroundColor": "rgba(148, 163, 184, 0.15)",
+                "borderWidth": 2,
+                "tension": 0.2,
+                "pointRadius": 3,
+                "fill": True,
+            }]
+            
+        dist_labels = [p for p in top_pests if pest_counter.get(p, 0) > 0]
+        dist_data = [pest_counter[p] for p in dist_labels]
+        if not dist_labels:
+            dist_labels = ["No reports yet"]
+            dist_data = [0]
+            
+        dashboard_payload = {
+            "trend_labels": time_labels,
+            "trend_datasets": trend_datasets,
+            "distribution_labels": dist_labels,
+            "distribution_data": dist_data,
+        }
+
+        locations = sorted([{'name': k, 'count': v} for k, v in location_counts.items()], key=lambda x: x['count'], reverse=True)
+
+        from datetime import datetime
+        generated_at = datetime.now().strftime("%B %d, %Y %I:%M %p")
+
+        data = {
+            'explanation': explanation,
+            'generated_at': generated_at,
+            'total_reports': len(pest_reports),
+            'rhino_count': rhino_count,
+            'brontispa_count': brontispa_count,
+            'pending_count': pending_count,
+            'resolved_count': resolved_count,
+            'in_progress_count': in_progress_count,
+            'locations': locations,
+            'dashboard_payload': dashboard_payload
+        }
+
+        return render_template('report_summary.html', data=data)
+    except Exception as e:
+        logger.error(f"Error generating report summary: {str(e)}")
+        flash("Failed to generate report.", "error")
+        return redirect(url_for('login'))
+
+    try:
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+
+        query = supabase.table('reports').select('*')
+        if start_date_str:
+            query = query.gte('created_at', start_date_str)
+        if end_date_str:
+            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
+
+        reports_response = query.order('created_at', desc=True).execute()
+        reports = getattr(reports_response, 'data', []) or []
+
+        # Filter to Rhino and Brontispa
+        pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
+        
+        rhino_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'rhinoceros beetle')
+        brontispa_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'brontispa')
+
+        pending_count = sum(1 for r in pest_reports if is_pending_report_status(str(r.get('status') or '').strip().lower()))
+        resolved_count = sum(1 for r in pest_reports if is_resolved_report_status(str(r.get('status') or '').strip().lower()))
+        in_progress_count = len(pest_reports) - (pending_count + resolved_count)
+
+        location_counts = {}
+        for r in pest_reports:
+            loc = str(r.get('barangay') or '').strip()
+            if loc:
+                location_counts[loc] = location_counts.get(loc, 0) + 1
+        locations = sorted([{'name': k, 'count': v} for k, v in location_counts.items()], key=lambda x: x['count'], reverse=True)
+
+        from datetime import datetime
+        generated_at = datetime.now().strftime("%B %d, %Y %I:%M %p")
+
+        data = {
+            'start_date': start_date_str or 'All Time',
+            'end_date': end_date_str or 'Present',
+            'generated_at': generated_at,
+            'total_reports': len(pest_reports),
+            'rhino_count': rhino_count,
+            'brontispa_count': brontispa_count,
+            'pending_count': pending_count,
+            'resolved_count': resolved_count,
+            'in_progress_count': in_progress_count,
+            'locations': locations
+        }
+
+        return render_template('report_summary.html', data=data)
+    except Exception as e:
+        logger.error(f"Error generating report summary: {str(e)}")
+        flash("Failed to generate report.", "error")
+        return redirect(url_for('login'))
 
 @app.route('/debug/reports')
 def debug_reports():
@@ -1994,8 +2379,6 @@ def agriculturist_finalize_visit_schedule():
             requested_status,
             note=f"Visit scheduled. {schedule_label}",
             extra_updates={
-                'visit_summary': schedule_label,
-                'visit_completed_at': datetime.now(UTC).isoformat(),
                 'visit_reschedule_reason': None,
                 'visit_rescheduled_at': None,
                 'visit_rescheduled_by': None,
@@ -2173,7 +2556,11 @@ def agriculturist_complete_visit():
             return jsonify({'success': False, 'message': 'Please upload at least one visit image.'}), 400
 
         note = f"Visit completed: {visit_summary}"
-        update_response = _update_report_workflow(report_id, 'resolved', note=note)
+        extra_updates = {
+            'visit_summary': visit_summary,
+            'visit_completed_at': datetime.now(UTC).isoformat()
+        }
+        update_response = _update_report_workflow(report_id, 'resolved', note=note, extra_updates=extra_updates)
         if getattr(update_response, 'error', None):
             logger.error(f"Visit completion update failed: {update_response.error}")
             return jsonify({'success': False, 'message': 'The visit completion note could not be saved.'}), 500
@@ -2424,7 +2811,7 @@ def admin_dashboard():
 
     # Basic mock weather for now
     weather = {
-        'location': 'Davao City, Philippines',
+        'location': 'San Pablo City, Philippines',
         'is_down': False,
         'temp': '31',
         'humidity': '78',
@@ -2442,6 +2829,17 @@ def admin_dashboard():
         risk=risk
     )
 
+@app.route('/admin/analytics')
+def admin_analytics():
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    if not user_id or user_role != 'admin':
+        return redirect(url_for('login'))
+
+    user_name = session.get('user_name', 'Administrator')
+    return render_template('shared_analytics.html', user_name=user_name, user_role=user_role)
+
 @app.route('/admin/user-management')
 def admin_user_management():
     current_role = str(session.get('user_role', '')).strip().lower()
@@ -2449,6 +2847,7 @@ def admin_user_management():
         return redirect(url_for('login'))
 
     status_filter = request.args.get('status', 'All').strip()
+    role_filter = request.args.get('role', 'All').strip()
     search_query = request.args.get('search', '').strip()
     
     try:
@@ -2468,6 +2867,9 @@ def admin_user_management():
             
             user_status = u.get('status', 'Under Review')
             if status_filter != 'All' and user_status != status_filter:
+                continue
+
+            if role_filter != 'All' and str(u.get('role', '')).strip().lower() != role_filter.lower():
                 continue
 
             first = u.get('first_name') or ''
@@ -2512,9 +2914,11 @@ def admin_user_management():
         'admin_user_management.html', 
         users=paginated_users, 
         current_status=status_filter, 
+        current_role=role_filter,
         search=search_query,
         current_page=current_page,
-        total_pages=total_pages
+        total_pages=total_pages,
+        total_records=total_records
     )
 
 @app.route('/admin/update-user-status', methods=['POST'])
@@ -2617,6 +3021,8 @@ def overview_reports():
         for report in reports:
             report['formatted_date'] = format_report_date(report.get('created_at'))
             report['normalized_status'] = normalize_report_status(report.get('status'))
+            report['formatted_location'] = _format_report_location(report)
+            report['badge_style'] = _get_status_badge_style(report.get('status'))
             
         return render_template(
             'overview_reports.html',

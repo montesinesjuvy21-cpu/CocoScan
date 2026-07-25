@@ -42,10 +42,10 @@
             {% for report in reports %}
             <tr style="border-bottom: 1px solid var(--bg-base); transition: background-color 0.2s;">
                 <td style="padding: 16px 12px; font-size: 0.9rem;">{{ report.formatted_date }}</td>
-                <td style="padding: 16px 12px; font-size: 0.9rem; font-weight: 500;">{{ report.barangay }}</td>
+                <td style="padding: 16px 12px; font-size: 0.9rem; font-weight: 500;">{{ report.formatted_location }}</td>
                 <td style="padding: 16px 12px; font-size: 0.9rem;">{{ report.pest_type }}</td>
                 <td style="padding: 16px 12px; font-size: 0.9rem;">
-                    <span style="background-color: #e2e8f0; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+                    <span class="report-status-badge" data-bg="{{ report.badge_style.backgroundColor }}" data-color="{{ report.badge_style.color }}" style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
                         {{ report.normalized_status }}
                     </span>
                 </td>
@@ -61,6 +61,15 @@
         </tbody>
     </table>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.report-status-badge').forEach(function(badge) {
+            badge.style.backgroundColor = badge.getAttribute('data-bg');
+            badge.style.color = badge.getAttribute('data-color');
+        });
+    });
+</script>
 
 {% include 'components/report_modal.html' %}
 
