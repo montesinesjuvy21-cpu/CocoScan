@@ -452,7 +452,7 @@
 
         if (!items || items.length === 0) {
             const li = document.createElement("li");
-            if (emptyText === "No expert recommendation available yet." || emptyText === "Submit report for expert assessment") {
+            if (emptyText === "No expert assessment available yet." || emptyText === "Submit report for expert assessment") {
                 li.style.listStyle = "none";
                 li.style.margin = "0";
                 li.style.padding = "0";
@@ -730,7 +730,7 @@
                 report.expertRecommendations = [];
             }
             report.expertRecommendations.push(assessment);
-            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.", false);
+            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert assessment available yet.", false);
             applyStatusStyle(report);
             renderWorkflowActions(currentReportModalMode, report);
             // Refresh lists on the page if available and close modal for agriculturists
@@ -2059,7 +2059,7 @@
                 report.expertRecommendations = [];
             }
             report.expertRecommendations.push(assessment);
-            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert recommendation available yet.", false);
+            renderList(document.getElementById("report-expert-list"), report.expertRecommendations, "No expert assessment available yet.", false);
             applyStatusStyle(report);
             renderWorkflowActions(currentReportModalMode, report);
             alert(data.message || "Assessment notes saved successfully.");
@@ -2139,7 +2139,7 @@
         currentReportModalRecord = normalizeReportData({ ...reportData, mode: currentReportModalMode });
 
         const report = currentReportModalRecord;
-        // Debug: log status and expert recommendations to help trace visibility issues
+        // Debug: log status and expert assessment to help trace visibility issues
         try { console.debug("[report_modal] opening report", { id: report.id, status: report.status, expertRecommendations: report.expertRecommendations }); } catch (e) { /* noop */ }
         await loadVisitDiscussion(report);
 
@@ -2209,7 +2209,7 @@
             renderList(document.getElementById("report-initial-list"), report.initialRecommendations, "No initial recommendations available.", true, true);
         }
         
-        let expertEmptyText = "No expert recommendation available yet.";
+        let expertEmptyText = "No expert assessment available yet.";
         if (currentReportModalMode === "scan") {
             expertEmptyText = "Submit report for expert assessment";
         }

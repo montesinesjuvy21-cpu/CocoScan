@@ -113,7 +113,9 @@
         .main-content-layout {
             flex: 1; 
             width: 100%; 
-            padding: 88px 16px 24px 16px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 88px 24px 24px 24px;
             display: flex; 
             flex-direction: column; 
             gap: 16px;
@@ -420,14 +422,20 @@
         @media (min-width: 1024px) {
             .main-content-layout {
                 max-width: 1400px;
-                margin: 0 auto;
-                padding: 108px 32px 32px 32px; 
-                gap: 24px; 
+                padding: 108px 32px 32px 32px;
+                gap: 24px;
+            }
+
+            .mobile-header {
+                height: 72px;
+                padding: 0 max(32px, calc((100% - 1400px) / 2 + 32px));
+            }
+
+            .sidebar-wrapper {
+                top: 72px;
             }
 
             .header-content-wrapper { max-width: 1400px; margin: 0 auto; }
-            .mobile-header { height: 72px; padding: 0 32px; }
-            .sidebar-wrapper { top: 72px; }
 
             .section-title-wrap h1 { font-size: 1.95rem; }
             .section-title-wrap p { font-size: 0.98rem; margin-top: 4px; }
@@ -472,10 +480,23 @@
             <div>
                 <div class="menu-label">Main Menu</div>
                 <ul class="sidebar-menu-list">
+                    {% if user_role == 'admin' %}
+                    <li><a href="/admin/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
+                    <li><a href="/admin/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+                    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i class="fa-solid fa-file-lines"></i> Reports</a></li>
+                    <li><a href="/admin/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                    <li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i> User Management</a></li>
+                    {% elif user_role == 'lgu' %}
+                    <li><a href="/lgu/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
+                    <li><a href="/lgu/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+                    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> Reports</a></li>
+                    <li><a href="/lgu/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                    {% else %}
                     <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
                     <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i> Active Reports</a></li>
                     <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Resolved</a></li>
                     <li><a href="/agriculturist/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                    {% endif %}
                 </ul>
             </div>
 
@@ -484,7 +505,7 @@
                     <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
                     <div class="user-identity-text">
                         <h4>{{user_name}}</h4>
-                        <p>PCA Agriculturist</p>
+                        <p>{% if user_role == 'admin' %}PCA Administrator{% elif user_role == 'lgu' %}LGU Officer{% else %}PCA Agriculturist{% endif %}</p>
                     </div>
                 </div>
                 <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
@@ -568,15 +589,21 @@
     <!-- ==========================================================================
         CORE CORE DATA INTERACTION & MAP LIFECYCLE SCRIPTS
         ========================================================================== -->
+    <script id="map-reports-data" type="application/json">
+        {{ map_reports | tojson | safe }}
+    </script>
     <script>
         let geoReportsDataset = [];
-
         try {
-            geoReportsDataset = JSON.parse('{{ map_reports | tojson | safe }}');
-            if (!geoReportsDataset || geoReportsDataset.length === 0) {
+            const dataEl = document.getElementById("map-reports-data");
+            if (dataEl && dataEl.textContent) {
+                geoReportsDataset = JSON.parse(dataEl.textContent);
+            }
+            if (!geoReportsDataset || !Array.isArray(geoReportsDataset)) {
                 geoReportsDataset = [];
             }
         } catch (e) {
+            console.error("Error parsing map reports:", e);
             geoReportsDataset = [];
         }
 
@@ -733,6 +760,19 @@
                 });
 
                 const mapMarker = L.marker([record.latitude, record.longitude], { icon: LeafletCustomIcon });
+                const popupHtml = `
+                    <div style="min-width: 170px; padding: 4px; font-family: inherit;">
+                        <h4 style="margin: 0 0 2px 0; font-size: 0.9rem; color: #0b251a;">${record.barangay}</h4>
+                        <p style="margin: 0 0 6px 0; font-size: 0.75rem; color: #64748b;">${record.municipality}, ${record.province}</p>
+                        <div style="font-weight: 700; font-size: 0.78rem; color: ${markerColor}; margin-bottom: 8px;">
+                            ${record.pest_type}
+                        </div>
+                        <button class="btn-view-action" style="width: 100%; padding: 6px 12px; font-size: 0.75rem;" onclick="openSpecificReportModal('${record.id}')">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Specific Report
+                        </button>
+                    </div>
+                `;
+                mapMarker.bindPopup(popupHtml);
                 mapMarker.on('click', () => populateDetailsBoxElement(record));
                 markersLayerGroup.addLayer(mapMarker);
             });
@@ -762,6 +802,7 @@
         }
 
         function populateDetailsBoxElement(record) {
+            window._currentActiveMapRecord = record;
             const emptyState = document.getElementById("details-empty-state");
             const activeState = document.getElementById("details-active-state");
             
@@ -771,12 +812,9 @@
             activeState.style.display = "flex";
             activeState.className = "detail-active-layout";
 
-            // Determine route base path based on case status matrix[cite: 3]
-            const targetDashboardRoute = (record.status === "Pending") 
-                ? `/agriculturist/pending` 
-                : `/agriculturist/reviewed`;
-
-            const cleanDisplayStatus = (record.status === "Pending") ? "Pending Review" : "Reviewed & Issued";
+            // Use report_modal.js helper to get the proper display label
+            const cleanDisplayStatus = (typeof getWorkflowStatusDisplayLabel === 'function') ? getWorkflowStatusDisplayLabel(record.status) : record.status;
+            const isPendingState = ["Pending", "under_review", "ready_to_submit"].includes(record.status);
 
             activeState.innerHTML = `
                 <div style="width:100%;">
@@ -798,7 +836,7 @@
                         </div>
                         <div class="data-table-row">
                             <span>Workflow Status</span>
-                            <span style="font-weight: 700; color: ${record.status === 'Pending' ? '#d97706' : '#164630'};">${cleanDisplayStatus}</span>
+                            <span style="font-weight: 700; color: ${isPendingState ? '#d97706' : '#164630'};">${cleanDisplayStatus}</span>
                         </div>
                         <div class="data-table-row">
                             <span>Coordinates</span>
@@ -807,15 +845,34 @@
                     </div>
                 </div>
 
-                <button class="btn-view-action" onclick="redirectToSpecificReport('${targetDashboardRoute}', ${record.id})">
+                <button class="btn-view-action" onclick="openSpecificReportModal('${record.id}')">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Specific Report
                 </button>
             `;
         }
 
-        function redirectToSpecificReport(baseRoute, reportId) {
-            // Direct workflow path to target report layout file sending parameters to activate the modal automatically[cite: 3]
-            window.location.href = `${baseRoute}?search=${reportId}`;
+        const currentUserRole = "{{ 'agriculturist' if user_role == 'agri_expert' else user_role }}";
+
+        function openSpecificReportModal(reportId) {
+            let record = window._currentActiveMapRecord;
+            if (!record || (reportId && String(record.id) !== String(reportId))) {
+                record = geoReportsDataset.find(r => String(r.id) === String(reportId));
+            }
+            if (!record) {
+                console.warn('Report not found for id:', reportId);
+                return;
+            }
+            const payload = {
+                ...record,
+                primary_image: record.primary_image || record.img || record.image_url,
+                additional_images: record.additional_images || record.supporting_images || [],
+                notes: record.farmer_notes || record.notes || '',
+            };
+            if (typeof window.openReportModal === 'function') {
+                window.openReportModal(payload, currentUserRole);
+            } else {
+                console.warn('openReportModal not found on map view');
+            }
         }
 
         function toggleSidebarMenu() {
@@ -830,5 +887,8 @@
             }
         }
     </script>
+    
+    {% include 'components/report_modal.html' %}
+    <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
 </body>
 </html>

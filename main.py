@@ -2002,13 +2002,12 @@ def agri_resolved_reports():
         flash("An alignment error occurred reading data snapshots.", "error")
         return redirect(url_for('agri_dashboard'))
 
-@app.route('/agriculturist/map')
-def agriculturist_map():
+def render_map_view(required_role):
     """Fetches incident coordinates and location data aggregates to render the geospatial map."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'agri_expert':
+    if not user_id or user_role != required_role:
         flash("Unauthorized access path.", "error")
         return redirect(url_for('login'))
         
@@ -2018,11 +2017,11 @@ def agriculturist_map():
 
         # Load user profile for layout presentation layer
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
-        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
+        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else ("Agriculturist" if required_role == 'agri_expert' else required_role.upper())
         
-        # Retrieve all spatial records containing geographical metrics
+        # Retrieve all spatial records containing geographical metrics (select all fields for modal)
         reports_response = supabase.table("reports")\
-            .select("id, barangay, municipality, province, latitude, longitude, pest_type, status")\
+            .select("*")\
             .order("created_at", desc=True)\
             .execute()
             
@@ -2037,24 +2036,25 @@ def agriculturist_map():
             except (ValueError, TypeError):
                 continue  # Skip records missing physical coordinates
                 
-            map_reports_list.append({
-                "id": item.get("id"),
-                "barangay": item.get("barangay") or "Unknown Sector",
-                "municipality": item.get("municipality") or "San Pablo City",
-                "province": item.get("province") or "Laguna",
-                "latitude": lat,
-                "longitude": lng,
-                "pest_type": item.get("pest_type") or "Unknown Pest",
-                "status": normalize_report_status(item.get("status"), default="Under Review"),
-                "cases_count": 1 # Serves as baseline cluster weight variable
-            })
+            record = dict(item)
+            record["id"] = item.get("id")
+            record["barangay"] = item.get("barangay") or "Unknown Sector"
+            record["municipality"] = item.get("municipality") or "San Pablo City"
+            record["province"] = item.get("province") or "Laguna"
+            record["latitude"] = lat
+            record["longitude"] = lng
+            record["pest_type"] = item.get("pest_type") or "Unknown Pest"
+            record["status"] = normalize_report_status(item.get("status"), default="Under Review")
+            record["cases_count"] = 1 # Serves as baseline cluster weight variable
+            map_reports_list.append(record)
 
         filtered_map_reports = filter_map_reports(map_reports_list, search_query=search_query, pest_filter=pest_filter)
         recent_map_reports = limit_recent_records(filtered_map_reports, 5)
             
         return render_template(
             'map_view.html', 
-            user_name=user_name, 
+            user_name=user_name,
+            user_role=user_role,
             map_reports=filtered_map_reports,
             recent_map_reports=recent_map_reports,
             search_query=search_query,
@@ -2063,8 +2063,21 @@ def agriculturist_map():
         
     except Exception as e:
         logger.error(f"Error serving geospatial map canvas metrics: {str(e)}")
-        flash("An alignment error occurred reading spatial coordinates.", "error")
-        return redirect(url_for('agri_dashboard'))
+        flash("Failed to initialize location mapping environment.", "error")
+        dash_map = {"agri_expert": "agri_dashboard", "lgu": "lgu_dashboard", "admin": "admin_dashboard"}
+        return redirect(url_for(dash_map.get(user_role, 'dashboard')))
+
+@app.route('/agriculturist/map')
+def agriculturist_map():
+    return render_map_view('agri_expert')
+
+@app.route('/lgu/map')
+def lgu_map():
+    return render_map_view('lgu')
+
+@app.route('/admin/map')
+def admin_map():
+    return render_map_view('admin')
 
 @app.route('/farmer/follow-up-report', methods=['POST'])
 def farmer_follow_up_report():

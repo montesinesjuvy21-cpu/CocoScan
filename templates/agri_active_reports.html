@@ -103,7 +103,9 @@
         .main-content-layout {
             flex: 1; 
             width: 100%; 
-            padding: 88px 16px 24px 16px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 88px 24px 24px 24px;
             display: flex; 
             flex-direction: column; 
             gap: 16px;
@@ -321,6 +323,22 @@
             font-size: 0.95rem;
         }
 
+        @media (min-width: 1024px) {
+            .main-content-layout {
+                max-width: 1400px;
+                padding: 108px 32px 32px 32px;
+                gap: 24px;
+            }
+
+            .mobile-header {
+                height: 72px;
+                padding: 0 max(32px, calc((100% - 1400px) / 2 + 32px));
+            }
+
+            .sidebar-wrapper {
+                top: 72px;
+            }
+        }
        </style>
 </head>
 <body>
