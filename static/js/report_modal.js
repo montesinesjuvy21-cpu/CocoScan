@@ -336,6 +336,7 @@
             "recommendation_issued": "Recommendation Issued",
             "closed": "Closed",
             "resolved": "Resolved",
+            "ready_to_submit": "Ready to Submit",
         };
         return labels[normalized] || normalized || "Pending";
     }
