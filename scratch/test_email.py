@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 brevo_api_key = os.getenv("BREVO_API_KEY", "").strip()
-recipient_email = os.getenv("TEST_EMAIL", "noreply@cocoscan.ph").strip()
+recipient_email = os.getenv("TEST_EMAIL", "admincocoscan.ph@gmail.com").strip()
 
 if not brevo_api_key:
     print("ERROR: BREVO_API_KEY not set in .env")
@@ -21,7 +21,7 @@ try:
         "api-key": brevo_api_key
     }
     payload = {
-        "sender": {"name": "CocoScan Test", "email": "noreply@cocoscan.ph"},
+        "sender": {"name": "CocoScan Test", "email": "admincocoscan.ph@gmail.com"},
         "to": [{"email": recipient_email}],
         "subject": "Test email from CocoScan via Brevo",
         "htmlContent": "<p>This is a test email sent via Brevo API.</p>"

@@ -30,11 +30,15 @@
             font-family: 'Inter', sans-serif;
         }
 
+        html, body, .mobile-viewport-container {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             background-color: var(--brand-dark);
             color: var(--text-dark);
             min-height: 100vh;
-            overflow-x: hidden;
         }
 
         /* --- GLOBAL LAYOUT CONTAINER --- */
@@ -45,6 +49,17 @@
             display: flex;
             flex-direction: column;
             position: relative;
+        }
+
+        .main-content-layout,
+        .search-controls-row,
+        .filter-button-group,
+        .filter-action-group,
+        .reports-feed-stack,
+        .report-row-node,
+        .report-main-meta,
+        .report-row-action {
+            min-width: 0;
         }
 
         /* --- STICKY APP HEADER --- */
@@ -257,8 +272,28 @@
             background-color: var(--bg-card); padding: 18px 18px; border-radius: 14px;
             border: 1px solid var(--border-light); display: flex; justify-content: space-between;
             align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; gap: 12px;
+            flex-wrap: wrap;
+            width: 100%;
+            min-width: 0;
         }
-        .report-row-action { display:flex; align-items:center; gap:12px; }
+        .report-row-action { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; width:100%; }
+        .report-row-action .unread-badge,
+        .report-row-action .status-badge-pill {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .report-row-action .unread-badge {
+            background-color: #ef4444;
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.18);
+        }
+        .report-row-action .status-badge-pill {
+            padding: 6px 12px;
+        }
         .report-row-node:hover {
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
@@ -866,7 +901,7 @@
                 const totalChats = item.chat_count || 0;
                 const readChats = parseInt(localStorage.getItem(`read_chats_${item.id}`) || '0');
                 const unreadCount = totalChats - readChats;
-                const unreadBadgeHTML = unreadCount > 0 ? `<span id="unread-badge-${item.id}" style="background-color: #ef4444; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); margin-right: auto;">${unreadCount} unread</span>` : '';
+                const unreadBadgeHTML = unreadCount > 0 ? `<span id="unread-badge-${item.id}" class="unread-badge">${unreadCount} unread</span>` : '';
 
                 card.innerHTML = `
                     <div class="report-main-meta">
@@ -874,9 +909,9 @@
                             <p>Farmer: <strong>${highlightSearchText(String(item.farmer || item.farmer_name || ""), activeSearchQuery)}</strong></p>
                             <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(String(item.location || item.full_location || ""))}</div>
                     </div>
-                    <div class="report-row-action" style="align-items:center; gap:10px;">
+                    <div class="report-row-action">
                         ${unreadBadgeHTML}
-                        <span class="status-badge-pill" style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-size:0.78rem; font-weight:700; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">
+                        <span class="status-badge-pill" style="display:inline-flex; align-items:center; gap:6px; border-radius:999px; font-size:0.78rem; font-weight:700; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">
                             <i class="fa-solid fa-circle-dot"></i> ${escapeHtml(statusLabel)}
                         </span>
                         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.95rem"></i>

@@ -33,11 +33,16 @@
             font-family: 'Inter', sans-serif;
         }
 
+        html,
+        body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             background-color: var(--brand-dark);
             color: var(--text-dark);
             min-height: 100vh;
-            overflow-x: hidden;
         }
 
         /* ==========================================================================
@@ -104,7 +109,8 @@
            3. SIDEBAR DRAWER MENU
            ========================================================================== */
         .sidebar-wrapper {
-            width: 290px;
+            width: min(290px, 100%);
+            max-width: 100%;
             background-color: var(--brand-dark);
             color: #ffffff;
             display: flex;
@@ -161,6 +167,9 @@
             border-radius: 10px;
             transition: all 0.2s ease;
             margin-bottom: 6px;
+            min-width: 0;
+            white-space: normal;
+            word-break: break-word;
         }
 
         .menu-item-link:hover,
@@ -238,11 +247,13 @@
            ========================================================================== */
         .mobile-viewport-container {
             width: 100%;
+            max-width: 100%;
             min-height: 100vh;
             background-color: var(--bg-base);
             display: flex;
             flex-direction: column;
             position: relative;
+            overflow-x: hidden;
         }
 
         .desktop-restriction-overlay {
@@ -352,6 +363,22 @@
             font-size: 0.95rem;
             color: #a4c2b3;
             line-height: 1.6;
+        }
+
+        .main-content-layout,
+        .dashboard-header-container,
+        .metrics-grid-matrix,
+        .metrics-row-wrapper,
+        .metrics-sub-split,
+        .metric-card-node,
+        .chart-visual-card,
+        .quick-action-card,
+        .dynamic-risk-card,
+        .menu-item-link,
+        .sidebar-menu-list,
+        .mobile-header,
+        .sidebar-wrapper {
+            min-width: 0;
         }
 
         .main-content-layout {

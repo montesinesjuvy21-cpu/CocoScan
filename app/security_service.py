@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "cocoscan_security.db")
-OTP_EXPIRY_SECONDS = 45
+OTP_EXPIRY_SECONDS = 90
 OTP_RESEND_COOLDOWN_SECONDS = 45
 
 def _get_db():
@@ -230,7 +230,7 @@ def _send_email_brevo(recipient: str, subject: str, body_html: str) -> bool:
         logger.warning(f"[BREVO OFFLINE] Brevo API key not set in .env. Would send email to {recipient}: Subject='{subject}'")
         return False
     
-    sender_email = "noreply@cocoscan.ph"
+    sender_email = "admincocoscan.ph@gmail.com"
     sender_name = "CocoScan Security"
     
     try:
@@ -346,7 +346,7 @@ def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> dict
                                         </tr>
                                     </table>
                                     <div style="margin-top: 12px; font-size: 13px; color: #166534; font-weight: 500;">
-                                     Valid for 45 seconds only
+                                     Valid for 90 seconds only
                                     </div>
                                 </div>
                                 

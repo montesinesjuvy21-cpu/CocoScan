@@ -30,11 +30,15 @@
             font-family: 'Inter', sans-serif;
         }
 
+        html, body, .mobile-viewport-container {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
-            background-color: var(--brand-dark);
+            background-color: var(--bg-base);
             color: var(--text-dark);
             min-height: 100vh;
-            overflow-x: hidden;
         }
 
         /* --- GLOBAL LAYOUT CONTAINER --- */
@@ -45,6 +49,17 @@
             display: flex;
             flex-direction: column;
             position: relative;
+        }
+
+        .main-content-layout,
+        .search-controls-row,
+        .filter-button-group,
+        .filter-action-group,
+        .reports-feed-stack,
+        .report-row-node,
+        .report-main-meta,
+        .report-row-action {
+            min-width: 0;
         }
 
         /* --- STICKY APP HEADER --- */
@@ -255,8 +270,16 @@
             background-color: var(--bg-card); padding: 18px 18px; border-radius: 14px;
             border: 1px solid var(--border-light); display: flex; justify-content: space-between;
             align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; gap: 12px;
+            flex-wrap: wrap;
+            width: 100%;
+            min-width: 0;
         }
-        .report-row-action { display:flex; align-items:center; gap:12px; }
+        .report-row-action { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; width:100%; }
+        .report-row-action .status-badge-pill {
+            flex-shrink: 0;
+            white-space: nowrap;
+            padding: 6px 12px;
+        }
         .report-row-node:hover {
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
@@ -807,8 +830,8 @@
                         <p>Farmer: <strong>${highlightSearchText(item.farmer || "", activeSearchQuery)}</strong></p>
                         <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${item.location || ""}</div>
                     </div>
-                    <div class="report-row-action" style="align-items:center; gap:10px;">
-                        <span class="status-badge-pill" style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-size:0.78rem; font-weight:700; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">
+                    <div class="report-row-action">
+                        <span class="status-badge-pill" style="display:inline-flex; align-items:center; gap:6px; border-radius:999px; font-size:0.78rem; font-weight:700; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">
                             <i class="fa-solid fa-circle-check"></i> ${statusLabel}
                         </span>
                         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.95rem"></i>

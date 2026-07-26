@@ -488,7 +488,7 @@ def upload_image_to_supabase(file_bytes, filename, content_type="application/oct
 def send_status_email(user_email, user_name, status):
     """Sends a transactional HTML notification email to the user via Brevo API"""
     sender_name = "CocoScan Admin Team"
-    sender_email = "noreply@cocoscan.ph"
+    sender_email = "admincocoscan.ph@gmail.com"
     subject = f"Account Update: Your CocoScan Application has been {status}"
     
     # Dynamic styling matching the context status
@@ -3436,11 +3436,10 @@ def forgot_password():
             
         try:
             user_query = supabase.table("users").select("*").eq("email", email).execute()
+            logger.info(f"[DEBUG] Checking email: '{email}' | Found: {bool(user_query.data)} | Data: {user_query.data}")
             if not user_query.data:
-                security_service.record_forgot_password_attempt(email)
-                flash("If an account exists with that email, a verification code has been sent.", "info")
-                session['reset_email_pending'] = email
-                return redirect(url_for('verify_forgot_otp'))
+                flash("This email is not registered in our system. Please sign up or check your email address.", "error")
+                return render_template('forgot_password.html', email=email)
                 
             security_service.record_forgot_password_attempt(email)
             otp_result = security_service.generate_and_send_otp(email, purpose="Password Reset")

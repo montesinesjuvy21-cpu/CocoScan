@@ -39,9 +39,38 @@
     let currentReportModalMode = "farmer";
     let activeReportModalSubmissionController = null;
     let currentWorkflowDefaultSubmitAction = null;
+    let visitDiscussionPollTimer = null;
+    const VISIT_DISCUSSION_POLL_INTERVAL_MS = 4000;
 
     function getModalRoot() {
         return document.querySelector("[data-report-modal]");
+    }
+
+    function stopVisitDiscussionPoll() {
+        if (visitDiscussionPollTimer !== null) {
+            clearInterval(visitDiscussionPollTimer);
+            visitDiscussionPollTimer = null;
+        }
+    }
+
+    function startVisitDiscussionPoll(report) {
+        stopVisitDiscussionPoll();
+        if (!report || !report.id) return;
+
+        visitDiscussionPollTimer = setInterval(async () => {
+            try {
+                const modalRoot = getModalRoot();
+                if (!modalRoot || !modalRoot.classList.contains("open-modal") || currentReportModalRecord?.id !== report.id) {
+                    stopVisitDiscussionPoll();
+                    return;
+                }
+
+                await loadVisitDiscussion(report);
+                renderVisitDiscussionCard(currentReportModalMode, report);
+            } catch (error) {
+                console.warn("Visit discussion poll failed", error);
+            }
+        }, VISIT_DISCUSSION_POLL_INTERVAL_MS);
     }
 
     function escapeHtml(text) {
@@ -2110,6 +2139,7 @@
 
     function closeReportModal() {
         abortActiveReportModalSubmission();
+        stopVisitDiscussionPoll();
 
         const modalRoot = getModalRoot();
         if (modalRoot) {
@@ -2312,6 +2342,7 @@
         setReportModalSubmissionState(false);
         modalRoot.classList.add("open-modal");
         modalRoot.setAttribute("aria-hidden", "false");
+        startVisitDiscussionPoll(report);
     }
 
     window.openReportModal = openReportModal;
