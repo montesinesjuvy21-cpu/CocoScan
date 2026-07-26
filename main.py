@@ -254,6 +254,21 @@ def _validate_time_range(start_time, end_time):
     return normalized_start, normalized_end
 
 
+def _do_schedule_time_ranges_overlap(start_time_a, end_time_a, start_time_b, end_time_b):
+    normalized_start_a = _coerce_time_to_hhmmss(start_time_a)
+    normalized_end_a = _coerce_time_to_hhmmss(end_time_a)
+    normalized_start_b = _coerce_time_to_hhmmss(start_time_b)
+    normalized_end_b = _coerce_time_to_hhmmss(end_time_b)
+    if not normalized_start_a or not normalized_end_a or not normalized_start_b or not normalized_end_b:
+        return False
+
+    a_start = datetime.strptime(normalized_start_a, "%H:%M:%S")
+    a_end = datetime.strptime(normalized_end_a, "%H:%M:%S")
+    b_start = datetime.strptime(normalized_start_b, "%H:%M:%S")
+    b_end = datetime.strptime(normalized_end_b, "%H:%M:%S")
+    return a_start < b_end and a_end > b_start
+
+
 def _fetch_visit_workflow_payload(report_id):
     report_response = supabase.table("reports").select("id, status, user_id, reviewed_by_id, visit_request_reason, visit_requested_at, visit_summary, visit_completed_at, final_remarks, visit_reschedule_reason, visit_rescheduled_at, visit_rescheduled_by").eq("id", report_id).execute()
     report_row = (getattr(report_response, "data", None) or [{}])[0] if getattr(report_response, "data", None) else {}
@@ -2656,13 +2671,15 @@ def agriculturist_finalize_visit_schedule():
             if datetime.strptime(normalized_start, "%H:%M:%S").time() < datetime.now().time():
                 return jsonify({'success': False, 'message': 'You cannot schedule a visit for a time that has already passed today.'}), 400
 
-        conflict_query = supabase.table('visit_schedules').select('start_time, end_time').eq('agriculturist_id', user_id).eq('confirmed_date', confirmed_date).execute()
+        conflict_query = supabase.table('visit_schedules').select('start_time, end_time, report_id').eq('agriculturist_id', user_id).eq('confirmed_date', confirmed_date).execute()
         conflict_rows = getattr(conflict_query, 'data', None) or []
         for row in conflict_rows:
+            if str(row.get('report_id') or '') == str(report_id):
+                continue
             existing_start = _coerce_time_to_hhmmss(row.get('start_time'))
             existing_end = _coerce_time_to_hhmmss(row.get('end_time'))
             if existing_start and existing_end:
-                if (normalized_start < existing_end) and (normalized_end > existing_start):
+                if _do_schedule_time_ranges_overlap(normalized_start, normalized_end, existing_start, existing_end):
                     return jsonify({'success': False, 'message': 'You already have an overlapping schedule on this date and time.'}), 400
         schedule_label = _format_confirmed_schedule_label(confirmed_date, normalized_start, normalized_end)
         schedule_message = f"{'New schedule confirmed' if has_pending_reschedule else 'Visit confirmed'}: {schedule_label.replace('Confirmed: ', '')}"
