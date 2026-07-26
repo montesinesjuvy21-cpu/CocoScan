@@ -2,12 +2,10 @@ import sqlite3
 import time
 import random
 import os
-import smtplib
 import traceback
 import logging
+import requests
 from datetime import datetime, timezone
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 logger = logging.getLogger(__name__)
 
@@ -221,39 +219,45 @@ def reset_forgot_password_attempts(email: str):
 # --- OTP GENERATION & VERIFICATION ---
 
 def _mail_transport_configured() -> bool:
-    """Return True when SMTP mail credentials are configured."""
-    sender_email = (os.getenv("MAIL_USERNAME") or "").strip()
-    sender_password = (os.getenv("MAIL_PASSWORD") or "").strip()
-    return bool(sender_email and sender_password)
+    """Return True when Brevo API is configured."""
+    brevo_api_key = (os.getenv("BREVO_API_KEY") or "").strip()
+    return bool(brevo_api_key)
 
 
-def _send_email_smtp(recipient: str, subject: str, body_html: str) -> bool:
-    """Helper to send transactional HTML emails via Gmail SMTP."""
-    smtp_server = os.getenv("MAIL_SERVER", "smtp.gmail.com").strip()
-    smtp_port = int(os.getenv("MAIL_PORT", 587))
-    sender_email = (os.getenv("MAIL_USERNAME") or "").strip()
-    sender_password = (os.getenv("MAIL_PASSWORD") or "").strip()
-    
+def _send_email_brevo(recipient: str, subject: str, body_html: str) -> bool:
+    """Helper to send transactional HTML emails via Brevo API."""
     if not _mail_transport_configured():
-        logger.warning(f"[SMTP OFFLINE] Email credentials not set in .env. Would send email to {recipient}: Subject='{subject}'")
+        logger.warning(f"[BREVO OFFLINE] Brevo API key not set in .env. Would send email to {recipient}: Subject='{subject}'")
         return False
-        
-    msg = MIMEMultipart()
-    msg['From'] = f"CocoScan Security <{sender_email}>"
-    msg['To'] = recipient
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body_html, 'html'))
-
+    
+    sender_email = "noreply@cocoscan.ph"
+    sender_name = "CocoScan Security"
+    
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.sendmail(sender_email, recipient, msg.as_string())
-        server.quit()
-        logger.info(f"Security email dispatched via Gmail to {recipient}.")
-        return True
+        brevo_api_key = os.getenv("BREVO_API_KEY", "").strip()
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "api-key": brevo_api_key
+        }
+        payload = {
+            "sender": {"name": sender_name, "email": sender_email},
+            "to": [{"email": recipient}],
+            "subject": subject,
+            "htmlContent": body_html
+        }
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        
+        if response.status_code in [200, 201]:
+            logger.info(f"Security email dispatched via Brevo to {recipient}.")
+            return True
+        else:
+            logger.error(f"Brevo API Error ({response.status_code}): {response.text}")
+            return False
     except Exception as e:
-        logger.error(f"Gmail SMTP Error while mailing {recipient}: {e}\n{traceback.format_exc()}")
+        logger.error(f"Brevo Email Error while mailing {recipient}: {e}\n{traceback.format_exc()}")
         return False
 
 def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> dict:
@@ -374,7 +378,7 @@ def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> dict
     </html>
     """
     
-    sent = _send_email_smtp(email, subject, body_html)
+    sent = _send_email_brevo(email, subject, body_html)
     delivery_available = _mail_transport_configured()
     fallback_allowed = not sent
     return {

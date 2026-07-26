@@ -1,30 +1,39 @@
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
-smtp_server = os.getenv("MAIL_SERVER", "smtp.gmail.com").strip()
-smtp_port = int(os.getenv("MAIL_PORT", 587))
-sender_email = (os.getenv("MAIL_USERNAME") or "").strip()
-sender_password = (os.getenv("MAIL_PASSWORD") or "").strip()
+brevo_api_key = os.getenv("BREVO_API_KEY", "").strip()
+recipient_email = os.getenv("TEST_EMAIL", "noreply@cocoscan.ph").strip()
 
-print(f"Connecting to {smtp_server}:{smtp_port} as {sender_email}")
+if not brevo_api_key:
+    print("ERROR: BREVO_API_KEY not set in .env")
+    exit(1)
+
+print(f"Sending test email via Brevo to {recipient_email}")
+
 try:
-    server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
-    server.starttls()
-    server.login(sender_email, sender_password)
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "api-key": brevo_api_key
+    }
+    payload = {
+        "sender": {"name": "CocoScan Test", "email": "noreply@cocoscan.ph"},
+        "to": [{"email": recipient_email}],
+        "subject": "Test email from CocoScan via Brevo",
+        "htmlContent": "<p>This is a test email sent via Brevo API.</p>"
+    }
     
-    msg = MIMEMultipart()
-    msg['From'] = sender_email
-    msg['To'] = sender_email
-    msg['Subject'] = "Test email"
-    msg.attach(MIMEText("This is a test email.", 'plain'))
+    response = requests.post(url, json=payload, headers=headers, timeout=10)
     
-    server.sendmail(sender_email, sender_email, msg.as_string())
-    server.quit()
-    print("Email sent successfully!")
+    if response.status_code in [200, 201]:
+        print("Email sent successfully!")
+        print(f"Response: {response.json()}")
+    else:
+        print(f"Failed to send email. Status: {response.status_code}")
+        print(f"Response: {response.text}")
 except Exception as e:
     print(f"Failed to send email: {e}")

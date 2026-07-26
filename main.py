@@ -15,10 +15,7 @@ from PIL import Image
 import re
 import requests
 
-# Native Python email modules (Replaces Brevo SDK)
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+
 
 from app.validators import (
     validate_signup_data, 
@@ -489,13 +486,9 @@ def upload_image_to_supabase(file_bytes, filename, content_type="application/oct
     return ''
 
 def send_status_email(user_email, user_name, status):
-    """Sends a transactional HTML notification email to the user via Gmail SMTP"""
-    smtp_server = os.getenv("MAIL_SERVER", "smtp.gmail.com").strip()
-    smtp_port = int(os.getenv("MAIL_PORT", 587))
-    sender_email = (os.getenv("MAIL_USERNAME") or "").strip()
-    sender_password = (os.getenv("MAIL_PASSWORD") or "").strip()
-    
+    """Sends a transactional HTML notification email to the user via Brevo API"""
     sender_name = "CocoScan Admin Team"
+    sender_email = "noreply@cocoscan.ph"
     subject = f"Account Update: Your CocoScan Application has been {status}"
     
     # Dynamic styling matching the context status
@@ -600,42 +593,35 @@ def send_status_email(user_email, user_name, status):
     </html>
     """
 
-    msg = MIMEMultipart()
-    msg['From'] = f"{sender_name} <{sender_email}>"
-    msg['To'] = user_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body_html, 'html'))
-
     try:
-        try:
-            server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
-        except Exception as e:
-            logger.error(f"Gmail SMTP Connection failed: {str(e)}\n{traceback.format_exc()}")
+        brevo_api_key = os.getenv("BREVO_API_KEY", "").strip()
+        if not brevo_api_key:
+            logger.warning(f"[BREVO OFFLINE] Brevo API key not configured in .env. Would send email to {user_email}: Subject='{subject}'")
             return False
-
-        try:
-            server.starttls()
-        except Exception as e:
-            logger.error(f"Gmail SMTP STARTTLS failed: {str(e)}\n{traceback.format_exc()}")
+        
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "api-key": brevo_api_key
+        }
+        payload = {
+            "sender": {"name": sender_name, "email": sender_email},
+            "to": [{"email": user_email, "name": user_name}],
+            "subject": subject,
+            "htmlContent": body_html
+        }
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        
+        if response.status_code in [200, 201]:
+            logger.info(f"Notification email dispatched via Brevo to {user_email}.")
+            return True
+        else:
+            logger.error(f"Brevo API Error ({response.status_code}): {response.text}")
             return False
-
-        try:
-            server.login(sender_email, sender_password)
-        except Exception as e:
-            logger.error(f"Gmail SMTP Login failed: {str(e)}\n{traceback.format_exc()}")
-            return False
-
-        try:
-            server.sendmail(sender_email, user_email, msg.as_string())
-        except Exception as e:
-            logger.error(f"Gmail SMTP Sendmail failed: {str(e)}\n{traceback.format_exc()}")
-            return False
-
-        server.quit()
-        logger.info(f"Notification email dispatched cleanly via Gmail to {user_email}.")
-        return True
     except Exception as e:
-        logger.error(f"Gmail SMTP Unexpected Exception thrown while mailing {user_email}: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"Brevo Email Exception while mailing {user_email}: {str(e)}\n{traceback.format_exc()}")
         return False
     
 @app.route('/favicon.ico')
