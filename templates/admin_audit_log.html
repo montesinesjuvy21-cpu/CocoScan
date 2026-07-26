@@ -256,7 +256,10 @@
 {% block main_content %}
 <form method="GET" action="{{ url_for('admin_audit_log') }}" class="control-actions-form" id="filterForm">
     <input type="hidden" name="action_filter" id="actionFilter" value="{{ current_action }}">
+    <input type="hidden" name="search" id="searchHidden" value="{{ search }}">
+</form>
 
+<div id="tableAndPagination">
     <div class="search-controls-row" style="display:flex; flex-direction:column; gap:12px; align-items:stretch; width:100%; margin-bottom:12px;">
         <div class="search-bar-box" style="width:100%;">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -305,9 +308,6 @@
             {% endif %}
         </div>
     </div>
-</form>
-
-<div id="tableAndPagination">
     <div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--border-light, #e2e8f0); overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
             <thead>
@@ -394,7 +394,6 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const searchInput = document.getElementById('searchInput');
         const filterForm = document.getElementById('filterForm');
         let debounceTimer;
 
@@ -410,16 +409,27 @@
                     const newContent = doc.getElementById('tableAndPagination');
                     if (newContent) {
                         document.getElementById('tableAndPagination').innerHTML = newContent.innerHTML;
+                        attachSearchListener();
                     }
                     window.history.replaceState({}, '', url);
                 })
                 .catch(err => console.error("Filter AJAX error:", err));
         };
 
-        searchInput.addEventListener('input', function () {
+        function attachSearchListener() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.removeEventListener('input', handleSearch);
+                searchInput.addEventListener('input', handleSearch);
+            }
+        }
+
+        const handleSearch = function () {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(triggerSearch, 400);
-        });
+        };
+
+        attachSearchListener();
 
         window.updateFilter = function (inputId, value) {
             document.getElementById(inputId).value = value;

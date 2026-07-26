@@ -12,6 +12,8 @@ from email.mime.text import MIMEText
 logger = logging.getLogger(__name__)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "cocoscan_security.db")
+OTP_EXPIRY_SECONDS = 45
+OTP_RESEND_COOLDOWN_SECONDS = 45
 
 def _get_db():
     conn = sqlite3.connect(DB_PATH, timeout=15)
@@ -247,15 +249,15 @@ def _send_email_smtp(recipient: str, subject: str, body_html: str) -> bool:
         logger.error(f"Gmail SMTP Error while mailing {recipient}: {e}\n{traceback.format_exc()}")
         return False
 
-def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> str:
+def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> dict:
     """
-    Generates a 6-digit OTP code, stores it in SQLite (valid for 10 minutes), and sends it via email.
-    Returns: the 6-digit code string.
+    Generates a 6-digit OTP code, stores it in SQLite (valid for 45 seconds), and sends it via email.
+    Returns: a dict with the code, send status, expires_at, and resend cooldown details.
     """
     email = (email or "").strip().lower()
     code = f"{random.randint(0, 999999):06d}"
     now = time.time()
-    expires_at = now + 600  # 10 minutes valid
+    expires_at = now + OTP_EXPIRY_SECONDS
     
     with _get_db() as conn:
         # Invalidate any previous unused OTPs for this email & purpose
@@ -329,7 +331,7 @@ def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> str:
                                 <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; padding: 28px 20px; text-align: center; margin: 28px 0;">
                                     <span style="font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #065f46; font-family: 'Courier New', Courier, monospace; display: block; margin-left: 10px;">{code}</span>
                                     <div style="margin-top: 12px; font-size: 13px; color: #166534; font-weight: 500;">
-                                     Valid for 10 minutes only
+                                     Valid for 45 seconds only
                                     </div>
                                 </div>
                                 
@@ -361,8 +363,14 @@ def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> str:
     </html>
     """
     
-    _send_email_smtp(email, subject, body_html)
-    return code
+    sent = _send_email_smtp(email, subject, body_html)
+    return {
+        "code": code,
+        "sent": sent,
+        "expires_at": expires_at,
+        "expires_in_seconds": OTP_EXPIRY_SECONDS,
+        "resend_cooldown_seconds": OTP_RESEND_COOLDOWN_SECONDS,
+    }
 
 def verify_otp(email: str, code: str, purpose: str = "2FA Verification"):
     """

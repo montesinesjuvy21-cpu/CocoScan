@@ -45,6 +45,7 @@
                 <input type="text" id="otp_code" name="otp_code" maxlength="6" pattern="\d{6}" placeholder="••••••" required autofocus
                     style="font-size: 24px; font-weight: 700; letter-spacing: 12px; text-align: center; padding: 12px; border-radius: 8px; border: 2px solid #0d9488; color: #164630;">
             </div>
+            <p id="otpStatus" style="margin-top: 0.75rem; font-size: 0.9rem; color: #64748b; text-align: center; min-height: 1.2rem;"></p>
         </div>
 
         <button type="submit" class="btn-primary" style="margin-top: 1.25rem;">Verify Code</button>
@@ -58,6 +59,43 @@
             </button>
         </form>
     </div>
+
+    <script>
+        (function () {
+            const expiresAt = Number('{{ otp_expires_at or 0 }}');
+            const resendAt = Number('{{ otp_resend_available_at or 0 }}');
+            const statusEl = document.getElementById('otpStatus');
+            const resendBtn = document.getElementById('resendBtn');
+
+            function updateStatus() {
+                if (!statusEl || !resendBtn) {
+                    return;
+                }
+
+                const now = Math.floor(Date.now() / 1000);
+
+                if (expiresAt > now) {
+                    const remaining = Math.floor(expiresAt - now);
+                    statusEl.textContent = `Code expires in ${remaining}s`;
+                } else {
+                    statusEl.textContent = 'This code has expired. Please request a new one.';
+                }
+
+                if (resendAt > now) {
+                    resendBtn.disabled = true;
+                    resendBtn.style.opacity = '0.65';
+                    resendBtn.style.cursor = 'not-allowed';
+                } else {
+                    resendBtn.disabled = false;
+                    resendBtn.style.opacity = '1';
+                    resendBtn.style.cursor = 'pointer';
+                }
+            }
+
+            updateStatus();
+            setInterval(updateStatus, 1000);
+        })();
+    </script>
 
     <div class="auth-footer" style="margin-top: 1.5rem;">
         <a href="{{ url_for('login') }}" style="color: #64748b; font-size: 0.85rem;"><i class="fa-solid fa-arrow-left" style="margin-right: 4px;"></i> Back to Login</a>

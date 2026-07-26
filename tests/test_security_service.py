@@ -58,6 +58,19 @@ class TestSecurityService(unittest.TestCase):
         security_service.record_2fa_verification(email)
         self.assertFalse(security_service.requires_2fa(email, days=7))
 
+    def test_generate_and_send_otp_uses_45_second_expiry(self):
+        email = "otp@example.com"
+        security_service.generate_and_send_otp(email, purpose="Password Reset")
+
+        with security_service._get_db() as conn:
+            row = conn.execute(
+                "SELECT created_at, expires_at FROM otp_codes WHERE email = ? AND purpose = ? ORDER BY id DESC LIMIT 1",
+                (email, "Password Reset")
+            ).fetchone()
+
+        self.assertIsNotNone(row)
+        self.assertAlmostEqual(row["expires_at"] - row["created_at"], 45, delta=1)
+
     def test_audit_logs(self):
         security_service.log_audit("admin@example.com", "admin", "LOGIN", "Test audit log", "127.0.0.1")
         logs_data = security_service.get_audit_logs(page=1, per_page=10)

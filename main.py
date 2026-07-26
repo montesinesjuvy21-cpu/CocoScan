@@ -724,9 +724,15 @@ def login():
                         "role": user_role,
                         "name": user_name
                     }
-                    security_service.generate_and_send_otp(email, purpose="2FA Verification")
-                    flash(f"A 6-digit verification code has been sent to {email}.", "info")
-                    return redirect(url_for('verify_2fa'))
+                    otp_result = security_service.generate_and_send_otp(email, purpose="2FA Verification")
+                    if otp_result.get("sent"):
+                        session['otp_expires_at'] = otp_result.get("expires_at")
+                        session['otp_resend_available_at'] = time.time() + otp_result.get("resend_cooldown_seconds", security_service.OTP_RESEND_COOLDOWN_SECONDS)
+                        flash(f"A 6-digit verification code has been sent to {email}.", "info")
+                        return redirect(url_for('verify_2fa'))
+
+                    flash("We couldn't send a verification code to your email. Please try again in a moment.", "error")
+                    return render_template('login.html')
 
             session.clear()
             session['user_id'] = user_data['id']
@@ -3451,8 +3457,14 @@ def forgot_password():
                 return redirect(url_for('verify_forgot_otp'))
                 
             security_service.record_forgot_password_attempt(email)
-            security_service.generate_and_send_otp(email, purpose="Password Reset")
+            otp_result = security_service.generate_and_send_otp(email, purpose="Password Reset")
+            if not otp_result.get("sent"):
+                flash("We couldn't send a verification code to your email. Please try again in a moment.", "error")
+                return render_template('forgot_password.html', email=email)
+
             session['reset_email_pending'] = email
+            session['otp_expires_at'] = otp_result.get("expires_at")
+            session['otp_resend_available_at'] = time.time() + otp_result.get("resend_cooldown_seconds", security_service.OTP_RESEND_COOLDOWN_SECONDS)
             flash("A 6-digit verification code has been sent to your email.", "info")
             return redirect(url_for('verify_forgot_otp'))
         except Exception as e:
@@ -3485,7 +3497,10 @@ def verify_forgot_otp():
                            title="Verify Reset Code",
                            email=email,
                            action_url=url_for('verify_forgot_otp'),
-                           resend_url=url_for('resend_forgot_otp'))
+                           resend_url=url_for('resend_forgot_otp'),
+                           otp_expires_at=session.get('otp_expires_at'),
+                           otp_resend_available_at=session.get('otp_resend_available_at'),
+                           otp_resend_cooldown_seconds=security_service.OTP_RESEND_COOLDOWN_SECONDS)
 
 
 @app.route('/resend-forgot-otp', methods=['POST'])
@@ -3500,8 +3515,21 @@ def resend_forgot_otp():
         flash("Maximum forgot password attempts (3) reached. Please try again tomorrow.", "error")
         return redirect(url_for('verify_forgot_otp'))
         
+    now = time.time()
+    resend_available_at = session.get('otp_resend_available_at') or 0
+    if resend_available_at > now:
+        wait_seconds = max(1, int(resend_available_at - now))
+        flash(f"Please wait {wait_seconds} seconds before requesting another code.", "warning")
+        return redirect(url_for('verify_forgot_otp'))
+
     security_service.record_forgot_password_attempt(email)
-    security_service.generate_and_send_otp(email, purpose="Password Reset")
+    otp_result = security_service.generate_and_send_otp(email, purpose="Password Reset")
+    if not otp_result.get("sent"):
+        flash("We couldn't send a new verification code. Please try again in a moment.", "error")
+        return redirect(url_for('verify_forgot_otp'))
+
+    session['otp_expires_at'] = otp_result.get("expires_at")
+    session['otp_resend_available_at'] = now + otp_result.get("resend_cooldown_seconds", security_service.OTP_RESEND_COOLDOWN_SECONDS)
     flash("A new verification code has been sent to your email.", "info")
     return redirect(url_for('verify_forgot_otp'))
 
@@ -3588,7 +3616,10 @@ def verify_2fa():
                            title="Two-Factor Authentication (2FA)",
                            email=email,
                            action_url=url_for('verify_2fa'),
-                           resend_url=url_for('resend_2fa'))
+                           resend_url=url_for('resend_2fa'),
+                           otp_expires_at=session.get('otp_expires_at'),
+                           otp_resend_available_at=session.get('otp_resend_available_at'),
+                           otp_resend_cooldown_seconds=security_service.OTP_RESEND_COOLDOWN_SECONDS)
 
 
 @app.route('/resend-2fa', methods=['POST'])
@@ -3599,7 +3630,20 @@ def resend_2fa():
         return redirect(url_for('login'))
         
     email = pending['email']
-    security_service.generate_and_send_otp(email, purpose="2FA Verification")
+    now = time.time()
+    resend_available_at = session.get('otp_resend_available_at') or 0
+    if resend_available_at > now:
+        wait_seconds = max(1, int(resend_available_at - now))
+        flash(f"Please wait {wait_seconds} seconds before requesting another code.", "warning")
+        return redirect(url_for('verify_2fa'))
+
+    otp_result = security_service.generate_and_send_otp(email, purpose="2FA Verification")
+    if not otp_result.get("sent"):
+        flash("We couldn't send a new verification code. Please try again in a moment.", "error")
+        return redirect(url_for('verify_2fa'))
+
+    session['otp_expires_at'] = otp_result.get("expires_at")
+    session['otp_resend_available_at'] = now + otp_result.get("resend_cooldown_seconds", security_service.OTP_RESEND_COOLDOWN_SECONDS)
     flash("A new 2FA verification code has been sent to your email.", "info")
     return redirect(url_for('verify_2fa'))
 
