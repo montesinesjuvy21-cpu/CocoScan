@@ -10,17 +10,60 @@
         --btn-approve-hover: #1b4d3e;
         --btn-reject-hover: #dc2626;
     }
-    
+
     /* Search & Filter Bar */
-    .control-actions-form { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1rem; width: 100%; }
-    .search-input-row { width: 100%; }
-    .search-box-wrapper { position: relative; width: 100%; }
-    .search-box-wrapper input { width: 100%; padding: 0.9rem 1rem 0.9rem 2.8rem; border: 1px solid rgba(0,0,0,0.08); border-radius: 30px; background-color: #ffffff; font-size: 0.95rem; box-sizing: border-box; outline: none; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    .search-box-wrapper input:focus { border-color: rgba(27, 67, 50, 0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-    .search-box-wrapper i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #8a94a6; font-size: 1rem; }
-    
-    .filter-dropdowns { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; width: 100%; }
-    
+    .control-actions-form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        margin-bottom: 1rem;
+        width: 100%;
+    }
+
+    .search-input-row {
+        width: 100%;
+    }
+
+    .search-box-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .search-box-wrapper input {
+        width: 100%;
+        padding: 0.9rem 1rem 0.9rem 2.8rem;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 30px;
+        background-color: #ffffff;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .search-box-wrapper input:focus {
+        border-color: rgba(27, 67, 50, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .search-box-wrapper i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #8a94a6;
+        font-size: 1rem;
+    }
+
+    .filter-dropdowns {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        width: 100%;
+    }
+
     .chip-filter-btn {
         background-color: #ffffff;
         border: 1px solid #e5e7eb;
@@ -40,106 +83,436 @@
         min-width: 44px;
         gap: 6px;
     }
-    
-    .chip-filter-btn:hover { 
-        border-color: #1a4d32; 
+
+    .chip-filter-btn:hover {
+        border-color: #1a4d32;
         color: #1a4d32;
     }
-    
-    .custom-select-chip.active-chip, .chip-filter-btn.active-chip {
+
+    .custom-select-chip.active-chip,
+    .chip-filter-btn.active-chip {
         background-color: #1a4d32;
         color: #ffffff;
         border-color: #1a4d32;
         box-shadow: 0 2px 6px rgba(26, 77, 50, 0.2);
     }
-    
-    .filter-dropdown-panel { display: none; position: absolute; top: 100%; left: 0; margin-top: 8px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); min-width: 180px; max-height: 240px; overflow: auto; z-index: 100; padding: 8px; }
-    .dropdown-item { display: block; width: 100%; padding: 8px 10px; text-align: left; background: transparent; border: none; cursor: pointer; font-size: 0.92rem; color: #1e293b; border-radius: 6px; transition: background-color 0.15s; }
-    .dropdown-item:hover { background-color: #f1f5f9; color: #0f172a; }
-    
-    .btn-clear-filters { background-color: #eb5757; color: #ffffff; border: none; padding: 8px 16px; border-radius: 28px; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2); transition: all 0.2s ease; white-space: nowrap; margin-left: auto; }
-    .btn-clear-filters:hover { background-color: #d64040; }
 
-    mark.ux-highlight { background: rgba(74, 198, 143, 0.28); color: #0b1315; padding: 0 2px; border-radius: 4px; font-weight: 700; }
-    
+    .filter-dropdown-panel {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin-top: 8px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+        min-width: 180px;
+        max-height: 240px;
+        overflow: auto;
+        z-index: 100;
+        padding: 8px;
+    }
+
+    .dropdown-item {
+        display: block;
+        width: 100%;
+        padding: 8px 10px;
+        text-align: left;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 0.92rem;
+        color: #1e293b;
+        border-radius: 6px;
+        transition: background-color 0.15s;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .dropdown-item.selected {
+        background-color: #ecfdf5;
+        color: #065f46;
+        font-weight: 600;
+    }
+
+    .btn-clear-filters {
+        background-color: #eb5757;
+        color: #ffffff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 28px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2);
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        margin-left: auto;
+    }
+
+    .btn-clear-filters:hover {
+        background-color: #d64040;
+    }
+
+    mark.ux-highlight {
+        background: rgba(74, 198, 143, 0.28);
+        color: #0b1315;
+        padding: 0 2px;
+        border-radius: 4px;
+        font-weight: 700;
+    }
+
     /* Table */
-    .table-scroll-container { background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--border-light); overflow-x: auto; }
-    .pca-data-table { width: 100%; border-collapse: collapse; min-width: 600px; text-align: left; font-size: 0.9rem; }
-    .pca-data-table thead tr { border-bottom: 2px solid var(--bg-base); text-align: left; }
-    .pca-data-table th { padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
-    .pca-data-table tbody tr { border-bottom: 1px solid var(--bg-base); transition: background-color 0.2s; }
-    .pca-data-table tbody tr:hover { background-color: #f9fafb; }
-    .pca-data-table td { padding: 16px 12px; font-size: 0.9rem; vertical-align: middle; }
-    .role-badge-cell { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--text-dark); }
-    .status-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-    .status-tag.pending { background-color: #fef3c7; color: #d97706; }
-    .status-tag.approved { background-color: #d1fae5; color: #065f46; }
-    .status-tag.rejected { background-color: #fee2e2; color: #991b1b; }
-    .status-tag.default { background-color: #edf2f7; color: #4a5568; }
-    .btn-action-approve { background-color: #1b4332; color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: background-color 0.2s ease, transform 0.1s ease; }
-    .btn-action-approve:hover { background-color: var(--btn-approve-hover); transform: translateY(-1px); }
-    .btn-action-reject { background: transparent; color: #b70909; border: 1px solid #b70909; padding: 5px 13px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s ease, transform 0.1s ease; }
-    .btn-action-reject:hover { background-color: #fee2e2; border-color: var(--btn-reject-hover); color: var(--btn-reject-hover); transform: translateY(-1px); }
-    
+    .table-scroll-container {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid var(--border-light);
+        overflow-x: auto;
+    }
+
+    .pca-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 600px;
+        text-align: left;
+        font-size: 0.9rem;
+    }
+
+    .pca-data-table thead tr {
+        border-bottom: 2px solid var(--bg-base);
+        text-align: left;
+    }
+
+    .pca-data-table th {
+        padding: 12px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .pca-data-table tbody tr {
+        border-bottom: 1px solid var(--bg-base);
+        transition: background-color 0.2s;
+    }
+
+    .pca-data-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .pca-data-table td {
+        padding: 16px 12px;
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+
+    .role-badge-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        color: var(--text-dark);
+    }
+
+    .status-tag {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .status-tag.pending {
+        background-color: #fef3c7;
+        color: #d97706;
+    }
+
+    .status-tag.approved {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-tag.rejected {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-tag.default {
+        background-color: #edf2f7;
+        color: #4a5568;
+    }
+
+    .btn-action-approve {
+        background-color: #1b4332;
+        color: #ffffff;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.8rem;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .btn-action-approve:hover {
+        background-color: var(--btn-approve-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-action-reject {
+        background: transparent;
+        color: #b70909;
+        border: 1px solid #b70909;
+        padding: 5px 13px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.8rem;
+        transition: all 0.2s ease, transform 0.1s ease;
+    }
+
+    .btn-action-reject:hover {
+        background-color: #fee2e2;
+        border-color: var(--btn-reject-hover);
+        color: var(--btn-reject-hover);
+        transform: translateY(-1px);
+    }
+
     /* Undo Toast */
-    .undo-toast-wrapper { position: fixed; bottom: 24px; right: 24px; background-color: #1f2937; color: #ffffff; padding: 14px 22px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 16px; z-index: 2000; transform: translateY(150%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); overflow: hidden; }
-    .undo-toast-wrapper.visible { transform: translateY(0); }
-    .btn-undo-trigger { background-color: #FEF3C7; color: #111827; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background-color 0.15s ease; }
-    .btn-undo-trigger:hover { background-color: #d0c28d; }
-    .toast-countdown-slider { position: absolute; bottom: 0; left: 0; height: 4px; background-color: #10b981; width: 100%; transition: width 5s linear; }
-    
+    .undo-toast-wrapper {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background-color: #1f2937;
+        color: #ffffff;
+        padding: 14px 22px;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        z-index: 2000;
+        transform: translateY(150%);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        overflow: hidden;
+    }
+
+    .undo-toast-wrapper.visible {
+        transform: translateY(0);
+    }
+
+    .btn-undo-trigger {
+        background-color: #FEF3C7;
+        color: #111827;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+    .btn-undo-trigger:hover {
+        background-color: #d0c28d;
+    }
+
+    .toast-countdown-slider {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 4px;
+        background-color: #10b981;
+        width: 100%;
+        transition: width 5s linear;
+    }
+
     /* Modal */
-    .modal-overlay-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(17, 24, 39, 0.4); backdrop-filter: blur(3px); z-index: 3000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-    .modal-overlay-container.active { opacity: 1; pointer-events: auto; }
-    .modal-dialog-box { background: #ffffff; border-radius: 12px; width: 100%; max-width: 420px; padding: 1.5rem; box-sizing: border-box; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); text-align: center; transform: scale(0.9); transition: transform 0.2s ease; }
-    .modal-overlay-container.active .modal-dialog-box { transform: scale(1); }
-    .modal-title-text { font-size: 1.2rem; font-weight: 700; color: #111827; margin: 0 0 8px 0; }
-    .modal-body-desc { font-size: 0.92rem; color: #6b7280; margin: 0 0 1.5rem 0; line-height: 1.4; }
-    .modal-btn-row { display: flex; gap: 10px; justify-content: center; }
-    .btn-modal-dismiss { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; padding: 8px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
-    .btn-modal-dismiss:hover { background-color: #e5e7eb; }
-    
+    .modal-overlay-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(17, 24, 39, 0.4);
+        backdrop-filter: blur(3px);
+        z-index: 3000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay-container.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .modal-dialog-box {
+        background: #ffffff;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 420px;
+        padding: 1.5rem;
+        box-sizing: border-box;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transform: scale(0.9);
+        transition: transform 0.2s ease;
+    }
+
+    .modal-overlay-container.active .modal-dialog-box {
+        transform: scale(1);
+    }
+
+    .modal-title-text {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 8px 0;
+    }
+
+    .modal-body-desc {
+        font-size: 0.92rem;
+        color: #6b7280;
+        margin: 0 0 1.5rem 0;
+        line-height: 1.4;
+    }
+
+    .modal-btn-row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .btn-modal-dismiss {
+        background-color: #f3f4f6;
+        color: #4b5563;
+        border: 1px solid #d1d5db;
+        padding: 8px 18px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    .btn-modal-dismiss:hover {
+        background-color: #e5e7eb;
+    }
+
     /* Pagination */
-    .pagination-container { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px; width: 100%; }
-    .page-btn { min-width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-light); background-color: var(--bg-card); color: var(--text-dark); font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
-    .page-btn:hover:not(:disabled) { background-color: #eef5f2; color: var(--brand-dark); }
-    .page-btn.active-page { background-color: #1a4d32; color: #ffffff; border-color: #1a4d32; }
-    .page-btn.disabled, .page-btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 24px;
+        width: 100%;
+    }
+
+    .page-btn {
+        min-width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        border: 1px solid var(--border-light);
+        background-color: var(--bg-card);
+        color: var(--text-dark);
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        padding: 8px 12px;
+        text-align: center;
+        text-decoration: none;
+    }
+
+    .page-btn:hover:not(:disabled) {
+        background-color: #eef5f2;
+        color: var(--brand-dark);
+    }
+
+    .page-btn.active-page {
+        background-color: #1a4d32;
+        color: #ffffff;
+        border-color: #1a4d32;
+    }
+
+    .page-btn:disabled,
+    .page-btn.disabled,
+    .page-btn[aria-disabled="true"] {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .pagination-meta {
+        width: 100%;
+        text-align: center;
+        margin-top: 10px;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
 
     @media (max-width: 991px) {
-        .search-input-row { flex-direction: column; align-items: stretch; }
-        .btn-clear-filters { justify-content: center; }
+        .search-input-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn-clear-filters {
+            justify-content: center;
+        }
     }
 </style>
 {% endblock %}
 
 {% block sidebar_menu %}
 <li><a href="/admin/dashboard" class="menu-item-link">
-    <i class="fa-solid fa-gauge-high"></i> Dashboard
-</a></li>
+        <i class="fa-solid fa-gauge-high"></i> Dashboard
+    </a></li>
 
 <li><a href="/admin/analytics" class="menu-item-link">
-    <i class="fa-solid fa-chart-line"></i> Analytics
-</a></li>
+        <i class="fa-solid fa-chart-line"></i> Analytics
+    </a></li>
 
 <li><a href="/reports/overview" class="menu-item-link">
-    <i class="fa-solid fa-file-lines"></i> Reports
-</a></li>
+        <i class="fa-solid fa-file-lines"></i> Reports
+    </a></li>
 
 <li><a href="/admin/map" class="menu-item-link">
-    <i class="fa-solid fa-map-location-dot"></i> Map View
-</a></li>
+        <i class="fa-solid fa-map-location-dot"></i> Map View
+    </a></li>
 
+<li class="menu-label-sub">Tools</li>
 <li><a href="/admin/user-management" class="menu-item-link active">
-    <i class="fa-solid fa-users-gear"></i> User Management
-</a></li>
+        <i class="fa-solid fa-users-gear"></i> User Management
+    </a></li>
+
+<li><a href="/admin/audit-log" class="menu-item-link">
+        <i class="fa-solid fa-clipboard-list"></i> Audit Log
+    </a></li>
 {% endblock %}
 
 {% block user_role %}PCA Administrator{% endblock %}
 
 {% block page_header %}
 <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">User Management</h1>
-<p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview of all registered users and pending applications for system access verification.</p>
+<p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview of all registered users and pending
+    applications for system access verification.</p>
 {% endblock %}
 
 {% block main_content %}
@@ -150,45 +523,57 @@
     <div class="search-input-row">
         <div class="search-box-wrapper">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" name="search" id="searchInput" placeholder="Search users name or email..." value="{{ search }}" autocomplete="off">
+            <input type="text" name="search" id="searchInput" placeholder="Search users name or email..."
+                value="{{ search }}" autocomplete="off">
         </div>
     </div>
-    
+
     <div class="filter-dropdowns">
-        <a href="{{ url_for('admin_user_management', status='All', role='All', search='') }}" class="chip-filter-btn {% if current_status == 'All' and current_role == 'All' and not search %}active-chip{% endif %}">
+        <a href="{{ url_for('admin_user_management', status='All', role='All', search='') }}"
+            class="chip-filter-btn {% if current_status == 'All' and current_role == 'All' and not search %}active-chip{% endif %}">
             All ({{ total_records }})
         </a>
-        
+
         <div class="custom-dropdown" style="position:relative;">
-            <button type="button" class="chip-filter-btn {% if current_status != 'All' %}active-chip{% endif %}" onclick="toggleDropdown('statusMenu', event)">
+            <button type="button" class="chip-filter-btn {% if current_status != 'All' %}active-chip{% endif %}"
+                onclick="toggleDropdown('statusMenu', event)">
                 {% if current_status == 'Under Review' %}Pending
                 {% elif current_status == 'Approved' %}Approved
                 {% elif current_status == 'Rejected' %}Rejected
                 {% else %}Status{% endif %} ▾
             </button>
             <div id="statusMenu" class="filter-dropdown-panel">
-                <button type="button" class="dropdown-item" onclick="updateFilter('statusFilter', 'All')">All</button>
-                <button type="button" class="dropdown-item" onclick="updateFilter('statusFilter', 'Under Review')">Pending</button>
-                <button type="button" class="dropdown-item" onclick="updateFilter('statusFilter', 'Approved')">Approved</button>
-                <button type="button" class="dropdown-item" onclick="updateFilter('statusFilter', 'Rejected')">Rejected</button>
+                <button type="button" class="dropdown-item {% if current_status == 'All' %}selected{% endif %}"
+                    onclick="updateFilter('statusFilter', 'All')">All Status</button>
+                <button type="button" class="dropdown-item {% if current_status == 'Under Review' %}selected{% endif %}"
+                    onclick="updateFilter('statusFilter', 'Under Review')">Pending</button>
+                <button type="button" class="dropdown-item {% if current_status == 'Approved' %}selected{% endif %}"
+                    onclick="updateFilter('statusFilter', 'Approved')">Approved</button>
+                <button type="button" class="dropdown-item {% if current_status == 'Rejected' %}selected{% endif %}"
+                    onclick="updateFilter('statusFilter', 'Rejected')">Rejected</button>
             </div>
         </div>
-        
+
         <div class="custom-dropdown" style="position:relative;">
-            <button type="button" class="chip-filter-btn {% if current_role != 'All' %}active-chip{% endif %}" onclick="toggleDropdown('roleMenu', event)">
+            <button type="button" class="chip-filter-btn {% if current_role != 'All' %}active-chip{% endif %}"
+                onclick="toggleDropdown('roleMenu', event)">
                 {% if current_role == 'farmer' %}Farmer
                 {% elif current_role == 'lgu' %}LGU
                 {% elif current_role == 'agri_expert' %}Agri Expert
                 {% else %}Role{% endif %} ▾
             </button>
             <div id="roleMenu" class="filter-dropdown-panel">
-                <button type="button" class="dropdown-item" onclick="updateFilter('roleFilter', 'All')">All</button>
-                <button type="button" class="dropdown-item" onclick="updateFilter('roleFilter', 'farmer')">Farmer</button>
-                <button type="button" class="dropdown-item" onclick="updateFilter('roleFilter', 'lgu')">LGU</button>
-                <button type="button" class="dropdown-item" onclick="updateFilter('roleFilter', 'agri_expert')">Agri Expert</button>
+                <button type="button" class="dropdown-item {% if current_role == 'All' %}selected{% endif %}"
+                    onclick="updateFilter('roleFilter', 'All')">All Roles</button>
+                <button type="button" class="dropdown-item {% if current_role == 'farmer' %}selected{% endif %}"
+                    onclick="updateFilter('roleFilter', 'farmer')">Farmer</button>
+                <button type="button" class="dropdown-item {% if current_role == 'lgu' %}selected{% endif %}"
+                    onclick="updateFilter('roleFilter', 'lgu')">LGU</button>
+                <button type="button" class="dropdown-item {% if current_role == 'agri_expert' %}selected{% endif %}"
+                    onclick="updateFilter('roleFilter', 'agri_expert')">Agri Expert</button>
             </div>
         </div>
-        
+
         {% if current_status != 'All' or current_role != 'All' or search %}
         <a href="{{ url_for('admin_user_management', status='All', role='All', search='') }}" class="btn-clear-filters">
             <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
@@ -198,21 +583,21 @@
 </form>
 
 <div id="tableAndPagination">
-<div class="table-scroll-container">
-    <table class="pca-data-table">
-        <thead>
-            <tr>
-                <th>Role</th>
-                <th>Full Name</th>
-                <th>Agency / Jurisdiction / Barangay</th>
-                <th>Email</th>
-                <th>Account Status</th>
-                <th>Email Delivery Notice</th> 
-                <th style="text-align: center;">Action</th>
-            </tr>
-        </thead>
-        <tbody id="userTableBody">
-            {% if users %}
+    <div class="table-scroll-container">
+        <table class="pca-data-table">
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Full Name</th>
+                    <th>Agency / Jurisdiction / Barangay</th>
+                    <th>Email</th>
+                    <th>Account Status</th>
+                    <th>Email Delivery Notice</th>
+                    <th style="text-align: center;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody">
+                {% if users %}
                 {% for user in users %}
                 <tr id="row-{{ user.id }}">
                     <td>
@@ -224,119 +609,142 @@
                         </div>
                     </td>
 
-                    <td><span class="user-display-name">{{ user.highlighted_first | safe }} {{ user.highlighted_last | safe }}</span></td>
+                    <td><span class="user-display-name">{{ user.highlighted_first | safe }} {{ user.highlighted_last |
+                            safe }}</span></td>
 
                     <td>
                         {% if user.role == 'farmer' and user.profiles %}
-                            <span style="font-size:0.85rem;">Brgy: <span style="font-weight:400">{{ user.profiles.farmer_barangay or 'N/A' }}</span></span>
+                        <span style="font-size:0.85rem;">Brgy: <span style="font-weight:400">{{
+                                user.profiles.farmer_barangay or 'N/A' }}</span></span>
                         {% elif user.profiles %}
-                            <span style="font-size:0.85rem; display:block;"> {{ user.profiles.agency_office or 'N/A' }}</span>
-                            <small style="color:#6b7280;">Scope: {{ user.profiles.jurisdiction or 'N/A' }}</small>
+                        <span style="font-size:0.85rem; display:block;"> {{ user.profiles.agency_office or 'N/A'
+                            }}</span>
+                        <small style="color:#6b7280;">Scope: {{ user.profiles.jurisdiction or 'N/A' }}</small>
                         {% else %}
-                            <span style="color:#9ca3af; font-style:italic;">No profile details</span>
+                        <span style="color:#9ca3af; font-style:italic;">No profile details</span>
                         {% endif %}
                     </td>
 
                     <td>{{ user.highlighted_email | safe }}</td>
-                    
+
                     <td class="account-status-cell" style="text-align: center;">
                         {% if user.status == 'Approved' %}
-                            <span class="status-tag approved"><i class="fa-solid fa-check-circle" style="margin-right:8px;color:inherit"></i>{{ user.status }}</span>
+                        <span class="status-tag approved"><i class="fa-solid fa-check-circle"
+                                style="margin-right:8px;color:inherit"></i>{{ user.status }}</span>
                         {% elif user.status == 'Under Review' %}
-                            <span class="status-tag pending">{{ user.status }}</span>
+                        <span class="status-tag pending">{{ user.status }}</span>
                         {% else %}
-                            <span class="status-tag rejected">{{ user.status }}</span>
+                        <span class="status-tag rejected">{{ user.status }}</span>
                         {% endif %}
                     </td>
 
                     <td class="email-status-cell" style="text-align: center;">
                         {% if user.email_status == 'Sent Successfully' %}
-                            <span class="status-tag approved"><i class="fa-solid fa-envelope" style="margin-right:8px;color:inherit"></i>Email Sent</span>
+                        <span class="status-tag approved"><i class="fa-solid fa-envelope"
+                                style="margin-right:8px;color:inherit"></i>Email Sent</span>
                         {% elif user.email_status == 'Delivery Failed' %}
-                            <span class="status-tag rejected">Delivery Failed</span>
-                            <div style="margin-top: 6px;">
-                                <button type="button" onclick="resendEmail('{{ user.id }}', this)" style="background-color: #dc2626; color: #ffffff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
-                                    <i class="fa-solid fa-rotate-right"></i> Resend
-                                </button>
-                            </div>
+                        <span class="status-tag rejected">Delivery Failed</span>
+                        <div style="margin-top: 6px;">
+                            <button type="button" onclick="resendEmail('{{ user.id }}', this)"
+                                style="background-color: #dc2626; color: #ffffff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+                                <i class="fa-solid fa-rotate-right"></i> Resend
+                            </button>
+                        </div>
                         {% else %}
-                            <span class="status-tag default">Pending Action</span>
+                        <span class="status-tag default">Pending Action</span>
                         {% endif %}
                     </td>
 
                     <td class="action-cell" style="text-align: center;">
                         {% if user.status == 'Under Review' %}
-                            <div style="display: flex; gap: 6px; justify-content: center;">
-                                <button type="button" class="btn-action-approve" onclick="triggerStatusConfirmation('{{ user.id }}', 'approve')">Approve</button>
-                                <button type="button" class="btn-action-reject" onclick="triggerStatusConfirmation('{{ user.id }}', 'reject')">Reject</button>
-                            </div>
+                        <div style="display: flex; gap: 6px; justify-content: center;">
+                            <button type="button" class="btn-action-approve"
+                                onclick="triggerStatusConfirmation('{{ user.id }}', 'approve')">Approve</button>
+                            <button type="button" class="btn-action-reject"
+                                onclick="triggerStatusConfirmation('{{ user.id }}', 'reject')">Reject</button>
+                        </div>
                         {% else %}
-                            <small style="color:#9ca3af;">Handled by:<br><span style="font-weight:400">{{ user.approved_by or 'System' }}</span></small>
+                        <small style="color:#9ca3af;">Handled by:<br><span style="font-weight:400">{{ user.approved_by
+                                or 'System' }}</span></small>
                         {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
-            {% else %}
+                {% else %}
                 <tr>
                     <td colspan="7" style="padding: 0; border: none; background: white;">
-                        <div style="text-align:center; padding: 60px 20px; background: white; border-radius: 12px; border: 1px solid #e5e7eb; margin-top: 20px;">
-                            <div style="width: 64px; height: 64px; background: #f0fdf4; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <div
+                            style="text-align:center; padding: 60px 20px; background: white; border-radius: 12px; border: 1px solid #e5e7eb; margin-top: 20px;">
+                            <div
+                                style="width: 64px; height: 64px; background: #f0fdf4; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
                                 <i class="fa-solid fa-folder-open" style="font-size: 28px; color: #1a4d32;"></i>
                             </div>
-                            <h3 style="color: #0b1315; margin: 0 0 10px; font-size: 1.2rem;">No matching records found</h3>
-                            <p style="color: #64748b; margin: 0; font-size: 0.95rem;">Try adjusting your search or filters to find what you're looking for.</p>
+                            <h3 style="color: #0b1315; margin: 0 0 10px; font-size: 1.2rem;">No matching records found
+                            </h3>
+                            <p style="color: #64748b; margin: 0; font-size: 0.95rem;">Try adjusting your search or
+                                filters to find what you're looking for.</p>
                         </div>
                     </td>
                 </tr>
-            {% endif %}
-        </tbody>
-    </table>
-</div>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
 
-{% if total_pages > 1 %}
-<div class="pagination-container">
-    <a href="{{ url_for('admin_user_management', page=current_page-1, status=current_status, role=current_role, search=search) }}" class="page-btn {% if current_page == 1 %}disabled{% endif %}" aria-disabled="{{ 1 if current_page == 1 else 0 }}">« Prev</a>
-    {% for p in range(1, total_pages + 1) %}
-        <a href="{{ url_for('admin_user_management', page=p, status=current_status, role=current_role, search=search) }}" class="page-btn {% if current_page == p %}active-page{% endif %}">{{ p }}</a>
-    {% endfor %}
-    <a href="{{ url_for('admin_user_management', page=current_page+1, status=current_status, role=current_role, search=search) }}" class="page-btn {% if current_page == total_pages %}disabled{% endif %}" aria-disabled="{{ 1 if current_page == total_pages else 0 }}">Next »</a>
-</div>
-{% endif %}
+    {% if total_records > 0 %}
+        {% set start_rec = (current_page - 1) * 10 + 1 %}
+        {% set end_rec = (current_page * 10) if (current_page * 10) < total_records else total_records %}
+        <div class="pagination-meta">Showing {{ start_rec }}–{{ end_rec }} of {{ total_records }}</div>
+    {% endif %}
+    {% if total_pages > 1 %}
+    <div class="pagination-container">
+        <a href="{{ url_for('admin_user_management', page=current_page-1, status=current_status, role=current_role, search=search) }}"
+            class="page-btn {% if current_page == 1 %}disabled{% endif %}"
+            aria-disabled="{{ 1 if current_page == 1 else 0 }}">← Previous</a>
+        {% for p in range(1, total_pages + 1) %}
+        <a href="{{ url_for('admin_user_management', page=p, status=current_status, role=current_role, search=search) }}"
+            class="page-btn {% if current_page == p %}active-page{% endif %}">{{ p }}</a>
+        {% endfor %}
+        <a href="{{ url_for('admin_user_management', page=current_page+1, status=current_status, role=current_role, search=search) }}"
+            class="page-btn {% if current_page == total_pages %}disabled{% endif %}"
+            aria-disabled="{{ 1 if current_page == total_pages else 0 }}">Next →</a>
+    </div>
+    {% endif %}
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         const searchInput = document.getElementById('searchInput');
         const filterForm = document.getElementById('filterForm');
         let debounceTimer;
 
         // AJAX search function
-        window.triggerSearch = function() {
+        window.triggerSearch = function () {
             const url = new URL(filterForm.action, window.location.origin);
             url.search = new URLSearchParams(new FormData(filterForm)).toString();
-            
+
             fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const newContent = doc.getElementById('tableAndPagination');
-                if(newContent) {
-                    document.getElementById('tableAndPagination').innerHTML = newContent.innerHTML;
-                }
-                window.history.replaceState({}, '', url);
-            })
-            .catch(err => console.error("Live search error: ", err));
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newContent = doc.getElementById('tableAndPagination');
+                    if (newContent) {
+                        document.getElementById('tableAndPagination').innerHTML = newContent.innerHTML;
+                    }
+                    window.history.replaceState({}, '', url);
+                })
+                .catch(err => console.error("Live search error: ", err));
         };
 
         // Perform AJAX form submission for live search
-        searchInput.addEventListener('input', function() {
+        searchInput.addEventListener('input', function () {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(window.triggerSearch, 400);
         });
 
         // Dropdown Logic
-        window.toggleDropdown = function(menuId, event) {
+        window.toggleDropdown = function (menuId, event) {
             event.stopPropagation();
             const menu = document.getElementById(menuId);
             const isVisible = menu.style.display === 'block';
@@ -346,17 +754,17 @@
             }
         };
 
-        window.updateFilter = function(inputId, value) {
+        window.updateFilter = function (inputId, value) {
             document.getElementById(inputId).value = value;
             document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.style.display = 'none');
-            
+
             // Full reload when changing dropdowns so the button labels/active state updates 
             // OR we could update it dynamically, but full reload is safer for jinja state
             filterForm.submit();
         };
 
         // Close dropdowns when clicking outside
-        document.addEventListener('click', function() {
+        document.addEventListener('click', function () {
             document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.style.display = 'none');
         });
     });
@@ -365,10 +773,12 @@
 <div class="modal-overlay-container" id="confirmationModal">
     <div class="modal-dialog-box">
         <div class="modal-title-text" id="modalTitle">Confirm Status Change</div>
-        <div class="modal-body-desc" id="modalDescription">Are you sure you want to proceed with executing this profile verification action?</div>
+        <div class="modal-body-desc" id="modalDescription">Are you sure you want to proceed with executing this profile
+            verification action?</div>
         <div class="modal-btn-row">
             <button type="button" class="btn-modal-dismiss" onclick="closeConfirmationModal()">Cancel</button>
-            <button type="button" id="modalConfirmBtn" style="padding: 8px 18px; border-radius: 6px; font-weight:600; cursor:pointer; font-size:0.85rem; border:none; color:white;">Proceed</button>
+            <button type="button" id="modalConfirmBtn"
+                style="padding: 8px 18px; border-radius: 6px; font-weight:600; cursor:pointer; font-size:0.85rem; border:none; color:white;">Proceed</button>
         </div>
     </div>
 </div>
@@ -389,66 +799,66 @@
     let originalRowHTML = null;
 
     /* --- STEP 1: OPEN CONFIRMATION DIALOG MODAL --- */
-   function triggerStatusConfirmation(userId, action) {
-    targetUserId = userId;
-    targetAction = action;
-    
-    const modal = document.getElementById('confirmationModal');
-    const title = document.getElementById('modalTitle');
-    const desc = document.getElementById('modalDescription');
-    const confirmBtn = document.getElementById('modalConfirmBtn');
-    const row = document.getElementById(`row-${userId}`);
-    const userName = row.querySelector('.user-display-name').textContent.trim();
+    function triggerStatusConfirmation(userId, action) {
+        targetUserId = userId;
+        targetAction = action;
 
-    if (action === 'approve') {
-        title.textContent = "Approve User Access";
-        desc.textContent = `Are you sure you want to approve system access credentials for ${userName}?`;
-        confirmBtn.textContent = "Approve User";
-        confirmBtn.style.backgroundColor = "var(--pca-dark-green)";
-    } else {
-        title.textContent = "Reject User Application";
-        desc.textContent = `Are you sure you want to reject and decline the system registration access request from ${userName}?`;
-        confirmBtn.textContent = "Reject User";
-        confirmBtn.style.backgroundColor = "var(--btn-reject-hover)";
-    }
+        const modal = document.getElementById('confirmationModal');
+        const title = document.getElementById('modalTitle');
+        const desc = document.getElementById('modalDescription');
+        const confirmBtn = document.getElementById('modalConfirmBtn');
+        const row = document.getElementById(`row-${userId}`);
+        const userName = row.querySelector('.user-display-name').textContent.trim();
 
-    
-    confirmBtn.onclick = function() {
-        closeConfirmationModal();
-        
-        
-        if (typeof initializeUndoStage === "function") {
-            initializeUndoStage();
+        if (action === 'approve') {
+            title.textContent = "Approve User Access";
+            desc.textContent = `Are you sure you want to approve system access credentials for ${userName}?`;
+            confirmBtn.textContent = "Approve User";
+            confirmBtn.style.backgroundColor = "var(--pca-dark-green)";
+        } else {
+            title.textContent = "Reject User Application";
+            desc.textContent = `Are you sure you want to reject and decline the system registration access request from ${userName}?`;
+            confirmBtn.textContent = "Reject User";
+            confirmBtn.style.backgroundColor = "var(--btn-reject-hover)";
         }
 
-        // Fire Asynchronous payload request directly to Flask API
-        fetch('/admin/update-user-status', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                user_id: targetUserId,
-                action: targetAction
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Instantly reloads the page so Jinja can render the fresh database 'email_status' column values!
-                window.location.reload();
-            } else {
-                alert("Error processing changes: " + data.message);
-            }
-        })
-        .catch(err => {
-            console.error("Critical communications breakdown:", err);
-            alert("Network connection error. Database was not updated.");
-        });
-    };
 
-    modal.classList.add('active');
-}
+        confirmBtn.onclick = function () {
+            closeConfirmationModal();
+
+
+            if (typeof initializeUndoStage === "function") {
+                initializeUndoStage();
+            }
+
+            // Fire Asynchronous payload request directly to Flask API
+            fetch('/admin/update-user-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: targetUserId,
+                    action: targetAction
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Instantly reloads the page so Jinja can render the fresh database 'email_status' column values!
+                        window.location.reload();
+                    } else {
+                        alert("Error processing changes: " + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error("Critical communications breakdown:", err);
+                    alert("Network connection error. Database was not updated.");
+                });
+        };
+
+        modal.classList.add('active');
+    }
 
     function closeConfirmationModal() {
         document.getElementById('confirmationModal').classList.remove('active');
@@ -466,9 +876,9 @@
         originalRowHTML = row.innerHTML; // Back up row layout state in case user cancels
 
         // Optimistically change row elements locally
-       const statusCell = row.querySelector('.account-status-cell');
+        const statusCell = row.querySelector('.account-status-cell');
         const actionCell = row.querySelector('.action-cell');
-        
+
         if (targetAction === 'approve') {
             statusCell.innerHTML = `<span class="status-tag approved">Approved</span>`;
         } else {
@@ -479,12 +889,12 @@
         // Trigger the 5-second slide banner
         const toast = document.getElementById('undoToast');
         const slider = document.getElementById('toastSlider');
-        
+
         slider.style.transition = 'none';
         slider.style.width = '100%';
         // Force layout redraw
-        toast.offsetHeight; 
-        
+        toast.offsetHeight;
+
         toast.classList.add('visible');
         slider.style.transition = 'width 5s linear';
         slider.style.width = '0%';
@@ -510,7 +920,7 @@
 
         // Hide notification toast banner
         document.getElementById('undoToast').classList.remove('visible');
-        
+
         targetUserId = null;
         targetAction = null;
         originalRowHTML = null;
@@ -519,7 +929,7 @@
     /* --- STEP 4: SAVE PERMANENT CHANGES TO DATABASE --- */
     function commitStatusToDatabase() {
         document.getElementById('undoToast').classList.remove('visible');
-        
+
         const currentUserId = targetUserId;
         const currentAction = targetAction;
 
@@ -530,23 +940,23 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: currentUserId, action: currentAction })
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                const row = document.getElementById(`row-${currentUserId}`);
-                if (row) {
-                    const actionCell = row.querySelector('.action-cell');
-                    actionCell.innerHTML = `<small style="color:#9ca3af;">Handled by:<br>${data.admin_name}</small>`;
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const row = document.getElementById(`row-${currentUserId}`);
+                    if (row) {
+                        const actionCell = row.querySelector('.action-cell');
+                        actionCell.innerHTML = `<small style="color:#9ca3af;">Handled by:<br>${data.admin_name}</small>`;
+                    }
+                } else {
+                    alert(`Error processing changes: ${data.message}`);
+                    location.reload();
                 }
-            } else {
-                alert(`Error processing changes: ${data.message}`);
+            })
+            .catch(err => {
+                console.error(err);
                 location.reload();
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            location.reload();
-        });
+            });
     }
 
     /* --- STEP 5: RESEND EMAIL FUNCTIONALITY --- */
@@ -561,29 +971,29 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                if (data.email_notified) {
-                    alert("Email has been sent successfully.");
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.email_notified) {
+                        alert("Email has been sent successfully.");
+                    } else {
+                        alert("Delivery failed again. Please check the server logs.");
+                    }
+                    location.reload();
                 } else {
-                    alert("Delivery failed again. Please check the server logs.");
+                    alert(`Error resending email: ${data.message}`);
+                    btnElement.innerHTML = originalText;
+                    btnElement.disabled = false;
+                    btnElement.style.opacity = '1';
                 }
-                location.reload();
-            } else {
-                alert(`Error resending email: ${data.message}`);
+            })
+            .catch(err => {
+                console.error("Resend email error:", err);
+                alert("Network connection error while trying to resend email.");
                 btnElement.innerHTML = originalText;
                 btnElement.disabled = false;
                 btnElement.style.opacity = '1';
-            }
-        })
-        .catch(err => {
-            console.error("Resend email error:", err);
-            alert("Network connection error while trying to resend email.");
-            btnElement.innerHTML = originalText;
-            btnElement.disabled = false;
-            btnElement.style.opacity = '1';
-        });
+            });
     }
 </script>
 {% endblock %}

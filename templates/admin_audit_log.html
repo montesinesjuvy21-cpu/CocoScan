@@ -1,0 +1,444 @@
+{% extends 'components/dashboard_base.html' %}
+
+{% block title %}CocoScan - Audit Log{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* --- SEARCH AND RESPONSIVE CONTROLS --- */
+    .search-controls-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .search-bar-box {
+        position: relative;
+        flex: 1;
+        min-width: 240px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 14px 16px 14px 44px;
+        border-radius: 32px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background-color: var(--bg-card, #ffffff);
+        font-size: 0.92rem;
+        outline: none;
+        color: var(--text-dark, #0f172a);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-input:focus {
+        border-color: rgba(82, 130, 101, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .search-bar-box i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+        font-size: 1rem;
+    }
+
+    .chip-filter-btn {
+        background-color: var(--bg-card, #ffffff);
+        color: var(--text-muted, #64748b);
+        border: 1px solid var(--border-light, #e2e8f0);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        text-decoration: none;
+    }
+
+    .chip-filter-btn:hover {
+        border-color: #1a4d32;
+        color: #1a4d32;
+    }
+
+    .chip-filter-btn.active-chip {
+        background-color: #1a4d32;
+        color: #ffffff;
+        border-color: #1a4d32;
+        box-shadow: 0 2px 6px rgba(26, 77, 50, 0.2);
+    }
+
+    .btn-clear-filters {
+        background-color: #eb5757;
+        color: #ffffff;
+        border: none;
+        padding: 8px 14px;
+        min-width: 120px;
+        border-radius: 28px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 4px rgba(235, 87, 87, 0.2);
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        text-decoration: none;
+    }
+
+    .btn-clear-filters:hover {
+        background-color: #d84343;
+        transform: translateY(-1px);
+    }
+
+    .filter-dropdown-panel {
+        display: none;
+        position: absolute;
+        top: 110%;
+        left: 0;
+        z-index: 50;
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        min-width: 170px;
+        overflow: hidden;
+        padding: 4px;
+    }
+
+    .filter-dropdown-panel.show {
+        display: block;
+    }
+
+    .dropdown-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        color: #475569;
+        background: none;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .dropdown-item:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .dropdown-item.selected {
+        background: #ecfdf5;
+        color: #065f46;
+        font-weight: 600;
+    }
+
+    .action-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+
+    .action-badge.login { background-color: #d1fae5; color: #065f46; }
+    .action-badge.failed { background-color: #fef3c7; color: #92400e; }
+    .action-badge.lockout { background-color: #fee2e2; color: #991b1b; }
+    .action-badge.reset { background-color: #e0e7ff; color: #3730a3; }
+    .action-badge.default { background-color: #f1f5f9; color: #475569; }
+
+    /* --- PAGINATION SYSTEM --- */
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 24px;
+        width: 100%;
+    }
+
+    .page-btn {
+        min-width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        border: 1px solid var(--border-light);
+        background-color: var(--bg-card);
+        color: var(--text-dark);
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        padding: 8px 12px;
+        text-align: center;
+        text-decoration: none;
+    }
+
+    .page-btn:hover:not(:disabled) {
+        background-color: #eef5f2;
+        color: var(--brand-dark);
+    }
+
+    .page-btn.active-page {
+        background-color: #1a4d32;
+        color: #ffffff;
+        border-color: #1a4d32;
+    }
+
+    .page-btn:disabled,
+    .page-btn.disabled,
+    .page-btn[aria-disabled="true"] {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .pagination-meta {
+        width: 100%;
+        text-align: center;
+        margin-top: 10px;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_menu %}
+<li><a href="/admin/dashboard" class="menu-item-link">
+        <i class="fa-solid fa-gauge-high"></i> Dashboard
+    </a></li>
+
+<li><a href="/admin/analytics" class="menu-item-link">
+        <i class="fa-solid fa-chart-line"></i> Analytics
+    </a></li>
+
+<li><a href="/reports/overview" class="menu-item-link">
+        <i class="fa-solid fa-file-lines"></i> Reports
+    </a></li>
+
+<li><a href="/admin/map" class="menu-item-link">
+        <i class="fa-solid fa-map-location-dot"></i> Map View
+    </a></li>
+
+<li class="menu-label-sub">Tools</li>
+<li><a href="/admin/user-management" class="menu-item-link">
+        <i class="fa-solid fa-users-gear"></i> User Management
+    </a></li>
+
+<li><a href="/admin/audit-log" class="menu-item-link active">
+        <i class="fa-solid fa-clipboard-list"></i> Audit Log
+    </a></li>
+{% endblock %}
+
+{% block user_role %}PCA Administrator{% endblock %}
+
+{% block page_header %}
+<h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">System Audit Log</h1>
+<p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Comprehensive activity trail of user authentication, security interventions, and system events.</p>
+{% endblock %}
+
+{% block main_content %}
+<form method="GET" action="{{ url_for('admin_audit_log') }}" class="control-actions-form" id="filterForm">
+    <input type="hidden" name="action_filter" id="actionFilter" value="{{ current_action }}">
+
+    <div class="search-controls-row" style="display:flex; flex-direction:column; gap:12px; align-items:stretch; width:100%; margin-bottom:12px;">
+        <div class="search-bar-box" style="width:100%;">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" name="search" id="searchInput" class="search-input" placeholder="Search by email, action, or details..."
+                value="{{ search }}" autocomplete="off">
+        </div>
+        <div class="filter-buttons-row" style="display:flex; gap:8px; align-items:center; width:100%; justify-content:space-between; flex-wrap:wrap;">
+            <div class="filter-button-group" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <button type="button" class="chip-filter-btn {% if not current_action %}active-chip{% endif %}"
+                    onclick="updateFilter('actionFilter', '')">All ({{ total_records }})</button>
+                <div class="custom-dropdown" style="position:relative;">
+                    <button type="button" class="chip-filter-btn {% if current_action %}active-chip{% endif %}"
+                        onclick="toggleDropdown('actionMenu', event)">
+                        {% if current_action == 'LOGIN' %}Login Success
+                        {% elif current_action == 'LOGIN_FAILED' %}Login Failed
+                        {% elif current_action == 'ACCOUNT_LOCKOUT' %}Account Lockout
+                        {% elif current_action == 'PASSWORD_RESET' %}Password Reset
+                        {% elif current_action == '2FA_VERIFIED' %}2FA Verified
+                        {% elif current_action == 'SESSION_TIMEOUT' %}Session Timeout
+                        {% elif current_action %}{{ current_action | replace('_', ' ') | title }}
+                        {% else %}Event Type{% endif %} ▾
+                    </button>
+                    <div id="actionMenu" class="filter-dropdown-panel">
+                        <button type="button" class="dropdown-item {% if not current_action %}selected{% endif %}"
+                            onclick="updateFilter('actionFilter', '')">All Events</button>
+                        <button type="button" class="dropdown-item {% if current_action == 'LOGIN' %}selected{% endif %}"
+                            onclick="updateFilter('actionFilter', 'LOGIN')">Login Success</button>
+                        <button type="button" class="dropdown-item {% if current_action == 'LOGIN_FAILED' %}selected{% endif %}"
+                            onclick="updateFilter('actionFilter', 'LOGIN_FAILED')">Login Failed</button>
+                        <button type="button" class="dropdown-item {% if current_action == 'ACCOUNT_LOCKOUT' %}selected{% endif %}"
+                            onclick="updateFilter('actionFilter', 'ACCOUNT_LOCKOUT')">Account Lockout</button>
+                        <button type="button" class="dropdown-item {% if current_action == 'PASSWORD_RESET' %}selected{% endif %}"
+                            onclick="updateFilter('actionFilter', 'PASSWORD_RESET')">Password Reset</button>
+                        <button type="button" class="dropdown-item {% if current_action == '2FA_VERIFIED' %}selected{% endif %}"
+                            onclick="updateFilter('actionFilter', '2FA_VERIFIED')">2FA Verified</button>
+                        <button type="button" class="dropdown-item {% if current_action == 'SESSION_TIMEOUT' %}selected{% endif %}"
+                            onclick="updateFilter('actionFilter', 'SESSION_TIMEOUT')">Session Timeout</button>
+                    </div>
+                </div>
+            </div>
+
+            {% if current_action or search %}
+            <button id="clear-filters-btn" class="btn-clear-filters" style="display:inline-flex;" onclick="window.location.href='{{ url_for('admin_audit_log') }}'; return false;">
+                <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+<div id="tableAndPagination">
+    <div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--border-light, #e2e8f0); overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--bg-base, #f1f5f9); text-align: left;">
+                    <th style="padding: 12px; color: var(--text-muted, #64748b); font-size: 0.85rem; font-weight: 600; width: 18%;">Timestamp</th>
+                    <th style="padding: 12px; color: var(--text-muted, #64748b); font-size: 0.85rem; font-weight: 600; width: 22%;">User Email</th>
+                    <th style="padding: 12px; color: var(--text-muted, #64748b); font-size: 0.85rem; font-weight: 600; width: 12%;">Role</th>
+                    <th style="padding: 12px; color: var(--text-muted, #64748b); font-size: 0.85rem; font-weight: 600; width: 16%;">Action</th>
+                    <th style="padding: 12px; color: var(--text-muted, #64748b); font-size: 0.85rem; font-weight: 600; width: 22%;">Details</th>
+                    <th style="padding: 12px; color: var(--text-muted, #64748b); font-size: 0.85rem; font-weight: 600; width: 10%;">IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if logs %}
+                {% for log in logs %}
+                <tr style="border-bottom: 1px solid var(--bg-base, #f1f5f9); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='var(--bg-base, #f8fafc)'" onmouseout="this.style.backgroundColor='transparent'">
+                    <td style="padding: 16px 12px; font-size: 0.9rem; font-family: monospace; color: #475569;">{{ log.timestamp }}</td>
+                    <td style="padding: 16px 12px; font-size: 0.9rem; font-weight: 600; color: #1e293b;">{{ log.user_email }}</td>
+                    <td style="padding: 16px 12px; font-size: 0.9rem;"><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: #475569;">{{ log.user_role }}</span></td>
+                    <td style="padding: 16px 12px; font-size: 0.9rem;">
+                        {% if log.action == 'LOGIN' %}
+                        <span class="action-badge login">Login Success</span>
+                        {% elif log.action == '2FA_VERIFIED' %}
+                        <span class="action-badge login">2FA Verified</span>
+                        {% elif log.action == 'LOGIN_FAILED' %}
+                        <span class="action-badge failed">Login Failed</span>
+                        {% elif log.action == 'ACCOUNT_LOCKOUT' %}
+                        <span class="action-badge lockout">Account Lockout</span>
+                        {% elif log.action == 'PASSWORD_RESET' %}
+                        <span class="action-badge reset">Password Reset</span>
+                        {% elif log.action == 'SESSION_TIMEOUT' %}
+                        <span class="action-badge failed">Session Timeout</span>
+                        {% else %}
+                        <span class="action-badge default">{{ log.action | replace('_', ' ') | title }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 16px 12px; font-size: 0.9rem; color: #475569;">{{ log.details }}</td>
+                    <td style="padding: 16px 12px; font-size: 0.85rem; font-family: monospace; color: #64748b;">{{ log.ip_address or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="6" style="padding: 0; border: none; background: white;">
+                        <div style="text-align:center; padding: 60px 20px; background: white; border-radius: 16px; margin: 10px 0;">
+                            <div style="width: 68px; height: 68px; background: #eef5f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                                <i class="fa-solid fa-folder-open" style="font-size: 28px; color: #1a4d32;"></i>
+                            </div>
+                            <h3 style="color: #0f172a; margin: 0 0 8px; font-size: 1.25rem; font-weight: 700;">No Audit Logs Found</h3>
+                            <p style="color: #64748b; margin: 0; font-size: 0.92rem; max-width: 400px; display: inline-block; line-height: 1.5;">We couldn't find any audit logs matching your criteria. Try adjustments to your text search or filters.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <!-- Standardized Pagination Matching Reports -->
+        <div class="pagination-meta" id="pagination-summary">
+            {% if total_records > 0 %}
+                {% set start_rec = (current_page - 1) * per_page + 1 %}
+                {% set end_rec = (current_page * per_page) if (current_page * per_page) < total_records else total_records %}
+                Showing {{ start_rec }}–{{ end_rec }} of {{ total_records }}
+            {% else %}
+                Showing 0 of 0
+            {% endif %}
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="pagination-container">
+            <a href="{{ url_for('admin_audit_log', page=current_page-1, action_filter=current_action, search=search) }}"
+                class="page-btn {% if current_page == 1 %}disabled{% endif %}"
+                aria-disabled="{{ 1 if current_page == 1 else 0 }}">← Previous</a>
+            {% for p in range(1, total_pages + 1) %}
+            <a href="{{ url_for('admin_audit_log', page=p, action_filter=current_action, search=search) }}"
+                class="page-btn {% if current_page == p %}active-page{% endif %}">{{ p }}</a>
+            {% endfor %}
+            <a href="{{ url_for('admin_audit_log', page=current_page+1, action_filter=current_action, search=search) }}"
+                class="page-btn {% if current_page == total_pages %}disabled{% endif %}"
+                aria-disabled="{{ 1 if current_page == total_pages else 0 }}">Next →</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById('searchInput');
+        const filterForm = document.getElementById('filterForm');
+        let debounceTimer;
+
+        window.triggerSearch = function () {
+            const url = new URL(filterForm.action, window.location.origin);
+            url.search = new URLSearchParams(new FormData(filterForm)).toString();
+
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newContent = doc.getElementById('tableAndPagination');
+                    if (newContent) {
+                        document.getElementById('tableAndPagination').innerHTML = newContent.innerHTML;
+                    }
+                    window.history.replaceState({}, '', url);
+                })
+                .catch(err => console.error("Filter AJAX error:", err));
+        };
+
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(triggerSearch, 400);
+        });
+
+        window.updateFilter = function (inputId, value) {
+            document.getElementById(inputId).value = value;
+            triggerSearch();
+            document.querySelectorAll('.filter-dropdown-panel').forEach(menu => menu.classList.remove('show'));
+        };
+
+        window.toggleDropdown = function (menuId, event) {
+            event.stopPropagation();
+            const targetMenu = document.getElementById(menuId);
+            document.querySelectorAll('.filter-dropdown-panel').forEach(menu => {
+                if (menu.id !== menuId) menu.classList.remove('show');
+            });
+            targetMenu.classList.toggle('show');
+        };
+
+        document.addEventListener('click', function () {
+            document.querySelectorAll('.filter-dropdown-panel').forEach(menu => menu.classList.remove('show'));
+        });
+    });
+</script>
+{% endblock %}

@@ -5,10 +5,9 @@
     <div class="logo-container">
         <div class="logo-icon-wrap">
             <i class="fa-solid fa-shield-halved"></i>
-            <i class="fa-solid fa-seedling" style="position: absolute; bottom: 4px; right: -4px; font-size: 1.5rem; color: #40916c;"></i>
+            <i class="fa-solid fa-lock" style="position: absolute; bottom: 4px; right: -4px; font-size: 1.2rem; color: #0d9488;"></i>
         </div>
-        <div class="logo-title">CocoScan</div>
-        <div class="logo-subtitle">Coconut Pest Detection</div>
+        <div class="logo-title">{{ title or 'Security Verification' }}</div>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -39,46 +38,29 @@
         {% endif %}
     {% endwith %}
 
-    <form action="{{ url_for('login') }}" method="POST">
-        <div class="form-group has-icon-left">
-            <label for="email">Email Address</label>
+    <form action="{{ action_url }}" method="POST">
+        <div class="form-group">
+            <label for="otp_code" style="text-align: center; display: block; margin-bottom: 8px;">Enter 6-Digit Code</label>
             <div class="input-wrapper">
-                <i class="fa-regular fa-envelope input-icon-left"></i>
-                <input type="email" id="email" name="email" placeholder="name@example.com" required>
+                <input type="text" id="otp_code" name="otp_code" maxlength="6" pattern="\d{6}" placeholder="••••••" required autofocus
+                    style="font-size: 24px; font-weight: 700; letter-spacing: 12px; text-align: center; padding: 12px; border-radius: 8px; border: 2px solid #0d9488; color: #164630;">
             </div>
         </div>
 
-        <div class="form-group has-icon-left">
-            <label for="password">Password</label>
-            <div class="input-wrapper">
-                <i class="fa-solid fa-lock input-icon-left"></i>
-                <input type="password" id="password" name="password" placeholder="••••••••" required>
-                <i class="fa-regular fa-eye toggle-password" onclick="togglePasswordVisibility('password', this)"></i>
-            </div>
-        </div>
-
-        <a href="{{ url_for('forgot_password') }}" class="forgot-password">Forgot Password?</a>
-
-        <button type="submit" class="btn-primary">Login</button>
+        <button type="submit" class="btn-primary" style="margin-top: 1.25rem;">Verify Code</button>
     </form>
 
-    <div class="auth-footer">
-        New to CocoScan? <a href="{{ url_for('signup') }}">Sign Up here</a>
+    <div style="margin-top: 1.5rem; text-align: center;">
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem;">Didn't receive the code?</p>
+        <form action="{{ resend_url }}" method="POST" style="display: inline;">
+            <button type="submit" id="resendBtn" class="btn-secondary" style="font-size: 0.85rem; padding: 8px 16px; background: transparent; border: 1px solid #cbd5e1; color: #164630; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                <i class="fa-solid fa-rotate-right" style="margin-right: 6px;"></i> Resend OTP Code
+            </button>
+        </form>
+    </div>
+
+    <div class="auth-footer" style="margin-top: 1.5rem;">
+        <a href="{{ url_for('login') }}" style="color: #64748b; font-size: 0.85rem;"><i class="fa-solid fa-arrow-left" style="margin-right: 4px;"></i> Back to Login</a>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    function togglePasswordVisibility(inputId, icon) {
-        const input = document.getElementById(inputId);
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.replace('fa-eye', 'fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.replace('fa-eye-slash', 'fa-eye');
-        }
-    }
-</script>
 {% endblock %}

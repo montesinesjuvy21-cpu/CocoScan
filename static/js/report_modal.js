@@ -491,7 +491,9 @@
             } else if (showIcon && withTooltip) {
                 html += `<div style="font-weight: 700; color: var(--text-muted); font-size: 0.85rem; margin-top: 0px; flex-shrink: 0; min-width: 14px; text-align: right; margin-right: 2px;">${index + 1}.</div>`;
             }
-            html += `<span style="font-size: 0.85rem; line-height: 1.3; color: var(--text-dark); padding: 0;">${escapeHtml(item)}</span>`;
+            const isExpertList = node && node.id === "report-expert-list";
+            const textColor = isExpertList ? "#64748b" : "var(--text-dark)";
+            html += `<span style="font-size: 0.85rem; line-height: 1.3; color: ${textColor}; padding: 0;">${escapeHtml(item)}</span>`;
             
             const tooltipText = withTooltip ? getRecommendationTooltip(item) : "";
             if (withTooltip) {

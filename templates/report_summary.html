@@ -297,21 +297,32 @@
         <div class="summary-grid" style="margin-bottom: 20px; grid-template-columns: 1fr;">
             <div class="stat-box" style="grid-column: 1 / -1;">
                 <h3 style="font-size: 1.05rem; margin-bottom: 12px; color: #1e293b;">Status Breakdown</h3>
+                <div style="display: flex; justify-content: center; gap: 24px; margin: 4px 0 12px 0; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: #1e293b;">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #f59e0b;"></span> Under Review
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: #1e293b;">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #164630;"></span> In Progress
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: #1e293b;">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #0f766e;"></span> Resolved
+                    </div>
+                </div>
                 <div style="position: relative; height: 200px;">
                     <canvas id="statusChart"></canvas>
                 </div>
                 <table style="margin-top:12px; width: auto; max-width: 480px;">
                     <tbody>
                         <tr>
-                            <td style="padding:6px 10px; color:#64748b;">Pending (Under Review)</td>
+                            <td style="padding:6px 10px; color:#64748b; display: flex; align-items: center; gap: 8px;"><span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #f59e0b;"></span> Pending (Under Review)</td>
                             <td style="padding:6px 10px; font-weight:700; text-align:right;">{{ data.pending_count }}</td>
                         </tr>
                         <tr>
-                            <td style="padding:6px 10px; color:#64748b;">In Progress</td>
+                            <td style="padding:6px 10px; color:#64748b; display: flex; align-items: center; gap: 8px;"><span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #164630;"></span> In Progress</td>
                             <td style="padding:6px 10px; font-weight:700; text-align:right;">{{ data.in_progress_count }}</td>
                         </tr>
                         <tr>
-                            <td style="padding:6px 10px; color:#64748b;">Resolved</td>
+                            <td style="padding:6px 10px; color:#64748b; display: flex; align-items: center; gap: 8px;"><span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #0f766e;"></span> Resolved</td>
                             <td style="padding:6px 10px; font-weight:700; text-align:right;">{{ data.resolved_count }}</td>
                         </tr>
                     </tbody>
@@ -425,7 +436,7 @@
                             datasets: [{
                                 label: 'Reports',
                                 data: [statusCounts.pending, statusCounts.in_progress, statusCounts.resolved],
-                                backgroundColor: ['#f59e0b', '#164630', '#10b981']
+                                backgroundColor: ['#f59e0b', '#164630', '#0f766e']
                             }]
                         },
                         options: {

@@ -133,6 +133,17 @@
             font-weight: 700;
         }
 
+        .menu-label-sub {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.4);
+            padding: 20px 10px 8px 10px;
+            font-weight: 700;
+            list-style: none;
+            cursor: default;
+        }
+
         .sidebar-menu-list {
             list-style: none;
             padding: 0 10px;
@@ -617,9 +628,14 @@
             </header>
 
             {% block main_content %}
-            <div>
+            <div style="margin-bottom: 18px;">
                 <p id="greeting-banner"
-                    style="font-size: 1rem; font-weight: 700; color: #164630; margin: 0; line-height: 1.2;"></p>
+                    style="font-size: 1.15rem; font-weight: 700; color: #164630; margin: 0; line-height: 1.2;"></p>
+                <p id="greeting-subtext"
+                    style="font-size: 0.85rem; color: #64748b; margin: 5px 0 0 0; display: none; align-items: center; gap: 6px; font-weight: 500;">
+                    <i class="fa-solid fa-clock-rotate-left" style="color: #0d9488;"></i>
+                    <span id="greeting-subtext-content"></span>
+                </p>
             </div>
 
             {% block metrics_grid %}
@@ -694,6 +710,44 @@
             if (banner) banner.textContent = welcome;
 
             initCharts();
+
+            try {
+                const userId = "{{ session.get('user_id', '') }}";
+                if (userId) {
+                    let lastLogin = localStorage.getItem("cocoscan_prev_login_" + userId);
+                    if (!lastLogin) {
+                        lastLogin = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                    }
+                    if (!sessionStorage.getItem("cocoscan_session_active_" + userId)) {
+                        const currentLogin = localStorage.getItem("cocoscan_current_login_" + userId) || new Date().toISOString();
+                        localStorage.setItem("cocoscan_prev_login_" + userId, currentLogin);
+                        lastLogin = currentLogin;
+                        localStorage.setItem("cocoscan_current_login_" + userId, new Date().toISOString());
+                        sessionStorage.setItem("cocoscan_session_active_" + userId, "true");
+                    }
+                    
+                    const res = await fetch("/api/reports/recent-activity?since=" + encodeURIComponent(lastLogin));
+                    if (res.ok) {
+                        const data = await res.json();
+                        const subtextEl = document.getElementById("greeting-subtext");
+                        const contentEl = document.getElementById("greeting-subtext-content");
+                        if (subtextEl && contentEl) {
+                            let msg = "No new pending or updated reports since your last login.";
+                            if (data.pending_count > 0 && data.updated_count > 0) {
+                                msg = `You have ${data.pending_count} pending report${data.pending_count > 1 ? 's' : ''} and ${data.updated_count} updated report${data.updated_count > 1 ? 's' : ''} since your last login.`;
+                            } else if (data.pending_count > 0) {
+                                msg = `You have ${data.pending_count} pending report${data.pending_count > 1 ? 's' : ''} since your last login.`;
+                            } else if (data.updated_count > 0) {
+                                msg = `You have ${data.updated_count} updated report${data.updated_count > 1 ? 's' : ''} since your last login.`;
+                            }
+                            contentEl.textContent = msg;
+                            subtextEl.style.display = "flex";
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load recent activity:", err);
+            }
         });
 
         function toggleSidebarMenu() {
@@ -877,6 +931,28 @@
                 });
             }
         }
+    </script>
+    <script>
+        // 15-Minute Client-Side Inactivity Monitor
+        (function() {
+            let timeoutTimer;
+            const TIMEOUT_DURATION = 15 * 60 * 1000; // 15 minutes in ms
+
+            function resetInactivityTimer() {
+                clearTimeout(timeoutTimer);
+                timeoutTimer = setTimeout(function() {
+                    window.location.href = '/logout';
+                }, TIMEOUT_DURATION);
+            }
+
+            // Listen for user activity
+            ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(function(evt) {
+                window.addEventListener(evt, resetInactivityTimer, { passive: true });
+            });
+
+            // Initialize timer on load
+            resetInactivityTimer();
+        })();
     </script>
     {% block extra_scripts %}{% endblock %}
 </body>

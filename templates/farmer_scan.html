@@ -1528,14 +1528,19 @@
         function handleSupportingImages(event) {
             const files = Array.from(event.target.files || []);
             if (!files.length) return;
-            const remainingSlots = 3 - supportingImages.length;
-            if (remainingSlots <= 0) {
-                alert('You can add up to 3 supporting photos only.');
+            const errorDiv = document.getElementById('supporting-photos-error');
+            if (errorDiv) errorDiv.style.display = 'none';
+
+            if (supportingImages.length + files.length > 3) {
+                if (errorDiv) {
+                    errorDiv.style.display = 'flex';
+                    errorDiv.querySelector('span').textContent = `Validation Error: Maximum of 3 supporting photos allowed. You currently have ${supportingImages.length} photo(s) and tried adding ${files.length} more.`;
+                }
+                alert('Validation Error: You can upload a maximum of 3 supporting photos only.');
                 event.target.value = '';
                 return;
             }
-            const limitedFiles = files.slice(0, remainingSlots);
-            supportingImages = supportingImages.concat(limitedFiles);
+            supportingImages = supportingImages.concat(files);
             renderSupportingPreviews();
             event.target.value = '';
         }
@@ -1564,6 +1569,8 @@
 
         function removeSupportingImage(index) {
             supportingImages.splice(index, 1);
+            const errorDiv = document.getElementById('supporting-photos-error');
+            if (errorDiv && supportingImages.length <= 3) errorDiv.style.display = 'none';
             renderSupportingPreviews();
         }
 
@@ -1595,6 +1602,8 @@
             document.getElementById('field-notes-capture').value = "";
             document.getElementById('supporting-photos-input').value = "";
             document.getElementById('supporting-preview-grid').innerHTML = '';
+            const errorDiv = document.getElementById('supporting-photos-error');
+            if (errorDiv) errorDiv.style.display = 'none';
             globalActiveImagePayload = "";
             globalActiveImageFile = null;
             globalPrimaryGPS = null;

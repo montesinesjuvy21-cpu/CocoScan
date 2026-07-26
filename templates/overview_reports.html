@@ -9,8 +9,9 @@
 <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link active"><i class="fa-solid fa-file-lines"></i>
         Reports</a></li>
 <li><a href="/admin/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
-<li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i> User Management</a>
-</li>
+<li class="menu-label-sub">Tools</li>
+<li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i> User Management</a></li>
+<li><a href="/admin/audit-log" class="menu-item-link"><i class="fa-solid fa-clipboard-list"></i> Audit Log</a></li>
 {% else %}
 <li><a href="/lgu/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
 <li><a href="/lgu/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
@@ -152,21 +153,51 @@
 
     /* --- PAGINATION SYSTEM --- */
     .pagination-container {
-        display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 24px;
         width: 100%;
     }
+
     .page-btn {
-        min-width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-light);
-        background-color: var(--bg-card); color: var(--text-dark); font-size: 0.85rem;
-        font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        min-width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        border: 1px solid var(--border-light);
+        background-color: var(--bg-card);
+        color: var(--text-dark);
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
         transition: all 0.2s ease;
+        padding: 8px 12px;
+        text-align: center;
+        text-decoration: none;
     }
+
     .page-btn:hover:not(:disabled) {
         background-color: #eef5f2;
         color: var(--brand-dark);
     }
-    .page-btn.active-page { background-color: #1a4d32; color: #ffffff; border-color: #1a4d32; }
-    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .page-btn.active-page {
+        background-color: #1a4d32;
+        color: #ffffff;
+        border-color: #1a4d32;
+    }
+
+    .page-btn:disabled,
+    .page-btn.disabled,
+    .page-btn[aria-disabled="true"] {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
 
     .pagination-meta {
         width: 100%;
@@ -189,9 +220,11 @@
             <button id="filter-all-btn" class="chip-filter-btn active-chip">All</button>
             <button id="filter-barangay-btn" class="chip-filter-btn">Barangay ▾</button>
             <button id="filter-status-btn" class="chip-filter-btn">Status ▾</button>
-            <button id="filter-calendar-btn" class="chip-filter-btn" title="Filter by date"><i
-                    class="fa-solid fa-calendar-days"></i></button>
-            <input type="date" id="report-date-filter" aria-label="Filter by date" style="display:none;">
+            <div style="position: relative; display: inline-flex;">
+                <button id="filter-calendar-btn" class="chip-filter-btn" title="Filter by date"><i
+                        class="fa-solid fa-calendar-days"></i></button>
+                <input type="date" id="report-date-filter" aria-label="Filter by date" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; background: transparent;">
+            </div>
         </div>
         <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
             <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
@@ -471,9 +504,16 @@
             
             const totalPagesCalculated = Math.ceil(totalMatchedCount / recordsPerPage);
             
+            if (paginationMeta) {
+                const startRec = totalMatchedCount > 0 ? Math.min(totalMatchedCount, (currentPage - 1) * recordsPerPage + 1) : 0;
+                const endRec = Math.min(currentPage * recordsPerPage, totalMatchedCount);
+                paginationMeta.textContent = totalMatchedCount > 0
+                    ? `Showing ${startRec}–${endRec} of ${totalMatchedCount}`
+                    : "";
+            }
+
             if (totalMatchedCount === 0 || totalPagesCalculated <= 1) {
                 paginationWrapper.style.display = "none";
-                paginationMeta.textContent = "";
                 return;
             }
             
@@ -504,11 +544,6 @@
             rightBtn.disabled = (currentPage === totalPagesCalculated);
             rightBtn.onclick = () => { if(currentPage < totalPagesCalculated) { currentPage++; renderReportsTable(); }};
             paginationWrapper.appendChild(rightBtn);
-            
-            // Update summary text
-            const startRec = (currentPage - 1) * recordsPerPage + 1;
-            const endRec = Math.min(currentPage * recordsPerPage, totalMatchedCount);
-            paginationMeta.textContent = `Showing ${startRec}–${endRec} of ${totalMatchedCount} reports`;
         }
 
         // Reset pagination when filters change

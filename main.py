@@ -1,4 +1,5 @@
 import os
+import time
 import traceback
 import logging
 import json
@@ -24,9 +25,11 @@ from app.validators import (
     validate_duplicate_email,
     validate_login_credentials,
     validate_login_form,
+    validate_password_strength,
     ValidationError
 )
 from app.password_utils import hash_password, verify_password
+from app import security_service
 from app.report_storage import (
     build_report_payload,
     format_report_date,
@@ -104,6 +107,22 @@ supabase: Client = create_client(url, key)
 
 def normalize_role(value) -> str:
     return str(value or "").strip().lower()
+
+
+@app.before_request
+def check_session_timeout():
+    if 'user_id' in session and request.endpoint:
+        if not request.endpoint.startswith('static') and not request.endpoint.startswith('api_') and request.endpoint not in ['login', 'signup', 'forgot_password', 'verify_forgot_otp', 'reset_password', 'verify_2fa', 'resend_2fa', 'logout']:
+            now = time.time()
+            last_active = session.get('last_active', now)
+            if now - last_active > 900:  # 15 minutes = 900 seconds
+                user_email = session.get('user_email', '')
+                user_role = session.get('user_role', '')
+                session.clear()
+                security_service.log_audit(user_email, user_role, "SESSION_TIMEOUT", "Session expired due to 15 minutes of inactivity", request.remote_addr)
+                flash("Your session has expired due to 15 minutes of inactivity. Please log in again.", "warning")
+                return redirect(url_for('login'))
+            session['last_active'] = now
 
 
 def _resolve_app_user_id(session_data=None, *, lookup_user_id=None, lookup_email=None):
@@ -527,47 +546,53 @@ def send_status_email(user_email, user_name, status):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{subject}</title>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1f2937; -webkit-font-smoothing: antialiased;">
-        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f3f4f6; padding: 40px 20px;">
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; padding: 48px 20px;">
             <tr>
                 <td align="center">
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);">
+                        <!-- Accent Top Bar -->
+                        <tr>
+                            <td style="height: 6px; background: {status_color};"></td>
+                        </tr>
                         <!-- Header Section -->
                         <tr>
-                            <td align="center" style="padding: 48px 24px 32px 24px; background-color: #ffffff; border-bottom: 1px solid #e5e7eb;">
-                                <div style="margin-bottom: 16px;">
-                                    {cocoscan_logo_svg}
-                                </div>
-                                <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #111827; letter-spacing: -0.5px;">CocoScan</h1>
-                                <div style="display: inline-block; padding: 4px 12px; background-color: {status_color}15; color: {status_color}; font-size: 12px; font-weight: 700; letter-spacing: 1px; border-radius: 9999px;">
-                                    {status_title}
-                                </div>
+                            <td align="center" style="padding: 36px 36px 24px 36px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+                                <table border="0" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td style="padding-right: 12px; vertical-align: middle;">
+                                            {cocoscan_logo_svg}
+                                        </td>
+                                        <td style="vertical-align: middle; text-align: left;">
+                                            <span style="font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; display: block;">CocoScan</span>
+                                            <span style="font-size: 11px; font-weight: 700; color: {status_color}; letter-spacing: 1.5px; text-transform: uppercase;">{status_title}</span>
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
                         </tr>
                         
                         <!-- Body Section -->
                         <tr>
-                            <td style="padding: 40px 32px; background-color: #ffffff;">
-                                <h2 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 600; color: #111827;">Hello {user_name},</h2>
-                                <div style="font-size: 16px; line-height: 1.6; color: #4b5563;">
+                            <td style="padding: 40px 36px; background-color: #ffffff;">
+                                <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px;">Hello {user_name},</h2>
+                                <div style="font-size: 15px; line-height: 1.6; color: #475569;">
                                     {message_body}
                                 </div>
                                 
-                                <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
-                                    <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.6;">
+                                <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
+                                    <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.5;">
                                         Best regards,<br>
-                                        <strong style="color: #111827;">The CocoScan Team</strong>
+                                        <strong style="color: #0f172a; font-weight: 600;">The CocoScan Administration Team</strong>
                                     </p>
                                 </div>
                             </td>
                         </tr>
-                    </table>
-                    
-                    <!-- Footer Section -->
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
+                        
+                        <!-- Footer Section -->
                         <tr>
-                            <td align="center" style="padding: 24px; font-size: 12px; color: #9ca3af; line-height: 1.5;">
-                                <p style="margin: 0 0 8px 0;">This transmission is encrypted and delivered from the CocoScan system.</p>
+                            <td align="center" style="padding: 24px 36px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8; line-height: 1.6;">
+                                <p style="margin: 0 0 6px 0;">This is an automated notification from the CocoScan system.</p>
                                 <p style="margin: 0;">&copy; 2026 CocoScan • Coconut Disease Detection Systems</p>
                             </td>
                         </tr>
@@ -628,13 +653,20 @@ def splash():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Login page route: Authenticates users against Supabase credentials"""
+    """Login page route: Authenticates users against Supabase credentials with lockout & 2FA protection"""
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
 
         if not email or not password:
             flash("Please enter both email and password.", "error")
+            return render_template('login.html')
+
+        # Check account lockout before verifying credentials
+        is_locked, rem_sec, lock_reason = security_service.check_account_lockout(email)
+        if is_locked:
+            rem_mins = max(1, (rem_sec + 59) // 60)
+            flash(f"{lock_reason} Please try again in ~{rem_mins} minute(s).", "error")
             return render_template('login.html')
 
         try:
@@ -651,13 +683,21 @@ def login():
             user_query = supabase.table("users").select("*").eq("email", email).execute()
             
             if not user_query.data:
-                flash("Account not found. Please verify your email or sign up.", "error")
+                new_cnt, locked_until, lock_reason = security_service.record_login_failure(email, request.remote_addr)
+                if locked_until:
+                    flash(f"{lock_reason}", "error")
+                else:
+                    flash(f"Account not found or invalid credentials. ({new_cnt}/3 failed attempts)", "error")
                 return render_template('login.html')
                 
             user_data = user_query.data[0]
             
             if not verify_password(password, user_data.get('password_hash', '')):
-                flash("Invalid credentials. Please verify your password and try again.", "error")
+                new_cnt, locked_until, lock_reason = security_service.record_login_failure(email, request.remote_addr)
+                if locked_until:
+                    flash(f"{lock_reason}", "error")
+                else:
+                    flash(f"Invalid credentials. ({new_cnt}/3 failed attempts)", "error")
                 return render_template('login.html')
                 
             user_status = user_data.get('status', 'Under Review')
@@ -669,12 +709,33 @@ def login():
                 flash("Your application for this account has been declined. Please contact support.", "error")
                 return render_template('login.html')
 
+            # Reset login failures on successful credential check
+            security_service.reset_login_failures(email)
+            user_role = normalize_role(user_data.get('role'))
+            user_name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
+
+            # 7-day 2FA check for lgu, admin, agri_expert
+            if user_role in ['lgu', 'admin', 'agri_expert']:
+                if security_service.requires_2fa(email, days=7):
+                    session.clear()
+                    session['pending_2fa'] = {
+                        "user_id": user_data['id'],
+                        "email": email,
+                        "role": user_role,
+                        "name": user_name
+                    }
+                    security_service.generate_and_send_otp(email, purpose="2FA Verification")
+                    flash(f"A 6-digit verification code has been sent to {email}.", "info")
+                    return redirect(url_for('verify_2fa'))
+
             session.clear()
             session['user_id'] = user_data['id']
             session['user_email'] = email
-            session['user_role'] = normalize_role(user_data.get('role'))
-            session['user_name'] = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
+            session['user_role'] = user_role
+            session['user_name'] = user_name
+            session['last_active'] = time.time()
             
+            security_service.log_audit(email, user_role, "LOGIN", "User successfully logged in", request.remote_addr)
             logger.info(f"User {email} successfully logged in with role: {session['user_role']}")
             
             if session['user_role'] == 'admin':
@@ -791,6 +852,64 @@ def dashboard():
         return redirect(url_for('admin_dashboard'))
         
     return render_template('404.html')
+
+@app.route('/api/reports/recent-activity', methods=['GET'])
+def get_recent_activity():
+    """Returns pending and updated reports since a given timestamp across all users/roles"""
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    since_str = request.args.get('since')
+    if not since_str:
+        return jsonify({"pending_count": 0, "updated_count": 0, "total": 0}), 200
+        
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    try:
+        query = supabase.table("reports").select("id, status, created_at, updated_at, user_id")
+        if user_role == 'farmer':
+            query = query.eq("user_id", user_id)
+            
+        reports_res = query.execute()
+        reports_data = getattr(reports_res, 'data', []) or []
+        
+        from datetime import datetime, timezone
+        def parse_iso(ts):
+            if not ts:
+                return datetime.min.replace(tzinfo=timezone.utc)
+            try:
+                clean_ts = str(ts).replace('Z', '+00:00')
+                dt = datetime.fromisoformat(clean_ts)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt
+            except Exception:
+                return datetime.min.replace(tzinfo=timezone.utc)
+                
+        since_dt = parse_iso(since_str)
+        pending_count = 0
+        updated_count = 0
+        
+        for r in reports_data:
+            c_dt = parse_iso(r.get("created_at"))
+            u_dt = parse_iso(r.get("updated_at") or r.get("created_at"))
+            status = str(r.get("status") or "")
+            
+            if c_dt >= since_dt or u_dt >= since_dt:
+                if is_pending_report_status(status):
+                    pending_count += 1
+                else:
+                    updated_count += 1
+                    
+        return jsonify({
+            "pending_count": pending_count,
+            "updated_count": updated_count,
+            "total": pending_count + updated_count
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching recent activity: {e}")
+        return jsonify({"pending_count": 0, "updated_count": 0, "total": 0}), 200
 
 def calculate_environmental_risk(temp, humidity, rainfall):
     """Rule-based engine returning high-contrast solid color spaces for dark container themes"""
@@ -1671,11 +1790,27 @@ def api_analytics():
 
         for r in reports:
             status = str(r.get('status') or '').strip().lower()
-            mapped_status = 'in_progress'
-            if is_pending_report_status(status):
-                mapped_status = 'pending'
-            elif is_resolved_report_status(status):
+            if is_resolved_report_status(status):
                 mapped_status = 'resolved'
+            else:
+                expert_recs = _normalize_string_list(r.get('expert_recommendations'))
+                has_assessment = (
+                    bool(expert_recs)
+                    or bool(r.get('reviewed_by_id'))
+                    or status in [
+                        'assessment_issued',
+                        'assessment issued',
+                        'visit_scheduled',
+                        'visit scheduled',
+                        'visit_completed',
+                        'visit completed',
+                        'on site visit requested',
+                        'visit requested',
+                        'waiting for agriculturist confirmation',
+                        'waiting for schedule',
+                    ]
+                )
+                mapped_status = 'in_progress' if has_assessment else 'pending'
 
             status_totals[mapped_status] += 1
 
@@ -2151,6 +2286,8 @@ def render_map_view(required_role):
             .execute()
             
         raw_reports = reports_response.data or []
+        supporting_map = _fetch_report_supporting_images([item.get("id") for item in raw_reports])
+        raw_reports = _enrich_reports_with_reviewer_info(raw_reports)
         map_reports_list = []
         
         # Aggregate tracking data parameters
@@ -2170,6 +2307,8 @@ def render_map_view(required_role):
             record["longitude"] = lng
             record["pest_type"] = item.get("pest_type") or "Unknown Pest"
             record["status"] = normalize_report_status(item.get("status"), default="Under Review")
+            record["supporting_images"] = supporting_map.get(str(item.get("id")), [])
+            record["additional_images"] = supporting_map.get(str(item.get("id")), [])
             record["cases_count"] = 1 # Serves as baseline cluster weight variable
             map_reports_list.append(record)
 
@@ -3108,6 +3247,7 @@ def admin_user_management():
 
     return render_template(
         'admin_user_management.html', 
+        user_name=session.get('user_name', 'Administrator'),
         users=paginated_users, 
         current_status=status_filter, 
         current_role=role_filter,
@@ -3245,7 +3385,7 @@ def view_report_readonly(report_id):
             flash("Report not found.", "error")
             return redirect(url_for('overview_reports'))
             
-        report = report_response.data[0]
+        report = _enrich_reports_with_reviewer_info(report_response.data)[0]
         
         # Get chats
         chats_response = supabase.table('visit_chats').select('*').eq('report_id', report_id).order('created_at', desc=False).execute()
@@ -3287,6 +3427,218 @@ def view_report_readonly(report_id):
         logger.error(f"Error serving view_report_readonly: {str(e)}")
         flash("Error fetching report details.", "error")
         return redirect(url_for('overview_reports'))
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Forgot password route: Step 1 - request OTP to email"""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        if not email:
+            flash("Please enter your registered email address.", "error")
+            return render_template('forgot_password.html')
+            
+        can_req, attempts_left = security_service.can_request_forgot_password(email)
+        if not can_req:
+            flash("Maximum forgot password attempts (3 per day) reached. Please try again tomorrow or contact support.", "error")
+            return render_template('forgot_password.html', attempts_left=0)
+            
+        try:
+            user_query = supabase.table("users").select("*").eq("email", email).execute()
+            if not user_query.data:
+                security_service.record_forgot_password_attempt(email)
+                flash("If an account exists with that email, a verification code has been sent.", "info")
+                session['reset_email_pending'] = email
+                return redirect(url_for('verify_forgot_otp'))
+                
+            security_service.record_forgot_password_attempt(email)
+            security_service.generate_and_send_otp(email, purpose="Password Reset")
+            session['reset_email_pending'] = email
+            flash("A 6-digit verification code has been sent to your email.", "info")
+            return redirect(url_for('verify_forgot_otp'))
+        except Exception as e:
+            logger.error(f"Error in forgot_password: {e}")
+            flash("An unexpected error occurred. Please try again.", "error")
+            return render_template('forgot_password.html')
+            
+    return render_template('forgot_password.html')
+
+
+@app.route('/verify-forgot-otp', methods=['GET', 'POST'])
+def verify_forgot_otp():
+    """Forgot password route: Step 2 - verify 6-digit OTP"""
+    email = session.get('reset_email_pending')
+    if not email:
+        flash("Please initiate the password reset process first.", "error")
+        return redirect(url_for('forgot_password'))
+        
+    if request.method == 'POST':
+        code = request.form.get('otp_code', '').strip()
+        success, msg = security_service.verify_otp(email, code, purpose="Password Reset")
+        if success:
+            session['reset_email_verified'] = email
+            flash("Email verified! Please create your new strong password below.", "success")
+            return redirect(url_for('reset_password'))
+        else:
+            flash(msg, "error")
+            
+    return render_template('verify_otp.html', 
+                           title="Verify Reset Code",
+                           email=email,
+                           action_url=url_for('verify_forgot_otp'),
+                           resend_url=url_for('resend_forgot_otp'))
+
+
+@app.route('/resend-forgot-otp', methods=['POST'])
+def resend_forgot_otp():
+    """Resends forgot password OTP if within limit"""
+    email = session.get('reset_email_pending')
+    if not email:
+        return redirect(url_for('forgot_password'))
+        
+    can_req, attempts_left = security_service.can_request_forgot_password(email)
+    if not can_req:
+        flash("Maximum forgot password attempts (3) reached. Please try again tomorrow.", "error")
+        return redirect(url_for('verify_forgot_otp'))
+        
+    security_service.record_forgot_password_attempt(email)
+    security_service.generate_and_send_otp(email, purpose="Password Reset")
+    flash("A new verification code has been sent to your email.", "info")
+    return redirect(url_for('verify_forgot_otp'))
+
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    """Forgot password route: Step 3 - update password hash in Supabase"""
+    email = session.get('reset_email_verified')
+    if not email:
+        flash("Please verify your email code first.", "error")
+        return redirect(url_for('forgot_password'))
+        
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        if password != confirm_password:
+            flash("New passwords do not match.", "error")
+            return render_template('reset_password.html', email=email)
+            
+        try:
+            validate_password_strength(password)
+        except ValidationError as val_err:
+            flash(str(val_err), "error")
+            return render_template('reset_password.html', email=email)
+            
+        try:
+            new_hash = hash_password(password)
+            supabase.table("users").update({"password_hash": new_hash}).eq("email", email).execute()
+            
+            security_service.reset_forgot_password_attempts(email)
+            security_service.log_audit(email, "User", "PASSWORD_RESET", "Password successfully reset via OTP", request.remote_addr)
+            
+            session.pop('reset_email_pending', None)
+            session.pop('reset_email_verified', None)
+            
+            flash("Your password has been reset successfully! You may now log in.", "success")
+            return redirect(url_for('login'))
+        except Exception as e:
+            logger.error(f"Error resetting password in Supabase: {e}")
+            flash("An error occurred while updating your password. Please try again.", "error")
+            
+    return render_template('reset_password.html', email=email)
+
+
+@app.route('/verify-2fa', methods=['GET', 'POST'])
+def verify_2fa():
+    """2FA Verification Route for LGU, Admin, Agri Expert"""
+    pending = session.get('pending_2fa')
+    if not pending:
+        flash("No pending 2FA verification found. Please log in.", "error")
+        return redirect(url_for('login'))
+        
+    email = pending['email']
+    role = pending['role']
+    name = pending['name']
+    user_id = pending['user_id']
+    
+    if request.method == 'POST':
+        code = request.form.get('otp_code', '').strip()
+        success, msg = security_service.verify_otp(email, code, purpose="2FA Verification")
+        if success:
+            security_service.record_2fa_verification(email)
+            
+            session.pop('pending_2fa', None)
+            session['user_id'] = user_id
+            session['user_email'] = email
+            session['user_role'] = role
+            session['user_name'] = name
+            session['last_active'] = time.time()
+            
+            security_service.log_audit(email, role, "2FA_VERIFIED", "User verified 2FA code successfully", request.remote_addr)
+            security_service.log_audit(email, role, "LOGIN", "User successfully logged in", request.remote_addr)
+            
+            flash("Two-factor authentication verified!", "success")
+            if role == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            else:
+                return redirect(url_for('dashboard'))
+        else:
+            flash(msg, "error")
+            
+    return render_template('verify_otp.html',
+                           title="Two-Factor Authentication (2FA)",
+                           email=email,
+                           action_url=url_for('verify_2fa'),
+                           resend_url=url_for('resend_2fa'))
+
+
+@app.route('/resend-2fa', methods=['POST'])
+def resend_2fa():
+    """Resends 2FA code to pending user"""
+    pending = session.get('pending_2fa')
+    if not pending:
+        return redirect(url_for('login'))
+        
+    email = pending['email']
+    security_service.generate_and_send_otp(email, purpose="2FA Verification")
+    flash("A new 2FA verification code has been sent to your email.", "info")
+    return redirect(url_for('verify_2fa'))
+
+
+@app.route('/admin/audit-log')
+def admin_audit_log():
+    """Admin Audit Log page with standardized reporting pagination and filtering"""
+    if 'user_id' not in session or session.get('user_role') != 'admin':
+        flash("Please log in as an administrator to access this page.", "error")
+        return redirect(url_for('login'))
+        
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str).strip()
+    action_filter = request.args.get('action_filter', '', type=str).strip()
+    per_page = 10
+    
+    data = security_service.get_audit_logs(page=page, per_page=per_page, search=search, action_filter=action_filter)
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render_template('admin_audit_log.html',
+                               user_name=session.get('user_name', 'Administrator'),
+                               logs=data['logs'],
+                               total_records=data['total'],
+                               current_page=data['page'],
+                               per_page=data['per_page'],
+                               total_pages=data['total_pages'],
+                               search=search,
+                               current_action=action_filter)
+                               
+    return render_template('admin_audit_log.html',
+                           user_name=session.get('user_name', 'Administrator'),
+                           logs=data['logs'],
+                           total_records=data['total'],
+                           current_page=data['page'],
+                           per_page=data['per_page'],
+                           total_pages=data['total_pages'],
+                           search=search,
+                           current_action=action_filter)
+
 
 @app.route('/logout')
 def logout():

@@ -9,8 +9,9 @@
 <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i class="fa-solid fa-file-lines"></i>
         Reports</a></li>
 <li><a href="/admin/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
-<li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i> User Management</a>
-</li>
+<li class="menu-label-sub">Tools</li>
+<li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i> User Management</a></li>
+<li><a href="/admin/audit-log" class="menu-item-link"><i class="fa-solid fa-clipboard-list"></i> Audit Log</a></li>
 {% elif user_role == 'agri_expert' %}
 <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
 <li><a href="/agriculturist/analytics" class="menu-item-link active"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
@@ -57,10 +58,11 @@
     }
 
     .filters-bar input {
-        padding: 8px 12px;
+        padding: 8px 14px;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
+        border-radius: 20px;
         font-family: inherit;
+        font-size: 0.85rem;
         background: #ffffff;
         color: #0f172a;
         transition: all 0.2s ease;
@@ -77,52 +79,104 @@
         box-shadow: 0 0 0 3px rgba(26, 77, 50, 0.1);
     }
 
-    .filters-bar select {
-        padding: 8px 12px;
+    .chip-filter-btn {
+        background-color: #ffffff;
+        color: #64748b;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-family: inherit;
-        background: #ffffff;
-        color: #0f172a;
-        transition: all 0.2s ease;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
         cursor: pointer;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231a4d32' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 8px center;
-        padding-right: 28px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
     }
 
-    .filters-bar select:hover {
+    .chip-filter-btn:hover {
         border-color: #1a4d32;
         color: #1a4d32;
     }
 
-    .filters-bar select:focus {
-        outline: none;
+    .chip-filter-btn.active-chip {
+        background-color: #1a4d32;
+        color: #ffffff;
         border-color: #1a4d32;
-        box-shadow: 0 0 0 3px rgba(26, 77, 50, 0.1);
+        box-shadow: 0 2px 6px rgba(26, 77, 50, 0.2);
     }
 
-    /* Override default month picker blue color */
-    .filters-bar input[type="month"]::-webkit-calendar-picker-indicator {
-        filter: invert(0.7);
-        cursor: pointer;
+    .month-chip-container {
+        position: relative;
+        display: inline-flex;
     }
 
-    .filters-bar button {
-        padding: 8px 16px;
-        background: #164630;
-        color: white;
-        border: none;
+    .month-chip-container:hover .chip-filter-btn {
+        border-color: #1a4d32;
+        color: #1a4d32;
+    }
+
+    .filter-dropdown-panel {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin-top: 8px;
+        background: white;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: background 0.2s;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+        min-width: 180px;
+        max-height: 240px;
+        overflow: auto;
+        z-index: 100;
+        padding: 8px;
     }
 
-    .filters-bar button:hover {
-        background: #123625;
+    .dropdown-item {
+        display: block;
+        width: 100%;
+        padding: 8px 12px;
+        text-align: left;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: #1e293b;
+        border-radius: 6px;
+        transition: background-color 0.15s;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .dropdown-item.selected {
+        background-color: #ecfdf5;
+        color: #065f46;
+        font-weight: 600;
+    }
+
+    .btn-clear-filters {
+        background-color: #eb5757;
+        color: #ffffff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .btn-clear-filters:hover {
+        background-color: #d64040;
     }
 
     .charts-grid {
@@ -160,27 +214,34 @@
 
 {% block main_content %}
 <div class="analytics-container">
-    <div class="filters-bar">
-        <div style="font-weight: 600; color: #1e293b;"> Date Range:</div>
-        <div>
-            <label for="monthFilter" style="font-size: 0.85rem; color: #64748b; margin-right: 8px;">Month</label>
-            <input type="month" id="monthFilter">
+    <div class="filters-bar" style="position: relative; z-index: 50; flex-wrap: wrap;">
+        <div style="font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-filter" style="color: #1a4d32;"></i> Date Range:
         </div>
-        <div>
-            <label for="weekFilter" style="font-size: 0.85rem; color: #64748b; margin-right: 8px;">Week</label>
-            <select id="weekFilter"
-                style="padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; background: white;">
-                <option value="">All Weeks</option>
-                <option value="1">Week 1 (Days 1-7)</option>
-                <option value="2">Week 2 (Days 8-14)</option>
-                <option value="3">Week 3 (Days 15-21)</option>
-                <option value="4">Week 4 (Days 22+)</option>
-            </select>
+        <div class="month-chip-container" style="position: relative; display: inline-flex;">
+            <button id="filter-month-btn" type="button" class="chip-filter-btn" style="pointer-events: none;">
+                <i class="fa-solid fa-calendar-days" style="color: #1a4d32;"></i>
+                <span id="month-label">Month</span> ▾
+            </button>
+            <input type="month" id="monthFilter" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; background: transparent;">
         </div>
-        <button id="applyFiltersBtn">Apply Filters</button>
+        <div style="position: relative;">
+            <input type="hidden" id="weekFilter" value="">
+            <button id="filter-week-btn" type="button" class="chip-filter-btn">All Weeks ▾</button>
+            <div id="week-dropdown-panel" class="filter-dropdown-panel">
+                <button type="button" class="dropdown-item selected" data-value="">All Weeks</button>
+                <button type="button" class="dropdown-item" data-value="1">Week 1 (Days 1-7)</button>
+                <button type="button" class="dropdown-item" data-value="2">Week 2 (Days 8-14)</button>
+                <button type="button" class="dropdown-item" data-value="3">Week 3 (Days 15-21)</button>
+                <button type="button" class="dropdown-item" data-value="4">Week 4 (Days 22+)</button>
+            </div>
+        </div>
+        <button id="clear-filters-btn" type="button" class="btn-clear-filters" style="display: none;">
+            <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+        </button>
         <div style="margin-left: auto;">
             <a href="#" id="generateReportBtn"
-                style="text-decoration: none; padding: 8px 16px; background: #e1b12c; color: #fff; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s;">
+                style="text-decoration: none; padding: 8px 16px; background: #e1b12c; color: #fff; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s; font-size: 0.85rem;">
                 <i class="fa-solid fa-print"></i> Generate Report
             </a>
         </div>
@@ -188,6 +249,17 @@
 
     <div class="chart-card full-width">
         <h3 class="chart-title">Status Breakdown</h3>
+        <div style="display: flex; justify-content: center; gap: 24px; margin: 8px 0 16px 0; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; color: #1e293b;">
+                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background-color: #f59e0b;"></span> Under Review
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; color: #1e293b;">
+                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background-color: #164630;"></span> In Progress
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; color: #1e293b;">
+                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background-color: #0f766e;"></span> Resolved
+            </div>
+        </div>
         <div style="position: relative; height: 320px;">
             <canvas id="statusBarChart"></canvas>
         </div>
@@ -208,11 +280,94 @@
         const monthFilter = document.getElementById('monthFilter');
         const weekFilter = document.getElementById('weekFilter');
         const generateReportBtn = document.getElementById('generateReportBtn');
+        const weekBtn = document.getElementById('filter-week-btn');
+        const weekPanel = document.getElementById('week-dropdown-panel');
+        const clearBtn = document.getElementById('clear-filters-btn');
 
         const today = new Date();
-        monthFilter.value = today.toISOString().slice(0, 7);
+        const defaultMonth = today.toISOString().slice(0, 7);
+        monthFilter.value = defaultMonth;
 
-        document.getElementById('applyFiltersBtn').addEventListener('click', loadData);
+        function formatMonthDisplay(val) {
+            if (!val) return "Select Month";
+            try {
+                const [y, m] = val.split('-');
+                const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+                return d.toLocaleString('default', { month: 'long', year: 'numeric' });
+            } catch (e) {
+                return val;
+            }
+        }
+
+        function updateMonthChip() {
+            const label = document.getElementById('month-label');
+            const btn = document.getElementById('filter-month-btn');
+            if (label) label.textContent = formatMonthDisplay(monthFilter.value);
+            if (btn) {
+                if (monthFilter.value && monthFilter.value !== defaultMonth) {
+                    btn.classList.add('active-chip');
+                } else {
+                    btn.classList.remove('active-chip');
+                }
+            }
+        }
+        updateMonthChip();
+
+        weekBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = weekPanel.style.display === 'block';
+            document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.style.display = 'none');
+            weekPanel.style.display = isVisible ? 'none' : 'block';
+        });
+
+        weekPanel.addEventListener('click', (e) => {
+            const item = e.target.closest('.dropdown-item');
+            if (!item) return;
+            const val = item.getAttribute('data-value');
+            const text = item.textContent.trim();
+            weekFilter.value = val;
+            weekBtn.innerHTML = `${val ? text.split(' ')[0] + ' ' + text.split(' ')[1] : 'All Weeks'} ▾`;
+            if (val) {
+                weekBtn.classList.add('active-chip');
+            } else {
+                weekBtn.classList.remove('active-chip');
+            }
+            weekPanel.querySelectorAll('.dropdown-item').forEach(i => i.classList.toggle('selected', i.getAttribute('data-value') === val));
+            weekPanel.style.display = 'none';
+            updateClearBtn();
+            loadData();
+        });
+
+        monthFilter.addEventListener('change', () => {
+            updateMonthChip();
+            updateClearBtn();
+            loadData();
+        });
+
+        function updateClearBtn() {
+            if (weekFilter.value || monthFilter.value !== defaultMonth) {
+                clearBtn.style.display = 'inline-flex';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+        }
+
+        clearBtn.addEventListener('click', () => {
+            monthFilter.value = defaultMonth;
+            updateMonthChip();
+            weekFilter.value = "";
+            weekBtn.innerHTML = "All Weeks ▾";
+            weekBtn.classList.remove('active-chip');
+            weekPanel.querySelectorAll('.dropdown-item').forEach(i => i.classList.toggle('selected', i.getAttribute('data-value') === ""));
+            clearBtn.style.display = 'none';
+            loadData();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#filter-week-btn') && !e.target.closest('#week-dropdown-panel')) {
+                weekPanel.style.display = 'none';
+            }
+        });
 
         generateReportBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -286,6 +441,9 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
                     scales: {
                         y: { beginAtZero: true, ticks: { stepSize: 1 } }
                     }

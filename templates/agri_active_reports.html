@@ -448,8 +448,10 @@
                         <button id="filter-all-btn" class="chip-filter-btn">All</button>
                         <button id="filter-barangay-btn" class="chip-filter-btn">Barangay ▾</button>
                         <button id="filter-status-btn" class="chip-filter-btn">Status ▾</button>
-                        <button id="filter-calendar-btn" class="chip-filter-btn" title="Filter by date"><i class="fa-solid fa-calendar-days"></i></button>
-                        <input type="date" id="report-date-filter" aria-label="Filter by date" style="display:none;">
+                        <div style="position: relative; display: inline-flex;">
+                            <button id="filter-calendar-btn" class="chip-filter-btn" title="Filter by date"><i class="fa-solid fa-calendar-days"></i></button>
+                            <input type="date" id="report-date-filter" aria-label="Filter by date" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; background: transparent;">
+                        </div>
                     </div>
                     <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
                         <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
