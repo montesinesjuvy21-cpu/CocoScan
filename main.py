@@ -3485,7 +3485,8 @@ def verify_forgot_otp():
                            resend_url=url_for('resend_forgot_otp'),
                            otp_expires_at=session.get('otp_expires_at'),
                            otp_resend_available_at=session.get('otp_resend_available_at'),
-                           otp_resend_cooldown_seconds=security_service.OTP_RESEND_COOLDOWN_SECONDS)
+                           otp_resend_cooldown_seconds=security_service.OTP_RESEND_COOLDOWN_SECONDS,
+                           server_time=int(time.time()))
 
 
 @app.route('/resend-forgot-otp', methods=['POST'])

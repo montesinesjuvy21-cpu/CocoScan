@@ -72,6 +72,8 @@
     <script>
         (function () {
             const expiresAt = Number('{{ otp_expires_at or 0 }}');
+            const serverTimeAtRender = Number('{{ server_time or 0 }}');
+            const clientLoadTs = Math.floor(Date.now() / 1000);
             const resendAt = Number('{{ otp_resend_available_at or 0 }}');
             const statusEl = document.getElementById('otpStatus');
             const resendBtn = document.getElementById('resendBtn');
@@ -84,16 +86,17 @@
                     return;
                 }
 
-                const now = Math.floor(Date.now() / 1000);
+                // Estimate server time to avoid client/server clock skew
+                const estimatedServerNow = serverTimeAtRender ? serverTimeAtRender + (Math.floor(Date.now() / 1000) - clientLoadTs) : Math.floor(Date.now() / 1000);
 
-                if (expiresAt > now) {
-                    const remaining = Math.floor(expiresAt - now);
+                if (expiresAt > estimatedServerNow) {
+                    const remaining = Math.floor(expiresAt - estimatedServerNow);
                     statusEl.textContent = `Code expires in ${remaining}s`;
                 } else {
                     statusEl.textContent = 'This code has expired. Please request a new one.';
                 }
 
-                if (resendAt > now) {
+                if (resendAt > estimatedServerNow) {
                     resendBtn.disabled = true;
                     resendBtn.style.opacity = '0.65';
                     resendBtn.style.cursor = 'not-allowed';

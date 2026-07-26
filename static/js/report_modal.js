@@ -65,6 +65,18 @@
                     return;
                 }
 
+                // If the user is actively typing or has text in the input, skip this poll
+                const feedbackContainer = document.getElementById("report-farmer-feedback");
+                const inputEl = feedbackContainer ? feedbackContainer.querySelector('#visit-discussion-input') : null;
+                if (inputEl) {
+                    const isFocused = (document.activeElement === inputEl);
+                    const hasText = inputEl.value && String(inputEl.value).trim().length > 0;
+                    if (isFocused || hasText) {
+                        // Skip update to avoid clearing user's in-progress message
+                        return;
+                    }
+                }
+
                 await loadVisitDiscussion(report);
                 renderVisitDiscussionCard(currentReportModalMode, report);
             } catch (error) {
@@ -2350,6 +2362,126 @@
     window.resolveReportImageUrl = resolveReportImageUrl;
     window.setReportModalSubmissionState = setReportModalSubmissionState;
     window.abortReportSubmission = abortActiveReportModalSubmission;
+
+    // Print a clean, minimal representation of the current report modal
+    window.printReportModal = function () {
+        try {
+            // Collect key elements from the modal instead of cloning the whole DOM
+            const title = (document.getElementById('report-pest-title')?.textContent || '').trim();
+            const confidence = (document.getElementById('report-confidence')?.textContent || '').trim();
+            const imgEl = document.getElementById('report-primary-image');
+            const imageSrc = imgEl?.src || '';
+            const farmer = (document.getElementById('report-farmer-name')?.textContent || '').trim();
+            const location = (document.getElementById('report-location-text')?.textContent || '').trim();
+            const timestamp = (document.getElementById('report-timestamp-text')?.textContent || '').trim();
+            const notes = (document.getElementById('report-notes-display')?.textContent || '').trim();
+
+            // Collect recommendations lists text
+            const initialList = Array.from(document.querySelectorAll('#report-initial-list li')).map(li => li.textContent.trim()).filter(Boolean);
+            const expertList = Array.from(document.querySelectorAll('#report-expert-list li')).map(li => li.textContent.trim()).filter(Boolean);
+
+            // Collect additional images (src attributes)
+            const additionalImgs = Array.from(document.querySelectorAll('#report-additional-images-grid img')).map(i => i.src).filter(Boolean);
+
+            const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report: ${escapeHtml(title)}</title>
+                <style>
+                    :root{--muted:#64748b;--card-border:#e6e8eb;--accent:#164630}
+                    body{font-family:Inter, Arial, Helvetica, sans-serif; color:#0f172a; margin:18px; background:#fff}
+                    .report-wrap{max-width:900px; margin:0 auto}
+                    .report-card{border:1px solid var(--card-border); border-radius:10px; padding:18px; background:#ffffff}
+                    .report-header{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; border-bottom:1px solid #f1f5f9; padding-bottom:12px}
+                    .report-title{font-size:22px; font-weight:700; margin:0}
+                    .report-meta{color:var(--muted); font-size:0.9rem; text-align:right}
+                    .main-grid{display:grid; grid-template-columns: 1fr 340px; gap:18px; margin-top:14px}
+                    .primary-image{width:100%; max-width:100%; max-height:260px; border-radius:8px; overflow:hidden; background:#f3f4f6}
+                    .primary-image img{width:100%; max-height:260px; object-fit:cover; display:block}
+                    .details{display:flex; flex-direction:column; gap:8px}
+                    .meta-row{font-size:0.95rem; color:var(--muted)}
+                    .section{margin-top:14px}
+                    .section h3{margin:0 0 8px 0; font-size:1rem}
+                    .notes{color:#475569; white-space:pre-wrap}
+                    .rec-list{margin:0; padding-left:18px}
+                    .additional-images{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+                    .additional-images img{width:180px; height:120px; object-fit:cover; border-radius:8px; border:1px solid #eef2f6}
+                    .footer-note{margin-top:18px; color:var(--muted); font-size:0.85rem}
+                    @media (max-width:760px){
+                        .main-grid{grid-template-columns:1fr}
+                        .report-meta{text-align:left}
+                    }
+                    @media print{ body{margin:6mm} .no-print{display:none !important} }
+                </style>
+            </head><body>
+                <div class="report-wrap">
+                    <div class="report-card">
+                        <div class="report-header">
+                                <div>
+                                <div class="report-title">${escapeHtml(title)}</div>
+                                <div style="color:var(--muted); font-size:0.9rem; margin-top:4px">Confidence: ${escapeHtml(confidence)}</div>
+                            </div>
+                            <div class="report-meta">
+                                <div>Farmer: ${escapeHtml(farmer)}</div>
+                                <div>Location: ${escapeHtml(location)}</div>
+                                <div>Scanned: ${escapeHtml(timestamp)}</div>
+                            </div>
+                        </div>
+
+                        <div class="main-grid">
+                            <div>
+                                ${imageSrc ? `<div class="primary-image"><img src="${escapeHtml(imageSrc)}" alt="Report image"></div>` : ''}
+
+                                <div class="section">
+                                    <h3>Farmer Notes</h3>
+                                    <div class="notes">${escapeHtml(notes) || '<em>No notes logged.</em>'}</div>
+                                </div>
+
+                                <div class="section">
+                                    <h3>Initial Recommendations</h3>
+                                    <ul class="rec-list">${initialList.map(i=>`<li>${escapeHtml(i)}</li>`).join('') || '<li>No recommendations.</li>'}</ul>
+                                </div>
+
+                                <div class="section">
+                                    <h3>Expert Assessment</h3>
+                                    <ul class="rec-list">${expertList.map(i=>`<li>${escapeHtml(i)}</li>`).join('') || '<li>No expert assessment.</li>'}</ul>
+                                </div>
+                            </div>
+
+                            <aside class="details">
+                                <div style="background:#f8fafc; border:1px solid #eef6f0; padding:12px; border-radius:8px">
+                                    <div style="font-weight:700; color:var(--accent)">Report Summary</div>
+                                    <div class="meta-row">Farmer: ${escapeHtml(farmer)}</div>
+                                    <div class="meta-row">Location: ${escapeHtml(location)}</div>
+                                    <div class="meta-row">Scanned: ${escapeHtml(timestamp)}</div>
+                                </div>
+
+                                ${additionalImgs.length ? `<div style="border:1px solid #eef2f6; padding:12px; border-radius:8px"><div style="font-weight:700; margin-bottom:8px">Additional Images</div><div class="additional-images">${additionalImgs.map(s=>`<img src="${escapeHtml(s)}">`).join('')}</div></div>` : ''}
+
+                                <div style="border:1px solid #f1f5f9; padding:12px; border-radius:8px">
+                                    <div style="font-weight:700; margin-bottom:8px">Notes</div>
+                                    <div class="meta-row">This printout is a snapshot of the report generated by CocoScan.</div>
+                                </div>
+                            </aside>
+                        </div>
+
+                        <div class="footer-note">Generated by CocoScan • ${new Date().toLocaleString()}</div>
+                    </div>
+                </div>
+            </body></html>`;
+
+            // Open print window
+            const w = window.open('', '_blank');
+            if (!w) {
+                return alert('Popup blocked — allow popups for this site to print.');
+            }
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+            // wait briefly for images to load, then print
+            setTimeout(() => { try { w.focus(); w.print(); } catch (e) { console.error(e); } }, 350);
+        } catch (e) {
+            console.error('Print error', e);
+            alert('Unable to prepare print preview.');
+        }
+    };
 
     window.__cocoScanReportModal = {
         get currentReport() {

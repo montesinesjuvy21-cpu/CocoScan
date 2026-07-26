@@ -471,7 +471,13 @@
 
         <div class="modal-header-inline" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px;">
             <h2 style="margin: 0;">Report Summary</h2>
-            <button class="btn-control cancel-secondary" id="report-modal-close-btn" type="button" onclick="closeReportModal()" style="width: auto; min-height: 34px; padding: 8px 12px; border-radius: 999px; background: #dc2626; color: #ffffff; border: 1px solid #dc2626; box-shadow: none;">Close</button>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <!-- Print button: icon-only, small, unobtrusive on mobile -->
+                <button id="report-print-btn" class="btn-control" type="button" title="Print report" onclick="printReportModal()" style="width:auto; min-height:34px; padding:8px 10px; border-radius:999px; background:#f3f4f6; color:#164630; border:1px solid #e6e7ea; box-shadow:none;">
+                    <i class="fa-solid fa-print"></i>
+                </button>
+                <button class="btn-control cancel-secondary" id="report-modal-close-btn" type="button" onclick="closeReportModal()" style="width: auto; min-height: 34px; padding: 8px 12px; border-radius: 999px; background: #dc2626; color: #ffffff; border: 1px solid #dc2626; box-shadow: none;">Close</button>
+            </div>
         </div>
 
         <div class="status-row-bar">Status: <span id="report-status-text">--</span></div>

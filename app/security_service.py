@@ -298,7 +298,7 @@ def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> dict
     # Send email
     subject = f"Your CocoScan {purpose} Code"
     digits_markup = "".join(
-        f"<td style='padding: 0 4px;'><div style='width: 44px; height: 54px; border: 1px solid #cbd5e1; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: #ffffff; color: #065f46; font-size: 22px; font-weight: 700; font-family: Inter, Arial, sans-serif;'>{digit}</div></td>"
+        f"<td style='padding: 0 4px; vertical-align: middle;'><div style='width: 44px; height: 54px; border: 1px solid #cbd5e1; border-radius: 12px; display: inline-block; box-sizing: border-box; line-height: 54px; text-align: center; background: #ffffff; color: #065f46; font-size: 22px; font-weight: 700; font-family: Inter, Arial, Helvetica, sans-serif;'>{digit}</div></td>"
         for digit in code
     )
     body_html = f"""
