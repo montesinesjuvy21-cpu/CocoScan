@@ -220,6 +220,13 @@ def reset_forgot_password_attempts(email: str):
 
 # --- OTP GENERATION & VERIFICATION ---
 
+def _mail_transport_configured() -> bool:
+    """Return True when SMTP mail credentials are configured."""
+    sender_email = (os.getenv("MAIL_USERNAME") or "").strip()
+    sender_password = (os.getenv("MAIL_PASSWORD") or "").strip()
+    return bool(sender_email and sender_password)
+
+
 def _send_email_smtp(recipient: str, subject: str, body_html: str) -> bool:
     """Helper to send transactional HTML emails via Gmail SMTP."""
     smtp_server = os.getenv("MAIL_SERVER", "smtp.gmail.com").strip()
@@ -227,7 +234,7 @@ def _send_email_smtp(recipient: str, subject: str, body_html: str) -> bool:
     sender_email = (os.getenv("MAIL_USERNAME") or "").strip()
     sender_password = (os.getenv("MAIL_PASSWORD") or "").strip()
     
-    if not sender_email or not sender_password:
+    if not _mail_transport_configured():
         logger.warning(f"[SMTP OFFLINE] Email credentials not set in .env. Would send email to {recipient}: Subject='{subject}'")
         return False
         
@@ -364,9 +371,14 @@ def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> dict
     """
     
     sent = _send_email_smtp(email, subject, body_html)
+    delivery_available = _mail_transport_configured()
+    fallback_allowed = not sent
     return {
         "code": code,
         "sent": sent,
+        "delivery_available": delivery_available,
+        "fallback_allowed": fallback_allowed,
+        "delivery_message": "Verification code sent successfully." if sent else "Email delivery is currently unavailable; continuing without email verification.",
         "expires_at": expires_at,
         "expires_in_seconds": OTP_EXPIRY_SECONDS,
         "resend_cooldown_seconds": OTP_RESEND_COOLDOWN_SECONDS,

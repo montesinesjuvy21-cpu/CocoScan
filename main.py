@@ -731,8 +731,12 @@ def login():
                         flash(f"A 6-digit verification code has been sent to {email}.", "info")
                         return redirect(url_for('verify_2fa'))
 
-                    flash("We couldn't send a verification code to your email. Please try again in a moment.", "error")
-                    return render_template('login.html')
+                    if otp_result.get("fallback_allowed"):
+                        logger.warning(f"OTP delivery failed for {email}; allowing login to proceed without email verification.")
+                        flash("We couldn't deliver the verification email right now, so the sign-in flow continued without it. Please contact support if this continues.", "warning")
+                    else:
+                        flash("We couldn't send a verification code to your email. Please try again in a moment.", "error")
+                        return render_template('login.html')
 
             session.clear()
             session['user_id'] = user_data['id']
@@ -2520,12 +2524,12 @@ def farmer_submit_assessment_feedback():
 
         if getattr(update_response, 'error', None):
             logger.error(f"Assessment feedback update failed: {update_response.error}")
-            return jsonify({'success': False, 'message': 'The feedback could not be saved.'}), 500
+            return jsonify({'success': False, 'message': 'The response could not be saved.'}), 500
 
-        return jsonify({'success': True, 'message': 'Your feedback has been saved.'})
+        return jsonify({'success': True, 'message': 'Your response has been saved.'})
     except Exception as e:
         logger.error(f"Error saving assessment feedback: {str(e)}")
-        return jsonify({'success': False, 'message': 'The feedback could not be saved.'}), 500
+        return jsonify({'success': False, 'message': 'The response could not be saved.'}), 500
 
 
 @app.route('/reports/<int:report_id>/visit-discussion', methods=['GET'])

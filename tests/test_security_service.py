@@ -71,6 +71,13 @@ class TestSecurityService(unittest.TestCase):
         self.assertIsNotNone(row)
         self.assertAlmostEqual(row["expires_at"] - row["created_at"], 45, delta=1)
 
+    def test_generate_and_send_otp_reports_delivery_failure_without_crashing(self):
+        result = security_service.generate_and_send_otp("otp-fallback@example.com", purpose="2FA Verification")
+        self.assertIn("sent", result)
+        self.assertIn("delivery_available", result)
+        self.assertIn("delivery_message", result)
+        self.assertIsInstance(result["delivery_available"], bool)
+
     def test_audit_logs(self):
         security_service.log_audit("admin@example.com", "admin", "LOGIN", "Test audit log", "127.0.0.1")
         logs_data = security_service.get_audit_logs(page=1, per_page=10)
