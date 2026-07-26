@@ -38,6 +38,21 @@
 
 {% block js_role_name %}{{ 'Administrator' if user_role == 'admin' else ('Agriculturist' if user_role == 'agri_expert' else 'LGU') }}{% endblock %}
 
+{% block mobile_restriction_overlay %}
+<div class="desktop-restriction-overlay">
+    <div class="desktop-card-prompt">
+        <div class="glow-effect"></div>
+        <div class="icon-pulse-container">
+            <div class="ripple-ring ring-1"></div>
+            <div class="ripple-ring ring-2"></div>
+            <i class="fa-solid fa-mobile-screen-button"></i>
+        </div>
+        <h2>Mobile Access Required</h2>
+        <p>This area is restricted on mobile. Please use a desktop or larger screen to access analytics and other tools.</p>
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_head %}
 <style>
     .analytics-container {

@@ -2,6 +2,21 @@
 
 {% block title %}CocoScan - Audit Log{% endblock %}
 
+{% block mobile_restriction_overlay %}
+<div class="desktop-restriction-overlay">
+    <div class="desktop-card-prompt">
+        <div class="glow-effect"></div>
+        <div class="icon-pulse-container">
+            <div class="ripple-ring ring-1"></div>
+            <div class="ripple-ring ring-2"></div>
+            <i class="fa-solid fa-mobile-screen-button"></i>
+        </div>
+        <h2>Mobile Access Required</h2>
+        <p>This area is restricted on mobile. Please use a desktop or larger screen to access analytics, map view, and other tools.</p>
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_head %}
 <style>
     /* --- SEARCH AND RESPONSIVE CONTROLS --- */

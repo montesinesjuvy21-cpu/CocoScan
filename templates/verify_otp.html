@@ -38,12 +38,21 @@
         {% endif %}
     {% endwith %}
 
-    <form action="{{ action_url }}" method="POST">
+    <form id="otp-form" action="{{ action_url }}" method="POST">
         <div class="form-group">
-            <label for="otp_code" style="text-align: center; display: block; margin-bottom: 8px;">Enter 6-Digit Code</label>
-            <div class="input-wrapper">
-                <input type="text" id="otp_code" name="otp_code" maxlength="6" pattern="\d{6}" placeholder="••••••" required autofocus
-                    style="font-size: 24px; font-weight: 700; letter-spacing: 12px; text-align: center; padding: 12px; border-radius: 8px; border: 2px solid #0d9488; color: #164630;">
+            <label for="otp_code" style="text-align: center; display: block; margin-bottom: 12px; font-family: 'Inter', sans-serif;">Enter 6-Digit Code</label>
+            <div class="input-wrapper" style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                {% for i in range(6) %}
+                <input type="text"
+                    class="otp-input"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    maxlength="1"
+                    pattern="\d"
+                    aria-label="OTP digit {{ i + 1 }}"
+                    style="width: 46px; height: 54px; text-align: center; font-size: 1.2rem; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 12px; color: #164630; font-family: 'Inter', sans-serif; outline: none; box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);">
+                {% endfor %}
+                <input type="hidden" id="otp_code" name="otp_code" required>
             </div>
             <p id="otpStatus" style="margin-top: 0.75rem; font-size: 0.9rem; color: #64748b; text-align: center; min-height: 1.2rem;"></p>
         </div>
@@ -66,6 +75,9 @@
             const resendAt = Number('{{ otp_resend_available_at or 0 }}');
             const statusEl = document.getElementById('otpStatus');
             const resendBtn = document.getElementById('resendBtn');
+            const otpForm = document.getElementById('otp-form');
+            const otpInputs = Array.from(document.querySelectorAll('.otp-input'));
+            const hiddenOtp = document.getElementById('otp_code');
 
             function updateStatus() {
                 if (!statusEl || !resendBtn) {
@@ -90,6 +102,72 @@
                     resendBtn.style.opacity = '1';
                     resendBtn.style.cursor = 'pointer';
                 }
+            }
+
+            function updateHiddenOtp() {
+                if (hiddenOtp) {
+                    hiddenOtp.value = otpInputs.map(input => input.value).join('');
+                }
+            }
+
+            function focusInput(index) {
+                const input = otpInputs[index];
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
+
+            otpInputs.forEach((input, index) => {
+                input.addEventListener('input', function (event) {
+                    const digit = event.target.value.replace(/\D/g, '').slice(0, 1);
+                    event.target.value = digit;
+                    updateHiddenOtp();
+                    if (digit && index < otpInputs.length - 1) {
+                        focusInput(index + 1);
+                    }
+                });
+
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Backspace' && !input.value && index > 0) {
+                        const prevInput = otpInputs[index - 1];
+                        if (prevInput) {
+                            prevInput.value = '';
+                            prevInput.focus();
+                            updateHiddenOtp();
+                        }
+                    } else if (event.key === 'ArrowLeft' && index > 0) {
+                        event.preventDefault();
+                        focusInput(index - 1);
+                    } else if (event.key === 'ArrowRight' && index < otpInputs.length - 1) {
+                        event.preventDefault();
+                        focusInput(index + 1);
+                    }
+                });
+
+                input.addEventListener('paste', function (event) {
+                    event.preventDefault();
+                    const pasted = (event.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, otpInputs.length);
+                    pasted.split('').forEach((digit, offset) => {
+                        const targetInput = otpInputs[index + offset];
+                        if (targetInput) {
+                            targetInput.value = digit;
+                        }
+                    });
+                    const nextIndex = Math.min(index + pasted.length, otpInputs.length - 1);
+                    focusInput(nextIndex);
+                    updateHiddenOtp();
+                });
+            });
+
+            if (otpForm) {
+                otpForm.addEventListener('submit', function (event) {
+                    updateHiddenOtp();
+                    if (hiddenOtp && hiddenOtp.value.length < 6) {
+                        event.preventDefault();
+                        focusInput(0);
+                    }
+                });
             }
 
             updateStatus();

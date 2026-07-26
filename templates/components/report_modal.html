@@ -499,7 +499,14 @@
             </div>
             <div class="desktop-col-right">
 
-        <div class="premium-reco-card" id="report-initial-card">
+{% if session.get('user_role') in ['admin', 'lgu'] %}
+        <div class="premium-form-card" id="report-notes-card">
+            <h4><i class="fa-solid fa-pen-to-square"></i> Farmer Notes</h4>
+            <textarea class="notes-input-box" id="field-notes-capture" placeholder="Describe what you observed on your coconut tree (e.g., yellowing leaves, damaged fruits, unusual insects, or other signs)."></textarea>
+            <p id="report-notes-display" style="font-size: 0.88rem; color: #64748b; line-height: 1.5; padding: 2px 0; display: none;">--</p>
+        </div>
+
+            <div class="premium-reco-card" id="report-initial-card">
             <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Initial Recommendations</h4>
            <p style="font-size: 0.82rem; color: #64748b; margin-top: 4px; margin-bottom: 8px; line-height: 1.4;">
                 These are general recommendations for the detected pest to help your initial decision on what to do.
@@ -510,13 +517,26 @@
             </p>
         </div>
 
-        <!-- Expert card removed from here; placed below Additional Images for agriculturist pending view -->
+        {% else %}
+            <div class="premium-reco-card" id="report-initial-card">
+            <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Initial Recommendations</h4>
+           <p style="font-size: 0.82rem; color: #64748b; margin-top: 4px; margin-bottom: 8px; line-height: 1.4;">
+                These are general recommendations for the detected pest to help your initial decision on what to do.
+            </p>
+            <ul id="report-initial-list"></ul>
+            <p style="font-size: 0.78rem; color: #64748b; margin-top: 2px; margin-bottom: 0; font-style: italic;">
+                Tap the <i class="fa-solid fa-circle-question" style="color: rgba(56, 189, 248, 0.7); margin:0 2px;"></i> icon for more details.
+            </p>
+        </div>
 
         <div class="premium-form-card" id="report-notes-card">
             <h4><i class="fa-solid fa-pen-to-square"></i> Farmer Notes</h4>
             <textarea class="notes-input-box" id="field-notes-capture" placeholder="Describe what you observed on your coconut tree (e.g., yellowing leaves, damaged fruits, unusual insects, or other signs)."></textarea>
             <p id="report-notes-display" style="font-size: 0.88rem; color: #64748b; line-height: 1.5; padding: 2px 0; display: none;">--</p>
         </div>
+        {% endif %}
+
+        <!-- Expert card removed from here; placed below Additional Images for agriculturist pending view -->
 
         <div class="premium-form-card" data-scan-only>
             <h4><i class="fa-solid fa-images"></i> Supporting Photos (optional)</h4>
@@ -545,7 +565,7 @@
             <button class="btn-control submit-primary" id="report-agri-submit-btn" type="button" onclick="window.submitExpertValidation()" style="display:none; width:100%; margin-top:12px;">
                 <i class="fa-solid fa-paper-plane"></i> Submit Assessment
             </button>
-            <p id="expert-assessment-issuer-note" style="font-size:0.78rem; color:#64748b; font-style:italic; margin:14px 0 0; padding-top:10px; border-top:1px dashed #cbd5e1; display:none; text-align:right;"></p>
+            <p id="expert-assessment-issuer-note" style="font-size:0.78rem; color:#64748b; font-style:italic; margin:14px 0 0; padding-top:10px; display:none; text-align:right;"></p>
         </div>
 
         <div class="premium-form-card" id="report-farmer-feedback-card" style="display:none;">

@@ -293,6 +293,10 @@ def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> dict
 
     # Send email
     subject = f"Your CocoScan {purpose} Code"
+    digits_markup = "".join(
+        f"<td style='padding: 0 4px;'><div style='width: 44px; height: 54px; border: 1px solid #cbd5e1; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: #ffffff; color: #065f46; font-size: 22px; font-weight: 700; font-family: Inter, Arial, sans-serif;'>{digit}</div></td>"
+        for digit in code
+    )
     body_html = f"""
     <!DOCTYPE html>
     <html>
@@ -301,15 +305,11 @@ def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> dict
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{subject}</title>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; padding: 48px 20px;">
             <tr>
                 <td align="center">
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);">
-                        <!-- Accent Top Bar -->
-                        <tr>
-                            <td style="height: 6px; background: linear-gradient(90deg, #0d9488 0%, #10b981 100%);"></td>
-                        </tr>
                         <!-- Header Section -->
                         <tr>
                             <td align="center" style="padding: 36px 36px 24px 36px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
@@ -335,8 +335,12 @@ def generate_and_send_otp(email: str, purpose: str = "2FA Verification") -> dict
                                     Please use the verification code below to complete your sign-in or security request for <strong>{purpose}</strong>.
                                 </p>
                                 
-                                <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; padding: 28px 20px; text-align: center; margin: 28px 0;">
-                                    <span style="font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #065f46; font-family: 'Courier New', Courier, monospace; display: block; margin-left: 10px;">{code}</span>
+                                <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; padding: 24px 20px; text-align: center; margin: 28px 0;">
+                                    <table border="0" cellpadding="0" cellspacing="0" role="presentation" align="center" style="margin: 0 auto;">
+                                        <tr>
+                                            {digits_markup}
+                                        </tr>
+                                    </table>
                                     <div style="margin-top: 12px; font-size: 13px; color: #166534; font-weight: 500;">
                                      Valid for 45 seconds only
                                     </div>
