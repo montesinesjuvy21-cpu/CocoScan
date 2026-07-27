@@ -431,6 +431,8 @@ def verify_otp(email: str, code: str, purpose: str = "2FA Verification"):
 # --- TWO FACTOR AUTHENTICATION (7 DAYS) ---
 
 def _use_supabase_security() -> bool:
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
     url = (os.getenv("SUPABASE_URL") or "").strip()
     key = (os.getenv("SUPABASE_KEY") or "").strip()
     if not url or not key or "example.supabase.co" in url or "dummy-key" in key or "dummy" in url:

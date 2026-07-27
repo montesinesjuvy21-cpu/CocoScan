@@ -40,8 +40,8 @@
 
     <form id="otp-form" action="{{ action_url }}" method="POST">
         <div class="form-group">
-            <label for="otp_code" style="text-align: center; display: block; margin-bottom: 12px; font-family: 'Inter', sans-serif;">Enter 6-Digit Code</label>
-            <div class="input-wrapper" style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+            <label for="otp_code" style="text-align: center; display: block; margin-bottom: 14px; font-family: 'Inter', sans-serif; font-weight: 600; color: #1e293b;">Enter 6-Digit Code</label>
+            <div class="input-wrapper" style="display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: nowrap; width: 100%; max-width: 320px; margin: 0 auto;">
                 {% for i in range(6) %}
                 <input type="text"
                     class="otp-input"
@@ -50,7 +50,7 @@
                     maxlength="1"
                     pattern="\d"
                     aria-label="OTP digit {{ i + 1 }}"
-                    style="width: 46px; height: 54px; text-align: center; font-size: 1.2rem; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 12px; color: #164630; font-family: 'Inter', sans-serif; outline: none; box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);">
+                    style="flex: 1; width: 0; min-width: 38px; max-width: 48px; height: 52px; text-align: center; font-size: 1.25rem; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 10px; color: #164630; font-family: 'Inter', sans-serif; outline: none; box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04); padding: 0; margin: 0; transition: all 0.2s ease;">
                 {% endfor %}
                 <input type="hidden" id="otp_code" name="otp_code" required>
             </div>
