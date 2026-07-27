@@ -430,6 +430,13 @@ def verify_otp(email: str, code: str, purpose: str = "2FA Verification"):
 
 # --- TWO FACTOR AUTHENTICATION (7 DAYS) ---
 
+def _use_supabase_security() -> bool:
+    url = (os.getenv("SUPABASE_URL") or "").strip()
+    key = (os.getenv("SUPABASE_KEY") or "").strip()
+    if not url or not key or "example.supabase.co" in url or "dummy-key" in key or "dummy" in url:
+        return False
+    return True
+
 def requires_2fa(email: str, days: int = 7) -> bool:
     """
     Checks if a user requires 2FA verification (every 7 days).
@@ -440,6 +447,23 @@ def requires_2fa(email: str, days: int = 7) -> bool:
         return False
         
     now = time.time()
+    
+    if _use_supabase_security():
+        try:
+            from supabase import create_client
+            url = os.getenv("SUPABASE_URL")
+            key = os.getenv("SUPABASE_KEY")
+            supabase_client = create_client(url, key)
+            response = supabase_client.table("two_factor_auth").select("last_verified_at").eq("email", email).execute()
+            if not response.data or len(response.data) == 0:
+                return True
+            last_verified = response.data[0].get("last_verified_at")
+            if not last_verified or (now - float(last_verified)) > (days * 86400):
+                return True
+            return False
+        except Exception as e:
+            logger.warning(f"Supabase 2FA check failed ({str(e)}), falling back to SQLite.")
+            
     with _get_db() as conn:
         row = conn.execute("SELECT * FROM two_factor_auth WHERE email = ?", (email,)).fetchone()
         if not row or not row["last_verified_at"]:
@@ -457,6 +481,21 @@ def record_2fa_verification(email: str):
     if not email:
         return
     now = time.time()
+    
+    if _use_supabase_security():
+        try:
+            from supabase import create_client
+            url = os.getenv("SUPABASE_URL")
+            key = os.getenv("SUPABASE_KEY")
+            supabase_client = create_client(url, key)
+            supabase_client.table("two_factor_auth").upsert({
+                "email": email,
+                "last_verified_at": now
+            }).execute()
+            logger.info(f"Recorded 2FA verification in Supabase for {email}")
+        except Exception as e:
+            logger.warning(f"Supabase record 2FA failed ({str(e)}), writing to SQLite.")
+
     with _get_db() as conn:
         conn.execute("""
             INSERT INTO two_factor_auth (email, last_verified_at)
@@ -475,6 +514,23 @@ def log_audit(email: str, role: str, action: str, details: str, ip_address: str 
     details = (details or "").strip()
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     
+    if _use_supabase_security():
+        try:
+            from supabase import create_client
+            url = os.getenv("SUPABASE_URL")
+            key = os.getenv("SUPABASE_KEY")
+            supabase_client = create_client(url, key)
+            supabase_client.table("audit_logs").insert({
+                "timestamp": timestamp,
+                "user_email": email,
+                "user_role": role,
+                "action": action,
+                "details": details,
+                "ip_address": ip_address
+            }).execute()
+        except Exception as e:
+            logger.warning(f"Supabase log_audit failed ({str(e)}), writing to SQLite.")
+            
     try:
         with _get_db() as conn:
             conn.execute("""
@@ -494,6 +550,36 @@ def get_audit_logs(page: int = 1, per_page: int = 10, search: str = "", action_f
     per_page = max(1, int(per_page))
     offset = (page - 1) * per_page
     
+    if _use_supabase_security():
+        try:
+            from supabase import create_client
+            url = os.getenv("SUPABASE_URL")
+            key = os.getenv("SUPABASE_KEY")
+            supabase_client = create_client(url, key)
+            
+            query = supabase_client.table("audit_logs").select("*", count="exact")
+            if search and search.strip():
+                s = search.strip()
+                query = query.or_(f"user_email.ilike.%{s}%,details.ilike.%{s}%,action.ilike.%{s}%")
+            if action_filter and action_filter.strip():
+                query = query.eq("action", action_filter.strip().upper())
+                
+            query = query.order("id", desc=True).range(offset, offset + per_page - 1)
+            response = query.execute()
+            
+            total = response.count if response.count is not None else len(response.data or [])
+            total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+            logs = response.data or []
+            return {
+                "logs": logs,
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": total_pages
+            }
+        except Exception as e:
+            logger.warning(f"Supabase get_audit_logs failed ({str(e)}), falling back to SQLite.")
+
     where_clauses = []
     params = []
     
