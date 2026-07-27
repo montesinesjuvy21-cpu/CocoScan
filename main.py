@@ -297,6 +297,18 @@ def _fetch_visit_workflow_payload(report_id):
             "created_at": chat_row.get("created_at"),
         })
 
+    visit_request_reason = str(report_row.get("visit_request_reason") or "").strip()
+    if visit_request_reason:
+        has_reason = any(m.get("message", "").strip() == visit_request_reason for m in messages)
+        if not has_reason:
+            messages.insert(0, {
+                "id": "reason",
+                "sender_id": report_row.get("user_id"),
+                "sender_label": "Farmer",
+                "message": visit_request_reason,
+                "created_at": report_row.get("visit_requested_at") or report_row.get("updated_at") or datetime.now(UTC).isoformat(),
+            })
+
     latest_schedule = schedule_rows[-1] if schedule_rows else None
     schedule_stamp = ""
     if latest_schedule:

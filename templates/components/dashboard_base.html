@@ -705,12 +705,31 @@
             }
         }
     </style>
+
+    {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else ''))|lower %}
+    {% if 'lgu' in role_str or 'admin' in role_str %}
+    <style>
+        @media (max-width: 900px) {
+            .desktop-restriction-overlay {
+                display: flex !important;
+            }
+
+            .mobile-viewport-container {
+                display: none !important;
+            }
+        }
+    </style>
+    {% endif %}
     {% block extra_head %}{% endblock %}
 </head>
 
 <body>
 
+    {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else ''))|lower %}
+    {% if 'lgu' in role_str or 'admin' in role_str %}
     {% block mobile_restriction_overlay %}{% endblock %}
+    {% endif %}
+
 
     <div class="mobile-viewport-container">
         <header class="mobile-header">

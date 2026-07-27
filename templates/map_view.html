@@ -740,21 +740,28 @@
                 gap: 20px;
             }
         }
+    </style>
 
+    {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else ''))|lower %}
+    {% if 'lgu' in role_str or 'admin' in role_str %}
+    <style>
         @media (max-width: 900px) {
             .desktop-restriction-overlay {
-                display: flex;
+                display: flex !important;
             }
 
             .mobile-viewport-container {
-                display: none;
+                display: none !important;
             }
         }
     </style>
+    {% endif %}
 </head>
 
 <body>
 
+    {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else ''))|lower %}
+    {% if 'lgu' in role_str or 'admin' in role_str %}
     <div class="desktop-restriction-overlay">
         <div class="desktop-card-prompt">
             <div class="glow-effect"></div>
@@ -767,6 +774,8 @@
             <p>This area is restricted on mobile. Please use a desktop or larger screen to access map view and other tools.</p>
         </div>
     </div>
+    {% endif %}
+
 
     <div class="mobile-viewport-container">
 
@@ -1015,28 +1024,36 @@
                         }
                     }
                 } else {
-                    // Fallback to OpenStreetMap Nominatim API if searched location is not in dataset reports
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(normalizedQuery + ', Laguna, Philippines')}&limit=1`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data && data.length > 0) {
-                                const lat = parseFloat(data[0].lat);
-                                const lon = parseFloat(data[0].lon);
-                                mapInstance.flyTo([lat, lon], 14, { duration: 1.2 });
-                            } else {
-                                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(normalizedQuery + ', Philippines')}&limit=1`)
-                                    .then(res2 => res2.json())
-                                    .then(data2 => {
-                                        if (data2 && data2.length > 0) {
-                                            const lat2 = parseFloat(data2[0].lat);
-                                            const lon2 = parseFloat(data2[0].lon);
-                                            mapInstance.flyTo([lat2, lon2], 14, { duration: 1.2 });
-                                        }
-                                    })
-                                    .catch(e => console.error("Geocoding retry error:", e));
-                            }
-                        })
-                        .catch(e => console.error("Geocoding error:", e));
+                    // Fallback to OpenStreetMap Nominatim API: Search nationwide first, and compare with local Laguna results
+                    Promise.all([
+                        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(normalizedQuery + ', Philippines')}&limit=3`).then(r => r.json()).catch(() => []),
+                        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(normalizedQuery + ', Laguna, Philippines')}&limit=3`).then(r => r.json()).catch(() => [])
+                    ]).then(([phResults, lagunaResults]) => {
+                        let bestMatch = null;
+                        
+                        // Check if national search found a major province, city, island, or region (importance >= 0.5 or administrative boundary)
+                        const majorPhMatch = phResults.find(item => parseFloat(item.importance || 0) >= 0.5 || item.type === 'administrative' || item.class === 'boundary');
+                        
+                        // Check if Laguna search found a valid local place (municipality, barangay, or village)
+                        const validLagunaMatch = lagunaResults.find(item => parseFloat(item.importance || 0) >= 0.25 && item.class !== 'highway');
+                        
+                        if (majorPhMatch && parseFloat(majorPhMatch.importance || 0) >= 0.55 && (!validLagunaMatch || parseFloat(majorPhMatch.importance) > parseFloat(validLagunaMatch.importance || 0) + 0.15)) {
+                            bestMatch = majorPhMatch;
+                        } else if (validLagunaMatch) {
+                            bestMatch = validLagunaMatch;
+                        } else if (lagunaResults.length > 0) {
+                            bestMatch = lagunaResults[0];
+                        } else if (phResults.length > 0) {
+                            bestMatch = phResults[0];
+                        }
+
+                        if (bestMatch) {
+                            const lat = parseFloat(bestMatch.lat);
+                            const lon = parseFloat(bestMatch.lon);
+                            const zoomLevel = parseFloat(bestMatch.importance || 0) >= 0.6 ? 10 : 14;
+                            mapInstance.flyTo([lat, lon], zoomLevel, { duration: 1.2 });
+                        }
+                    });
                 }
             };
 

@@ -1,6 +1,6 @@
 (function () {
     window.COCOSCAN_BARANGAYS = [
-        "Bagong Bayan II-A","Bagong Pook VI-C","Barangay I-A","Barangay I-B","Barangay II-A","Barangay II-B","Barangay II-C","Barangay II-D","Barangay II-E","Barangay II-F","Barangay III-A","Barangay III-B","Barangay III-C","Barangay III-D","Barangay III-E","Barangay III-F","Barangay IV-A","Barangay IV-B","Barangay IV-C","Barangay V-A","Barangay V-B","Barangay V-C","Barangay V-D","Barangay VI-A","Barangay VI-B","Bautista","Concepcion","Del Remedio","Dolores","San Antonio 1","San Antonio 2","San Bartolome","San Buenaventura","San Crispin","San Cristobal","San Diego","San Francisco","San Gabriel","San Gregorio","San Ignacio","San Isidro","San Joaquin","San Jose","San Juan","San Lorenzo","San Lucas 1","San Lucas 2","San Marcos","San Mateo","San Miguel","San Nicolas","San Pedro","San Rafael","San Roque","San Vicente","Santa Ana","Santa Catalina","Santa Cruz","Santa Elena","Santa Filomena","Santa Isabel","Santa Maria","Santa Maria Magdalena","Santa Monica","Santa Veronica","Santiago I","Santiago II","Santisimo Rosario","Santo Angel","Santo Cristo","Santo Niño","Soledad","Atisan","Balagtas","Dapdap","Dolores","Sta. Catalina","Sta. Cruz","Sta. Elena"
+        "Bagong Bayan II-A", "Bagong Pook VI-C", "Barangay I-A", "Barangay I-B", "Barangay II-A", "Barangay II-B", "Barangay II-C", "Barangay II-D", "Barangay II-E", "Barangay II-F", "Barangay III-A", "Barangay III-B", "Barangay III-C", "Barangay III-D", "Barangay III-E", "Barangay III-F", "Barangay IV-A", "Barangay IV-B", "Barangay IV-C", "Barangay V-A", "Barangay V-B", "Barangay V-C", "Barangay V-D", "Barangay VI-A", "Barangay VI-B", "Bautista", "Concepcion", "Del Remedio", "Dolores", "San Antonio 1", "San Antonio 2", "San Bartolome", "San Buenaventura", "San Crispin", "San Cristobal", "San Diego", "San Francisco", "San Gabriel", "San Gregorio", "San Ignacio", "San Isidro", "San Joaquin", "San Jose", "San Juan", "San Lorenzo", "San Lucas 1", "San Lucas 2", "San Marcos", "San Mateo", "San Miguel", "San Nicolas", "San Pedro", "San Rafael", "San Roque", "San Vicente", "Santa Ana", "Santa Catalina", "Santa Cruz", "Santa Elena", "Santa Filomena", "Santa Isabel", "Santa Maria", "Santa Maria Magdalena", "Santa Monica", "Santa Veronica", "Santiago I", "Santiago II", "Santisimo Rosario", "Santo Angel", "Santo Cristo", "Santo Niño", "Soledad", "Atisan", "Balagtas", "Dapdap", "Dolores", "Sta. Catalina", "Sta. Cruz", "Sta. Elena"
     ];
 
     const SUPABASE_REPORT_IMAGE_BASE_URL =
@@ -67,18 +67,23 @@
 
                 // If the user is actively typing or has text in the input, skip this poll
                 const feedbackContainer = document.getElementById("report-farmer-feedback");
-                const inputEl = feedbackContainer ? feedbackContainer.querySelector('#visit-discussion-input') : null;
-                if (inputEl) {
-                    const isFocused = (document.activeElement === inputEl);
-                    const hasText = inputEl.value && String(inputEl.value).trim().length > 0;
-                    if (isFocused || hasText) {
-                        // Skip update to avoid clearing user's in-progress message
-                        return;
-                    }
+                const activeInputs = feedbackContainer ? Array.from(feedbackContainer.querySelectorAll('input:not([type="radio"]):not([type="checkbox"]), textarea, select')) : [];
+                const hasUserInput = activeInputs.some(el => {
+                    const isFocused = (document.activeElement === el);
+                    const hasText = el && el.value && String(el.value).trim().length > 0;
+                    return isFocused || hasText;
+                });
+                if (hasUserInput) {
+                    // Skip update to avoid clearing user's in-progress message
+                    return;
                 }
 
                 await loadVisitDiscussion(report);
-                renderVisitDiscussionCard(currentReportModalMode, report);
+                const discussionStatuses = ["awaiting_confirmed_schedule", "visit_requested", "visit_scheduled"];
+                const normalizedStatus = getStatusKey(report?.status || "");
+                if (discussionStatuses.includes(normalizedStatus)) {
+                    renderVisitDiscussionCard(currentReportModalMode, report);
+                }
             } catch (error) {
                 console.warn("Visit discussion poll failed", error);
             }
@@ -443,7 +448,7 @@
             button.classList.toggle("is-disabled", shouldDisable);
             button.setAttribute("aria-busy", isSubmitting ? "true" : "false");
 
-                if (isSubmitting) {
+            if (isSubmitting) {
                 if (!button.dataset.defaultHtml) {
                     button.dataset.defaultHtml = button.innerHTML;
                 }
@@ -525,7 +530,7 @@
             li.style.display = "flex";
             li.style.flexDirection = "column";
             li.style.marginBottom = "4px";
-            
+
             let html = `<div style="display: flex; align-items: flex-start; gap: 4px;">`;
             if (showIcon && !withTooltip) {
                 html += `<i class="fa-solid fa-circle-check" style="margin-top: 2px; color: var(--primary-green); flex-shrink: 0;"></i>`;
@@ -535,15 +540,15 @@
             const isExpertList = node && node.id === "report-expert-list";
             const textColor = isExpertList ? "#64748b" : "var(--text-dark)";
             html += `<span style="font-size: 0.85rem; line-height: 1.3; color: ${textColor}; padding: 0;">${escapeHtml(item)}</span>`;
-            
+
             const tooltipText = withTooltip ? getRecommendationTooltip(item) : "";
             if (withTooltip) {
                 html += `<i class="fa-solid fa-circle-question reco-tooltip-icon" style="color: rgba(56, 189, 248, 0.7); cursor: pointer; margin-top: 0px; font-size: 1.05rem; transition: opacity 0.2s; flex-shrink: 0;" title="Click for details"></i>`;
             }
             html += `</div>`;
-            
+
             li.innerHTML = html;
-            
+
             if (withTooltip) {
                 const dropdownDiv = document.createElement("div");
                 dropdownDiv.style.display = "none";
@@ -556,9 +561,9 @@
                 dropdownDiv.style.color = "var(--text-dark)";
                 dropdownDiv.style.lineHeight = "1.3";
                 dropdownDiv.innerHTML = tooltipText;
-                
+
                 li.appendChild(dropdownDiv);
-                
+
                 const icon = li.querySelector(".reco-tooltip-icon");
                 if (icon) {
                     icon.addEventListener("click", () => {
@@ -572,7 +577,7 @@
                     });
                 }
             }
-            
+
             node.appendChild(li);
         });
     }
@@ -795,7 +800,7 @@
             applyStatusStyle(report);
             renderWorkflowActions(currentReportModalMode, report);
             // Refresh lists on the page if available and close modal for agriculturists
-            if (typeof window.  renderReportsGrid === "function") {
+            if (typeof window.renderReportsGrid === "function") {
                 try { window.renderReportsGrid(); } catch (e) { console.debug(e); }
             }
             if (currentReportModalMode === "agriculturist") {
@@ -876,7 +881,7 @@
         const isExpanded = Boolean(report?.visitDiscussionExpanded);
 
         const hasPendingReschedule = Boolean(report?.visitRescheduleReason);
-        const bannerStyle = hasPendingReschedule 
+        const bannerStyle = hasPendingReschedule
             ? "background:#fffbeb; color:#b45309;" // Yellow/Orange
             : "background:#ecfdf5; color:#065f46;"; // Green
 
@@ -965,8 +970,8 @@
                 <div id="visit-discussion-body" style="display:${isExpanded ? "grid" : "none"}; gap:10px;">
                     <div id="visit-discussion-messages-container" style="display:grid; gap:8px; padding:10px; border:1px solid #e2e8f0; border-radius:16px; background:#fff; max-height:320px; overflow-y:auto;">
                         ${chats.length ? chats.map((chat) => {
-                            const isAgriculturistMessage = String(chat.sender_label || "").toLowerCase() === "agriculturist";
-                            return `
+            const isAgriculturistMessage = String(chat.sender_label || "").toLowerCase() === "agriculturist";
+            return `
                                 <div style="display:flex; justify-content:${isAgriculturistMessage ? "flex-end" : "flex-start"};">
                                     <div style="max-width:82%; display:grid; gap:4px;">
                                         <div style="font-size:0.74rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.04em; padding:${isAgriculturistMessage ? "0 0 0 8px" : "0 8px 0 0"};">${escapeHtml(chat.sender_label || "Farmer")}</div>
@@ -976,7 +981,7 @@
                                         </div>
                                     </div>
                                 </div>`;
-                        }).join("") : '<div style="font-size:0.9rem; color:#64748b;">No discussion messages yet.</div>'}
+        }).join("") : '<div style="font-size:0.9rem; color:#64748b;">No discussion messages yet.</div>'}
                     </div>
                     ${isArchived ? "" : `
                         <div style="display:flex; align-items:flex-end; background:#f8fafc; border:1px solid #cbd5e1; border-radius:24px; padding:6px 6px 6px 16px; gap:8px;">
@@ -1024,7 +1029,7 @@
                     alert("Please type a message before sending.");
                     return;
                 }
-                
+
                 // Disable button and input to prevent double sending
                 sendButton.disabled = true;
                 sendButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:1rem;"></i>';
@@ -1061,7 +1066,7 @@
                     }
                     await loadVisitDiscussion(report);
                     renderWorkflowActions(currentReportModalMode, report);
-                    
+
                     if (scrollContainer) {
                         requestAnimationFrame(() => {
                             scrollContainer.scrollTop = savedScrollTop;
@@ -1075,7 +1080,7 @@
                 }
             });
         }
-        
+
         const messageInput = feedbackContainer.querySelector('#visit-discussion-input');
         if (messageInput && sendButton) {
             messageInput.addEventListener('keydown', (e) => {
@@ -1103,14 +1108,6 @@
             setTimeout(() => {
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }, 10);
-        }
-
-        if (workflowInput) {
-            workflowInput.value = "";
-            setDisplay(workflowInput, false);
-        }
-        if (workflowCard) {
-            setDisplay(workflowCard, false, "block");
         }
         setDisplay(feedbackCard, true, "block");
     }
@@ -1447,6 +1444,7 @@
                     refreshDecisionView();
                     const feedbackCard = document.getElementById('report-farmer-feedback-card');
                     if (feedbackCard) setDisplay(feedbackCard, true, 'block');
+                    return;
                 }
             } else if (normalizedStatus === "visit_scheduled") {
                 if (workflowHeader) {
@@ -1461,7 +1459,7 @@
                     }
                 }
                 const disabledReason = "You can only complete the visit after the scheduled time has passed.";
-                
+
                 actions.push({
                     label: "Complete Visit",
                     icon: "fa-solid fa-circle-check",
@@ -1475,7 +1473,7 @@
                     workflowInput.disabled = !isVisitTimePassed;
                     workflowInput.style.backgroundColor = isVisitTimePassed ? "" : "#f1f5f9";
                     workflowInput.style.display = "block";
-                    
+
                     let warningHtml = '';
                     if (!isVisitTimePassed) {
                         warningHtml = `
@@ -1565,15 +1563,19 @@
                         </div>`;
                     const feedbackRadios = feedbackContainer.querySelectorAll("input[name='farmer-feedback-choice']");
                     const reasonSection = feedbackContainer.querySelector("#farmer-visit-reason-section");
+                    const submitFeedbackBtn = feedbackContainer.querySelector('#farmer-submit-feedback-btn');
                     const refreshReasonDisplay = () => {
                         const selectedValue = Array.from(feedbackRadios).find((input) => input.checked)?.value || "resolved";
+                        const showReason = selectedValue === 'needs-assistance';
                         if (reasonSection) {
-                            setDisplay(reasonSection, selectedValue === 'needs-assistance', 'grid');
+                            setDisplay(reasonSection, showReason, 'grid');
+                        }
+                        if (submitFeedbackBtn) {
+                            submitFeedbackBtn.textContent = showReason ? 'Request Visit' : 'Confirm Resolved';
                         }
                     };
                     feedbackRadios.forEach((input) => input.addEventListener('change', refreshReasonDisplay));
                     refreshReasonDisplay();
-                    const submitFeedbackBtn = feedbackContainer.querySelector('#farmer-submit-feedback-btn');
                     if (submitFeedbackBtn) {
                         submitFeedbackBtn.addEventListener('click', () => submitWorkflowAction('farmer-feedback'));
                     }
@@ -1595,7 +1597,7 @@
                     const scheduleDisplay = Array.isArray(report.farmerSchedules) && report.farmerSchedules.length
                         ? `<div style="display:grid; gap:6px; padding-top:8px;">${report.farmerSchedules.map(s => `<div style="font-size:0.95rem; color:#0f172a;">• ${escapeHtml(s.display)}</div>`).join("")}</div>`
                         : "";
-                        
+
                     let visitSummaryBlock = "";
                     if (normalizedStatus === "resolved" && report.visit_summary) {
                         visitSummaryBlock = `
@@ -1610,11 +1612,11 @@
                             </div>
                         `;
                     }
-                    
+
                     const message = normalizedStatus === "visit_requested"
                         ? `<p style="font-size:0.92rem; color:#334155; margin:0;">Your visit request was submitted successfully. The agriculturist will review your preferred schedules.</p>${reasonDisplay}${scheduleDisplay}`
-                        : (report.visit_summary 
-                            ? `<p style="font-size:0.92rem; color:#334155; margin:0;">The agriculturist has completed the visit and marked the issue as resolved.</p>${visitSummaryBlock}` 
+                        : (report.visit_summary
+                            ? `<p style="font-size:0.92rem; color:#334155; margin:0;">The agriculturist has completed the visit and marked the issue as resolved.</p>${visitSummaryBlock}`
                             : `
                             <div style="font-size: 0.8rem; color: #64748b; line-height: 1.3; display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                                 <div><strong style="color: #475569;">Outcome:</strong> Issue resolved by following expert assessment.</div>
@@ -1644,7 +1646,7 @@
                 const feedbackCard = document.getElementById('report-farmer-feedback-card');
                 if (feedbackCard) setDisplay(feedbackCard, false, 'block');
             }
-            return;
+            if (mode === "farmer") return;
         }
 
         if (workflowHelp) {
@@ -1672,10 +1674,10 @@
                                 </div>
                             `;
                         }
-                        
-                        const message = report.visit_summary 
-                                ? `<p style="font-size:0.92rem; color:#334155; margin:0;">The agriculturist has completed the visit and marked the issue as resolved.</p>${visitSummaryBlock}` 
-                                : `
+
+                        const message = report.visit_summary
+                            ? `<p style="font-size:0.92rem; color:#334155; margin:0;">The agriculturist has completed the visit and marked the issue as resolved.</p>${visitSummaryBlock}`
+                            : `
                                 <div style="font-size: 0.8rem; color: #64748b; line-height: 1.3; display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                                     <div><strong style="color: #475569;">Outcome:</strong> Issue resolved by following expert assessment.</div>
                                     <div><strong style="color: #475569;">Resolved On:</strong> ${formatTimestamp(report.updated_at || report.timestamp)}</div>
@@ -1723,7 +1725,7 @@
         });
 
         const feedbackRadios = feedbackContainer?.querySelectorAll("input[name='farmer-feedback-choice']");
-        const requestDetails = feedbackContainer?.querySelector("#farmer-visit-request-details");
+        const requestDetails = feedbackContainer?.querySelector("#farmer-visit-reason-section");
         const actionButton = workflowButtons.querySelector("button");
 
         if (feedbackRadios && feedbackRadios.length && actionButton) {
@@ -1768,13 +1770,13 @@
                     <select class="farmer-schedule-time schedule-input" style="padding:12px 14px; border-radius:12px; border:1px solid #e6e6e6; min-height:48px; background-color:#fff;">
                         <option value="" disabled ${!timeVal ? "selected" : ""}>Select time</option>
                         ${['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'].map(val => {
-                            let h = parseInt(val.substring(0, 2), 10);
-                            let ampm = h < 12 ? 'AM' : 'PM';
-                            let h12 = h <= 12 ? h : h - 12;
-                            if (h12 === 0) h12 = 12;
-                            let display = h12 + val.substring(2) + ' ' + ampm;
-                            return `<option value="${val}" ${timeVal === val ? "selected" : ""}>${display}</option>`;
-                        }).join('')}
+            let h = parseInt(val.substring(0, 2), 10);
+            let ampm = h < 12 ? 'AM' : 'PM';
+            let h12 = h <= 12 ? h : h - 12;
+            if (h12 === 0) h12 = 12;
+            let display = h12 + val.substring(2) + ' ' + ampm;
+            return `<option value="${val}" ${timeVal === val ? "selected" : ""}>${display}</option>`;
+        }).join('')}
                     </select>
                 </label>
             </div>
@@ -1794,12 +1796,12 @@
             if (d && t) {
                 try {
                     const dt = new Date(`${d}T${t}`);
-                    display = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dt)  + new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(dt);
+                    display = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dt) + new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(dt);
                 } catch (e) { display = `${d} ${t}`; }
             }
             return { date: d, time: t, display };
         }).filter(s => s.date && s.time);
-        return schedules.slice(0,3);
+        return schedules.slice(0, 3);
     }
 
     async function submitWorkflowAction(actionName) {
@@ -2271,7 +2273,7 @@
         } else {
             renderAdditionalImages(document.getElementById("report-additional-images-grid"), report.additionalImages);
         }
-        
+
         const initialCard = document.getElementById("report-initial-card");
         if (currentReportModalMode === "lgu" || currentReportModalMode === "admin") {
             if (initialCard) {
@@ -2281,7 +2283,7 @@
             if (initialCard) setDisplay(initialCard, true, "flex");
             renderList(document.getElementById("report-initial-list"), report.initialRecommendations, "No initial recommendations available.", true, true);
         }
-        
+
         let expertEmptyText = "No expert assessment available yet.";
         if (currentReportModalMode === "scan") {
             expertEmptyText = "Submit report for expert assessment";
@@ -2436,12 +2438,12 @@
 
                                 <div class="section">
                                     <h3>Initial Recommendations</h3>
-                                    <ul class="rec-list">${initialList.map(i=>`<li>${escapeHtml(i)}</li>`).join('') || '<li>No recommendations.</li>'}</ul>
+                                    <ul class="rec-list">${initialList.map(i => `<li>${escapeHtml(i)}</li>`).join('') || '<li>No recommendations.</li>'}</ul>
                                 </div>
 
                                 <div class="section">
                                     <h3>Expert Assessment</h3>
-                                    <ul class="rec-list">${expertList.map(i=>`<li>${escapeHtml(i)}</li>`).join('') || '<li>No expert assessment.</li>'}</ul>
+                                    <ul class="rec-list">${expertList.map(i => `<li>${escapeHtml(i)}</li>`).join('') || '<li>No expert assessment.</li>'}</ul>
                                 </div>
                             </div>
 
@@ -2453,7 +2455,7 @@
                                     <div class="meta-row">Scanned: ${escapeHtml(timestamp)}</div>
                                 </div>
 
-                                ${additionalImgs.length ? `<div style="border:1px solid #eef2f6; padding:12px; border-radius:8px"><div style="font-weight:700; margin-bottom:8px">Additional Images</div><div class="additional-images">${additionalImgs.map(s=>`<img src="${escapeHtml(s)}">`).join('')}</div></div>` : ''}
+                                ${additionalImgs.length ? `<div style="border:1px solid #eef2f6; padding:12px; border-radius:8px"><div style="font-weight:700; margin-bottom:8px">Additional Images</div><div class="additional-images">${additionalImgs.map(s => `<img src="${escapeHtml(s)}">`).join('')}</div></div>` : ''}
 
                                 <div style="border:1px solid #f1f5f9; padding:12px; border-radius:8px">
                                     <div style="font-weight:700; margin-bottom:8px">Notes</div>

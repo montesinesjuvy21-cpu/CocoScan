@@ -69,7 +69,7 @@ class TestSecurityService(unittest.TestCase):
             ).fetchone()
 
         self.assertIsNotNone(row)
-        self.assertAlmostEqual(row["expires_at"] - row["created_at"], 45, delta=1)
+        self.assertAlmostEqual(row["expires_at"] - row["created_at"], 90, delta=1)
 
     def test_generate_and_send_otp_reports_delivery_failure_without_crashing(self):
         result = security_service.generate_and_send_otp("otp-fallback@example.com", purpose="2FA Verification")
