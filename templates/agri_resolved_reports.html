@@ -131,6 +131,33 @@
         .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
         .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); }
 
+        .btn-icon-refresh {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: #ffffff;
+            border: 1px solid var(--border-light);
+            color: var(--primary-green);
+            font-size: 1.05rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-icon-refresh:hover {
+            background-color: var(--primary-green);
+            color: #ffffff;
+            transform: rotate(45deg);
+            box-shadow: 0 6px 14px rgba(82, 130, 101, 0.15);
+        }
+
+        .btn-icon-refresh:active {
+            transform: rotate(90deg) scale(0.95);
+        }
+
         /* --- SEARCH AND RESPONSIVE CONTROLS --- */
         .search-controls-row {
             display: flex; 
@@ -456,6 +483,10 @@
                 <div>
                     <h1>Resolved Reports</h1>
                     <p>Completed cases that have been closed with a final outcome</p>
+                </div>
+                <div>
+                    <button class="btn-icon-refresh" onclick="spinAndRefresh(this)" title="Refresh Layout"><i
+                            class="fa-solid fa-arrows-rotate"></i></button>
                 </div>
             </header>
 
@@ -925,6 +956,23 @@
             if (icon) {
                 icon.className = sidebar.classList.contains('show-mobile') ? "fa-solid fa-xmark" : "fa-solid fa-bars";
             }
+        }
+
+        function spinAndRefresh(btn) {
+            if (btn) btn.disabled = true;
+            const icon = btn ? btn.querySelector('i') : null;
+            if (icon) icon.classList.add('fa-spin');
+            
+            const mainContent = document.querySelector('main') || document.body;
+            if (mainContent) {
+                mainContent.style.transition = 'opacity 0.25s ease';
+                mainContent.style.opacity = '0.5';
+            }
+            setTimeout(() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('_r', Date.now());
+                window.location.href = url.toString();
+            }, 300);
         }
     </script>
     <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
