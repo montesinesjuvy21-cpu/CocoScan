@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CocoScan - Visit Schedules Calendar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ==========================================================================
+           1. DESIGN TOKENS & BASE COHESION
+           ========================================================================== */
+        :root {
+            --bg-base: #f4f7f5;
+            --bg-card: #ffffff;
+            --brand-dark: #0b251a;
+            --brand-accent: #4ac68f;
+            --primary-green: #528265;
+            --badge-green-bg: #8ba888;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-light: rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        html, body, .mobile-viewport-container {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            background-color: var(--brand-dark);
+            color: var(--text-dark);
+            min-height: 100vh;
+        }
+
+        /* --- GLOBAL LAYOUT CONTAINER --- */
+        .mobile-viewport-container {
+            width: 100%;
+            min-height: 100vh;
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* --- STICKY APP HEADER --- */
+        .mobile-header {
+            width: 100%;
+            height: 64px;
+            background-color: var(--brand-dark);
+            color: #ffffff;
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 1000;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .header-content-wrapper {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-group { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #ffffff; }
+        .logo-img-fallback {
+            width: 32px; height: 32px; background: var(--bg-card); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .mobile-header h2 { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.2px; }
+        .mobile-header p { font-size: 0.65rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; }
+        .hamburger-btn { background: none; border: none; color: #ffffff; font-size: 1.35rem; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: flex-end; }
+
+        /* --- SIDEBAR MENU SYSTEM --- */
+        .sidebar-wrapper {
+            width: min(290px, 100%); max-width: 100%; background-color: var(--brand-dark); color: #ffffff;
+            display: flex; flex-direction: column; justify-content: space-between;
+            position: fixed; top: 64px; bottom: 0; right: 0; z-index: 999;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-wrapper.show-mobile { transform: translateX(0); }
+        .menu-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.4); padding: 24px 20px 12px 20px; font-weight: 700; }
+        .sidebar-menu-list { list-style: none; padding: 0 10px; }
+        .menu-item-link { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 0.95rem; font-weight: 500; border-radius: 10px; margin-bottom: 6px; transition: all 0.2s ease; }
+        .menu-item-link:hover, .menu-item-link.active { color: #ffffff; background-color: rgba(255, 255, 255, 0.06); }
+        .menu-item-link.active { font-weight: 600; }
+        .sidebar-user-footer { padding: 20px; background-color: rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .user-meta-box { display: flex; align-items: center; gap: 12px; }
+        .user-avatar-circle { width: 42px; height: 42px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; }
+        .user-identity-text h4 { font-size: 0.9rem; color: #ffffff; }
+        .user-identity-text p { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
+        .btn-logout-trigger { color: rgba(255, 255, 255, 0.4); font-size: 1.2rem; transition: color 0.2s ease; padding: 4px; text-decoration: none; display: flex; align-items: center; }
+        .btn-logout-trigger:hover { color: #ef4444 !important; }
+        .sidebar-backdrop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 37, 26, 0.4); backdrop-filter: blur(4px); z-index: 950; }
+        .sidebar-backdrop.active { display: block; }
+
+        /* --- MAIN VIEWPORTS LAYOUT --- */
+        .main-content-layout {
+            flex: 1; 
+            width: 100%; 
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 88px 24px 24px 24px;
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px;
+        }
+
+        .section-title-wrap { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+        .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
+        .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+
+        .btn-icon-refresh {
+            width: 42px; height: 42px; border-radius: 50%; background-color: #ffffff;
+            border: 1px solid rgba(0,0,0,0.08); color: var(--primary-green); font-size: 1.05rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-icon-refresh:hover { background-color: var(--primary-green); color: #ffffff; transform: rotate(45deg); box-shadow: 0 6px 14px rgba(82, 130, 101, 0.15); }
+        .btn-icon-refresh:active { transform: rotate(90deg) scale(0.95); }
+
+        /* --- CONTROLS BAR --- */
+        .controls-bar {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+            background: var(--bg-card); padding: 14px 20px; border-radius: 16px; border: 1px solid var(--border-light); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+        }
+        .view-toggle-group { display: flex; background: #f1f5f9; padding: 4px; border-radius: 10px; gap: 4px; }
+        .view-toggle-btn {
+            border: none; background: transparent; padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+            color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;
+        }
+        .view-toggle-btn.active { background: white; color: var(--brand-dark); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .view-toggle-btn:hover:not(.active) { color: var(--brand-dark); }
+
+        .month-nav-group { display: flex; align-items: center; gap: 12px; }
+        .month-title { font-size: 1.15rem; font-weight: 700; color: var(--brand-dark); min-width: 170px; text-align: center; }
+        .btn-nav-month {
+            background: white; border: 1px solid rgba(0,0,0,0.1); width: 36px; height: 36px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-dark); transition: all 0.15s ease;
+        }
+        .btn-nav-month:hover { background: #f8fafc; border-color: var(--primary-green); color: var(--primary-green); }
+        .btn-today {
+            background: white; border: 1px solid rgba(0,0,0,0.1); padding: 7px 14px; border-radius: 8px;
+            font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--text-dark); transition: all 0.15s ease;
+        }
+        .btn-today:hover { background: #f8fafc; border-color: var(--primary-green); color: var(--primary-green); }
+
+        /* --- CALENDAR GRID --- */
+        .calendar-container {
+            background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .calendar-header-row {
+            display: grid; grid-template-columns: repeat(7, 1fr); background: #f8fafc; border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .calendar-day-header {
+            padding: 14px 8px; text-align: center; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .calendar-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(115px, auto); background: rgba(0,0,0,0.06); gap: 1px;
+        }
+        .calendar-day-cell {
+            background: white; padding: 10px; min-height: 115px; display: flex; flex-direction: column; gap: 5px; position: relative; transition: background 0.15s ease;
+        }
+        .calendar-day-cell.other-month { background: #fafbfc; opacity: 0.55; }
+        .calendar-day-cell.today { background: #f0fdf4; }
+        .calendar-day-cell:hover { background: #f8fafc; }
+        .day-number { font-size: 0.88rem; font-weight: 600; color: var(--text-dark); align-self: flex-end; margin-bottom: 2px; }
+        .calendar-day-cell.today .day-number {
+            background: var(--primary-green); color: white; width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700;
+        }
+
+        .schedule-chip {
+            background: #edf6f1;  padding: 6px 8px; border-radius: 6px; border-left: 3px solid #164630;
+            font-size: 0.74rem; color: var(--brand-dark); cursor: pointer; transition: all 0.15s ease; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .schedule-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(11, 37, 26, 0.12); background: #dcece3; }
+        .schedule-chip strong { font-weight: 700; color: var(--primary-green); margin-right: 4px;  }
+
+        /* --- LIST VIEW --- */
+        .list-container { display: none; background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .schedules-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.92rem; }
+        .schedules-table th { background: #f8fafc; padding: 16px 18px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .schedules-table td { padding: 16px 18px; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: middle; }
+        .schedules-table tr:hover { background-color: #f8fafc; cursor: pointer; }
+        .schedules-table tr:last-child td { border-bottom: none; }
+        .badge-status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: capitalize; }
+        .badge-confirmed { background: #dcfce7; color: #166534; }
+        .badge-resolved { background: #e0e7ff; color: #3730a3; }
+        .badge-pending { background: #fef9c3; color: #854d0e; }
+
+        /* --- DETAILS MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 37, 26, 0.5);
+            backdrop-filter: blur(4px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 1rem;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white; border-radius: 20px; width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            overflow: hidden; animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalPop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .modal-header { padding: 1.25rem 1.5rem; background: #f8fafc; border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 1.15rem; font-weight: 800; color: var(--brand-dark); }
+        .btn-close-modal { background: none; border: none; font-size: 1.25rem; color: var(--text-muted); cursor: pointer; padding: 4px; transition: color 0.15s ease; }
+        .btn-close-modal:hover { color: var(--brand-dark); }
+        .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; font-size: 0.95rem; }
+        .detail-row { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(0,0,0,0.08); padding-bottom: 0.75rem; }
+        .detail-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .detail-label { color: var(--text-muted); font-weight: 500; }
+        .detail-value { font-weight: 600; color: var(--brand-dark); text-align: right; }
+        .modal-footer { padding: 1.25rem 1.5rem; background: #f8fafc; border-top: 1px solid rgba(0,0,0,0.06); display: flex; justify-content: flex-end; gap: 12px; }
+        .btn-primary { background-color: #164630; color: #ffffff; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.92rem; transition: all 0.25s ease; box-shadow: 0 4px 12px rgba(22, 70, 48, 0.18); }
+        .btn-primary:hover { background-color: #1e5c3f; color: #ffffff; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(30, 92, 63, 0.25); }
+        .btn-secondary { background: white; color: var(--text-dark); border: 1px solid rgba(0,0,0,0.12); padding: 14px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.92rem; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-secondary:hover { background: #f8fafc; }
+
+        /* --- DESKTOP ADAPTATION --- */
+        @media (min-width: 1024px) {
+            .main-content-layout {
+                max-width: 1400px;
+                padding: 108px 32px 32px 32px;
+                gap: 24px;
+            }
+
+            .mobile-header {
+                height: 72px;
+                padding: 0 max(32px, calc((100% - 1400px) / 2 + 32px));
+            }
+
+            .sidebar-wrapper {
+                top: 72px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .calendar-grid { grid-auto-rows: minmax(80px, auto); }
+            .calendar-day-cell { padding: 6px; min-height: 80px; }
+            .schedule-chip { font-size: 0.68rem; padding: 4px 6px; }
+            .month-title { min-width: 140px; font-size: 1rem; }
+            .controls-bar { padding: 12px 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-viewport-container">
+        <!-- STICKY APP HEADER -->
+        <header class="mobile-header">
+            <div class="header-content-wrapper">
+                <a href="/agriculturist/dashboard" class="logo-group">
+                    <div class="logo-img-fallback">
+                        <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
+                    </div>
+                    <div>
+                        <h2>CocoScan</h2>
+                        <p>Agri-Expert Portal</p>
+                    </div>
+                </a>
+                <button class="hamburger-btn" onclick="toggleSidebarMenu()" type="button" aria-label="Toggle navigation menu">
+                    <i class="fa-solid fa-bars" id="toggleIcon"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
+
+        <!-- SIDEBAR MENU DRAWER -->
+        <aside class="sidebar-wrapper" id="sidebar">
+            <div>
+                <div class="menu-label">Main Menu</div>
+                <ul class="sidebar-menu-list">
+                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
+                    <li><a href="/agriculturist/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+                    <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i> Active Reports</a></li>
+                    <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Resolved</a></li>
+                    <li><a href="/agriculturist/schedules" class="menu-item-link active"><i class="fa-solid fa-calendar-days"></i> Visit Schedules</a></li>
+                    <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-user-footer">
+                <div class="user-meta-box">
+                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
+                    <div class="user-identity-text">
+                        <h4>{{ user_name }}</h4>
+                        <p>PCA Agriculturist</p>
+                    </div>
+                </div>
+                <a href="/logout" class="btn-logout-trigger" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content-layout">
+            <header class="section-title-wrap">
+                <div>
+                    <h1>Visit Schedules</h1>
+                    <p>Calendar overview of all your confirmed field inspections and farmer visits.</p>
+                </div>
+                <div>
+                    <button class="btn-icon-refresh" onclick="spinAndRefresh(this)" title="Refresh Layout" type="button">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- CONTROLS BAR -->
+            <div class="controls-bar">
+                <div class="month-nav-group" id="monthNavGroup">
+                    <button class="btn-nav-month" onclick="changeMonth(-1)" title="Previous Month" type="button"><i class="fa-solid fa-chevron-left"></i></button>
+                    <div class="month-title" id="currentMonthDisplay">July 2026</div>
+                    <button class="btn-nav-month" onclick="changeMonth(1)" title="Next Month" type="button"><i class="fa-solid fa-chevron-right"></i></button>
+                    <button class="btn-today" onclick="goToToday()" type="button">Today</button>
+                </div>
+                <div class="view-toggle-group">
+                    <button class="view-toggle-btn active" id="btnCalendarView" onclick="switchView('calendar')" type="button">
+                        <i class="fa-solid fa-calendar-days"></i> Calendar
+                    </button>
+                    <button class="view-toggle-btn" id="btnListView" onclick="switchView('list')" type="button">
+                        <i class="fa-solid fa-list"></i> List View
+                    </button>
+                </div>
+            </div>
+
+            <!-- CALENDAR VIEW -->
+            <div class="calendar-container" id="calendarViewWrap">
+                <div class="calendar-header-row">
+                    <div class="calendar-day-header">Sun</div>
+                    <div class="calendar-day-header">Mon</div>
+                    <div class="calendar-day-header">Tue</div>
+                    <div class="calendar-day-header">Wed</div>
+                    <div class="calendar-day-header">Thu</div>
+                    <div class="calendar-day-header">Fri</div>
+                    <div class="calendar-day-header">Sat</div>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Cells generated via JavaScript -->
+                </div>
+            </div>
+
+            <!-- LIST VIEW -->
+            <div class="list-container" id="listViewWrap">
+                <table class="schedules-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Report ID & Pest</th>
+                            <th>Farmer</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedulesTableBody">
+                        <!-- Rows generated via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- DETAILS MODAL -->
+    <div class="modal-overlay" id="scheduleDetailModal" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modalTitle">Visit Schedule Details</h3>
+            </div>
+            <div class="modal-body">
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fa-regular fa-calendar" style="margin-right:6px;"></i> Date & Time:</span>
+                    <span class="detail-value" id="modalDateTime">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fa-solid fa-bug" style="margin-right:6px;"></i> Report / Pest:</span>
+                    <span class="detail-value" id="modalReportPest">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fa-solid fa-user-tag" style="margin-right:6px;"></i> Farmer:</span>
+                    <span class="detail-value" id="modalFarmer">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fa-solid fa-location-dot" style="margin-right:6px;"></i> Location:</span>
+                    <span class="detail-value" id="modalLocation">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label"><i class="fa-solid fa-info-circle" style="margin-right:6px;"></i> Status:</span>
+                    <span class="detail-value" id="modalStatus">--</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeScheduleModal()" type="button">Close</button>
+                <a href="/agriculturist/pending" class="btn-primary" id="modalOpenCaseBtn">
+                    <span>Open Reports Queue</span> <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- INJECTED SCHEDULES DATA -->
+    <script id="schedules-data" type="application/json">
+        {{ schedules | tojson | safe }}
+    </script>
+
+    <script>
+        let allSchedules = [];
+        let currentDate = new Date();
+        let activeView = 'calendar'; // 'calendar' or 'list'
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const dataEl = document.getElementById("schedules-data");
+            try {
+                allSchedules = JSON.parse(dataEl.textContent || "[]");
+            } catch (err) {
+                console.error("Failed to parse schedules data:", err);
+                allSchedules = [];
+            }
+            renderView();
+        });
+
+        function switchView(view) {
+            activeView = view;
+            document.getElementById('btnCalendarView').classList.toggle('active', view === 'calendar');
+            document.getElementById('btnListView').classList.toggle('active', view === 'list');
+            document.getElementById('calendarViewWrap').style.display = view === 'calendar' ? 'block' : 'none';
+            document.getElementById('monthNavGroup').style.display = view === 'calendar' ? 'flex' : 'none';
+            document.getElementById('listViewWrap').style.display = view === 'list' ? 'block' : 'none';
+            renderView();
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderView();
+        }
+
+        function goToToday() {
+            currentDate = new Date();
+            renderView();
+        }
+
+        function renderView() {
+            if (activeView === 'calendar') {
+                renderCalendar();
+            } else {
+                renderList();
+            }
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById("currentMonthDisplay").textContent = `${monthNames[month]} ${year}`;
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+            const grid = document.getElementById("calendarGrid");
+            grid.innerHTML = "";
+
+            const today = new Date();
+            const isCurrentYearMonth = today.getFullYear() === year && today.getMonth() === month;
+
+            const schedMap = {};
+            allSchedules.forEach(s => {
+                const d = s.confirmed_date;
+                if (!schedMap[d]) schedMap[d] = [];
+                schedMap[d].push(s);
+            });
+
+            let cellCount = 0;
+
+            for (let x = firstDayIndex; x > 0; x--) {
+                const dayNum = daysInPrevMonth - x + 1;
+                const cell = createDayCell(dayNum, true, false, null);
+                grid.appendChild(cell);
+                cellCount++;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isToday = isCurrentYearMonth && today.getDate() === d;
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const daySchedules = schedMap[dateStr] || [];
+                const cell = createDayCell(d, false, isToday, daySchedules);
+                grid.appendChild(cell);
+                cellCount++;
+            }
+
+            const remaining = (cellCount % 7 === 0) ? 0 : (7 - (cellCount % 7));
+            for (let n = 1; n <= remaining; n++) {
+                const cell = createDayCell(n, true, false, null);
+                grid.appendChild(cell);
+            }
+        }
+
+        function createDayCell(dayNum, isOtherMonth, isToday, schedules) {
+            const cell = document.createElement("div");
+            cell.className = `calendar-day-cell ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`;
+            
+            const numSpan = document.createElement("span");
+            numSpan.className = "day-number";
+            numSpan.textContent = dayNum;
+            cell.appendChild(numSpan);
+
+            if (schedules && schedules.length > 0) {
+                schedules.forEach(s => {
+                    const chip = document.createElement("div");
+                    chip.className = "schedule-chip";
+                    chip.title = `Report #${s.report_id}: ${s.pest_type} (${s.formatted_time})`;
+                    chip.innerHTML = `<strong>${s.formatted_time.split(' - ')[0]}</strong> #${s.report_id} ${s.pest_type}`;
+                    chip.onclick = (e) => {
+                        e.stopPropagation();
+                        openScheduleModal(s);
+                    };
+                    cell.appendChild(chip);
+                });
+            }
+
+            return cell;
+        }
+
+        function renderList() {
+            const tbody = document.getElementById("schedulesTableBody");
+            tbody.innerHTML = "";
+
+            if (allSchedules.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2.5rem; color: var(--text-muted);">No confirmed visit schedules found.</td></tr>`;
+                return;
+            }
+
+            allSchedules.forEach(s => {
+                const tr = document.createElement("tr");
+                tr.onclick = () => openScheduleModal(s);
+
+                let badgeClass = "badge-pending";
+                if (s.status === 'confirmed') badgeClass = "badge-confirmed";
+                if (s.status === 'resolved' || s.status === 'completed') badgeClass = "badge-resolved";
+
+                tr.innerHTML = `
+                    <td><strong>${s.confirmed_date}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${s.formatted_time}</span></td>
+                    <td><strong>Report #${s.report_id}</strong><br><span style="font-size:0.85rem;">${s.pest_type}</span></td>
+                    <td>${s.farmer_name}</td>
+                    <td>${s.location}</td>
+                    <td><span class="badge-status ${badgeClass}">${s.status}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openScheduleModal(s) {
+            document.getElementById("modalTitle").textContent = `Visit Schedule - Report #${s.report_id}`;
+            document.getElementById("modalDateTime").textContent = `${s.confirmed_date} (${s.formatted_time})`;
+            document.getElementById("modalReportPest").textContent = `Report #${s.report_id} - ${s.pest_type}`;
+            document.getElementById("modalFarmer").textContent = s.farmer_name || "Farmer";
+            document.getElementById("modalLocation").textContent = s.location || "Unknown Location";
+            
+            const statusSpan = document.getElementById("modalStatus");
+            statusSpan.textContent = s.status ? s.status.toUpperCase() : "CONFIRMED";
+            
+            const btn = document.getElementById("modalOpenCaseBtn");
+            if (s.status === 'resolved' || s.status === 'completed') {
+                btn.href = "/agriculturist/reviewed";
+                btn.querySelector("span").textContent = "View Resolved Archive";
+            } else {
+                btn.href = "/agriculturist/pending";
+                btn.querySelector("span").textContent = "Open Active Reports";
+            }
+
+            document.getElementById("scheduleDetailModal").classList.add("active");
+        }
+
+        function closeScheduleModal() {
+            document.getElementById("scheduleDetailModal").classList.remove("active");
+        }
+
+        function closeModalOnBackdrop(e) {
+            if (e.target.id === "scheduleDetailModal") {
+                closeScheduleModal();
+            }
+        }
+
+        function toggleSidebarMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('backdrop');
+            const icon = document.getElementById('toggleIcon');
+            sidebar.classList.toggle('show-mobile');
+            backdrop.classList.toggle('active');
+
+            if (icon) {
+                icon.className = sidebar.classList.contains('show-mobile') ? "fa-solid fa-xmark" : "fa-solid fa-bars";
+            }
+        }
+
+        function spinAndRefresh(btn) {
+            if (btn) btn.disabled = true;
+            const icon = btn ? btn.querySelector('i') : null;
+            if (icon) icon.classList.add('fa-spin');
+            
+            const mainContent = document.querySelector('main') || document.body;
+            if (mainContent) {
+                mainContent.style.transition = 'opacity 0.25s ease';
+                mainContent.style.opacity = '0.5';
+            }
+            setTimeout(() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('_r', Date.now());
+                window.location.href = url.toString();
+            }, 300);
+        }
+    </script>
+</body>
+</html>

@@ -2354,6 +2354,74 @@ def render_map_view(required_role):
 def agriculturist_map():
     return render_map_view('agri_expert')
 
+@app.route('/agriculturist/schedules')
+def agri_schedules():
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    if not user_id or user_role != 'agri_expert':
+        flash("Unauthorized access path.", "error")
+        return redirect(url_for('login'))
+    try:
+        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
+        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
+        
+        sched_resp = supabase.table('visit_schedules').select('*').eq('agriculturist_id', user_id).execute()
+        raw_schedules = getattr(sched_resp, 'data', []) or []
+        
+        # Keep only the latest schedule row for each report_id
+        raw_schedules.sort(key=lambda x: str(x.get('created_at') or x.get('id') or ''))
+        latest_map = {}
+        for s in raw_schedules:
+            rep_id = s.get('report_id')
+            if rep_id:
+                latest_map[str(rep_id)] = s
+            else:
+                latest_map[f"sched_{s.get('id')}"] = s
+                
+        schedules = sorted(latest_map.values(), key=lambda x: str(x.get('confirmed_date') or ''))
+        
+        enriched_schedules = []
+        for s in schedules:
+            rep_id = s.get('report_id')
+            rep_info = {}
+            if rep_id:
+                rep_resp = supabase.table('reports').select('pest_type, barangay, municipality, status, user_id, latitude, longitude').eq('id', rep_id).execute()
+                if getattr(rep_resp, 'data', None) and len(rep_resp.data) > 0:
+                    rep_info = rep_resp.data[0]
+            
+            farmer_name = "Farmer"
+            if rep_info.get('user_id'):
+                u_resp = supabase.table("users").select("first_name, last_name").eq("id", rep_info.get('user_id')).execute()
+                if getattr(u_resp, 'data', None) and len(u_resp.data) > 0:
+                    farmer_name = f"{u_resp.data[0].get('first_name', '')} {u_resp.data[0].get('last_name', '')}".strip()
+                    
+            try:
+                t1 = datetime.strptime(_coerce_time_to_hhmmss(s.get('start_time')), "%H:%M:%S").strftime("%I:%M %p").lstrip("0")
+                t2 = datetime.strptime(_coerce_time_to_hhmmss(s.get('end_time')), "%H:%M:%S").strftime("%I:%M %p").lstrip("0")
+                formatted_time = f"{t1} - {t2}"
+            except Exception:
+                formatted_time = f"{s.get('start_time')} - {s.get('end_time')}"
+                
+            enriched_schedules.append({
+                "id": s.get('id'),
+                "report_id": rep_id,
+                "confirmed_date": s.get('confirmed_date'),
+                "start_time": s.get('start_time'),
+                "end_time": s.get('end_time'),
+                "formatted_time": formatted_time,
+                "pest_type": rep_info.get('pest_type') or 'Pest Scan',
+                "barangay": rep_info.get('barangay') or '',
+                "municipality": rep_info.get('municipality') or '',
+                "location": _format_report_location(rep_info) if rep_info else "Unknown Location",
+                "status": rep_info.get('status', 'pending'),
+                "farmer_name": farmer_name
+            })
+            
+        return render_template('agri_schedules.html', user_name=user_name, schedules=enriched_schedules)
+    except Exception as e:
+        logger.error(f"Agriculturist schedules exception: {str(e)}")
+        return redirect(url_for('agri_dashboard'))
+
 @app.route('/lgu/map')
 def lgu_map():
     return render_map_view('lgu')
@@ -2683,8 +2751,15 @@ def agriculturist_finalize_visit_schedule():
             if datetime.strptime(normalized_start, "%H:%M:%S").time() < datetime.now().time():
                 return jsonify({'success': False, 'message': 'You cannot schedule a visit for a time that has already passed today.'}), 400
 
-        conflict_query = supabase.table('visit_schedules').select('start_time, end_time, report_id').eq('agriculturist_id', user_id).eq('confirmed_date', confirmed_date).execute()
-        conflict_rows = getattr(conflict_query, 'data', None) or []
+        all_sched_query = supabase.table('visit_schedules').select('id, start_time, end_time, report_id, confirmed_date, created_at').eq('agriculturist_id', user_id).execute()
+        all_sched_rows = getattr(all_sched_query, 'data', None) or []
+        all_sched_rows.sort(key=lambda x: str(x.get('created_at') or x.get('id') or ''))
+        latest_active_map = {}
+        for r in all_sched_rows:
+            rid = r.get('report_id')
+            if rid:
+                latest_active_map[str(rid)] = r
+        conflict_rows = [r for r in latest_active_map.values() if str(r.get('confirmed_date') or '') == str(confirmed_date)]
         for row in conflict_rows:
             if str(row.get('report_id') or '') == str(report_id):
                 continue
@@ -2692,7 +2767,29 @@ def agriculturist_finalize_visit_schedule():
             existing_end = _coerce_time_to_hhmmss(row.get('end_time'))
             if existing_start and existing_end:
                 if _do_schedule_time_ranges_overlap(normalized_start, normalized_end, existing_start, existing_end):
-                    return jsonify({'success': False, 'message': 'You already have an overlapping schedule on this date and time.'}), 400
+                    conflicting_report_id = row.get('report_id')
+                    conflict_details = f"Report #{conflicting_report_id}"
+                    try:
+                        rep_resp = supabase.table('reports').select('pest_type, latitude, longitude, created_at, user_id').eq('id', conflicting_report_id).execute()
+                        if getattr(rep_resp, 'data', None) and len(rep_resp.data) > 0:
+                            rep_item = rep_resp.data[0]
+                            pest = rep_item.get('pest_type') or 'Pest Scan'
+                            loc = _format_report_location(rep_item)
+                            conflict_details = f"Report #{conflicting_report_id} ({pest} at {loc})"
+                    except Exception as ex:
+                        logger.warning(f"Unable to fetch conflict report details: {ex}")
+                    
+                    try:
+                        t1 = datetime.strptime(existing_start, "%H:%M:%S").strftime("%I:%M %p").lstrip("0")
+                        t2 = datetime.strptime(existing_end, "%H:%M:%S").strftime("%I:%M %p").lstrip("0")
+                        time_str = f"{t1} - {t2}"
+                    except Exception:
+                        time_str = f"{existing_start} - {existing_end}"
+                        
+                    return jsonify({
+                        'success': False,
+                        'message': f"Schedule conflict! You already have an overlapping visit for {conflict_details} on {confirmed_date} from {time_str}."
+                    }), 400
         schedule_label = _format_confirmed_schedule_label(confirmed_date, normalized_start, normalized_end)
         schedule_message = f"{'New schedule confirmed' if has_pending_reschedule else 'Visit confirmed'}: {schedule_label.replace('Confirmed: ', '')}"
 

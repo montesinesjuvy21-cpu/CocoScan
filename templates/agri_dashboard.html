@@ -11,6 +11,7 @@
         Active Reports</a></li>
 <li><a href="/agriculturist/reviewed" class="menu-item-link"><i
             class="fa-solid fa-check-double"></i> Resolved</a></li>
+<li><a href="/agriculturist/schedules" class="menu-item-link"><i class="fa-solid fa-calendar-days"></i> Visit Schedules</a></li>
 <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i>
         Map View</a></li>
 {% endblock %}
@@ -25,11 +26,16 @@
 
 {% block quick_action %}
 <div class="quick-action-card">
-    <h3>Active Reports</h3>
-    <p>Review reports that are still waiting for your actions</p>
-    <a href="{{ url_for('agri_active_reports') }}" class="btn-primary-scan" style="text-decoration: none;">
-        <i class="fa-solid fa-list-ul"></i> View Active Reports
-    </a>
+    <h3>Active Reports & Schedules</h3>
+    <p>Review reports waiting for your actions and check your upcoming field visit schedule</p>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;">
+        <a href="{{ url_for('agri_active_reports') }}" class="btn-primary-scan" style="text-decoration: none;">
+            <i class="fa-solid fa-list-ul"></i> View Active Reports
+        </a>
+        <a href="/agriculturist/schedules" class="btn-primary-scan" style="text-decoration: none; background-color: #ffffff; color: #164630; border: 1px solid #cbd5e1;">
+            <i class="fa-solid fa-calendar-days"></i> Visit Calendar
+        </a>
+    </div>
 </div>
 {% endblock %}
 
