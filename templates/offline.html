@@ -206,10 +206,10 @@
         </p>
 
         <div class="actions-stack">
-            <a href="/farmer/scan" class="btn btn-primary">
+            <a href="/farmer/scan" class="btn btn-primary farmer-only" style="display: none;">
                 <i class="fa-solid fa-camera"></i> Take Offline Field Scan
             </a>
-            <a href="/farmer/drafts" class="btn btn-secondary">
+            <a href="/farmer/drafts" class="btn btn-secondary farmer-only" style="display: none;">
                 <i class="fa-solid fa-folder-open"></i> View Saved Offline Drafts
             </a>
             <button onclick="window.location.reload()" class="btn btn-outline">
@@ -223,6 +223,11 @@
     </div>
 
     <script>
+        // Check role and show farmer-only actions
+        if (localStorage.getItem('cocoscan_user_role') === 'farmer') {
+            document.querySelectorAll('.farmer-only').forEach(el => el.style.display = 'flex');
+        }
+
         // When online status is restored, automatically reload or alert user
         window.addEventListener('online', () => {
             window.location.reload();

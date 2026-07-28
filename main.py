@@ -1376,7 +1376,7 @@ def farmer_dashboard():
         
     except Exception as e:
         logger.error(f"Dashboard routing exception: {str(e)}")
-        return redirect(url_for('logout'))
+        return render_template('500.html'), 503
 
 @app.route('/farmer/scan')
 def farmer_scan():
@@ -1410,7 +1410,7 @@ def farmer_scan():
         return render_template('farmer_scan.html', user_name=user_name, recent_reports=recent_reports[:6])
     except Exception as e:
         logger.error(f"Scan Pest routing exception: {str(e)}")
-        return redirect(url_for('logout'))
+        return render_template('500.html'), 503
 
 @app.route('/farmer/predict', methods=['POST'])
 def farmer_predict():
@@ -1630,7 +1630,7 @@ def agri_dashboard():
         
     except Exception as e:
         logger.error(f"Agriculturist dashboard routing exception: {str(e)}")
-        return redirect(url_for('logout'))
+        return render_template('500.html'), 503
 
 @app.route('/agriculturist/analytics')
 def agriculturist_analytics():
@@ -1706,7 +1706,7 @@ def lgu_dashboard():
         
     except Exception as e:
         logger.error(f"LGU dashboard routing exception: {str(e)}")
-        return redirect(url_for('logout'))
+        return render_template('500.html'), 503
 
 @app.route('/lgu/analytics')
 def lgu_analytics():
@@ -1771,7 +1771,7 @@ def lgu_analytics():
 
     except Exception as e:
         logger.error(f"LGU analytics routing exception: {str(e)}")
-        return redirect(url_for('logout'))
+        return render_template('500.html'), 503
 
 @app.route('/api/analytics')
 def api_analytics():

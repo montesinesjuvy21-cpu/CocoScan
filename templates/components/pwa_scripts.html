@@ -165,6 +165,17 @@
         });
     }
 
+    // Save user role for offline access logic
+    let currentUserRole = "";
+    {% if current_user is defined and current_user.is_authenticated %}
+    currentUserRole = "{{ current_user.role }}";
+    {% elif session is defined and session.get('role') %}
+    currentUserRole = "{{ session.get('role') }}";
+    {% endif %}
+    if (currentUserRole) {
+        localStorage.setItem('cocoscan_user_role', currentUserRole);
+    }
+
     // 2. Install Prompt Handling
     let deferredPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {

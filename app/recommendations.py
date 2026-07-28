@@ -24,52 +24,23 @@ RISK_FACTORS = {
 }
 
 RECOMMENDATIONS = {
-    "Rhinoceros Beetle": {
-        "Mild": [
-            "Improve farm sanitation",
-            "Remove breeding sites",
-            "Install pheromone traps",
-            "Monitor weekly",
-        ],
-        "Moderate": [
-            "Improve farm sanitation",
-            "Install pheromone traps",
-            "Use green Muscardine fungus log traps",
-            "Apply biological treatment",
-            "Use light traps at night",
-        ],
-        "Severe": [
-            "Perform immediate intervention",
-            "Increase trap density",
-            "Apply biological control",
-            "Remove infested breeding materials",
-            "Consult an agricultural technician",
-        ],
-    },
-    "Brontispa": {
-        "Mild": [
-            "Prune affected leaves",
-            "Monitor infestation levels",
-            "Maintain field sanitation",
-        ],
-        "Moderate": [
-            "Prune damaged leaves",
-            "Release earwigs for natural control",
-            "Release Tetrastichus parasitoids",
-            "Spray white Muscardine fungus",
-        ],
-        "Severe": [
-            "Prune heavily infested leaves",
-            "Apply biological control",
-            "Use approved pesticide early morning",
-            "Quarantine nursery area if necessary",
-        ],
-    },
-    "Healthy Coconut Leaf": {
-        "Mild": ["Continue regular monitoring", "Maintain current sanitation practices"],
-        "Moderate": ["Continue regular monitoring", "Maintain current sanitation practices"],
-        "Severe": ["Continue regular monitoring", "Maintain current sanitation practices"],
-    }
+    "Rhinoceros Beetle": [
+        "Improve farm sanitation and remove breeding sites",
+        "Install pheromone traps and green Muscardine fungus log traps",
+        "Apply biological treatment or use light traps at night",
+        "Monitor weekly and consult an agricultural technician for severe cases",
+    ],
+    "Brontispa": [
+        "Prune and safely dispose of infested leaves",
+        "Maintain field sanitation and monitor infestation levels",
+        "Release earwigs and Tetrastichus parasitoids for natural control",
+        "Spray white Muscardine fungus",
+        "Use approved pesticide early morning for severe infestations",
+    ],
+    "Healthy Coconut Leaf": [
+        "Continue regular monitoring",
+        "Maintain current sanitation practices",
+    ]
 }
 
 
@@ -82,37 +53,35 @@ def assess_risk(pest: str, risk_score: int) -> str:
     return "High"
 
 
-def urgency_from_risk(risk_level: str, severity: str) -> str:
-    """Determine urgency level from risk and severity."""
-    if risk_level == "High" or severity == "Severe":
+def urgency_from_risk(risk_level: str) -> str:
+    """Determine urgency level from risk."""
+    if risk_level == "High":
         return "High"
-    if severity == "Moderate":
+    if risk_level == "Medium":
         return "Medium"
     return "Low"
 
 
-def recommend_actions(pest: str, severity: str, risk_score: int = 50) -> Dict[str, object]:
+def recommend_actions(pest: str, risk_score: int = 50) -> Dict[str, object]:
     """
     Generate action recommendations for a detected pest.
     
     Args:
         pest: Type of pest detected
-        severity: Severity level (Mild, Moderate, Severe)
         risk_score: Risk assessment score (0-100)
     
     Returns:
         Dictionary with recommendations and risk assessment
     """
     risk_level = assess_risk(pest, risk_score)
-    urgency = urgency_from_risk(risk_level, severity)
+    urgency = urgency_from_risk(risk_level)
     
-    # Get recommendations for the pest and severity, default to empty list
-    recommendations = RECOMMENDATIONS.get(pest, {}).get(severity, [])
+    # Get recommendations for the pest, default to empty list
+    recommendations = RECOMMENDATIONS.get(pest, [])
     risk_factors = RISK_FACTORS.get(pest, [])
     
     return {
         "pest": pest,
-        "severity": severity,
         "risk": risk_level,
         "urgency": urgency,
         "recommendation": recommendations,

@@ -52,7 +52,6 @@ def run_full_inference_pipeline(
 
         recommendations_result = recommend_actions(
             inference_result["predicted_pest"],
-            "Moderate",
             risk_score=50,
         )
 

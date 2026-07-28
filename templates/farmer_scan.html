@@ -1286,6 +1286,21 @@
                 return;
             }
 
+            if (!navigator.onLine) {
+                document.getElementById('step-loading-view').classList.remove('active-view');
+                document.getElementById('step-upload-view').classList.add('active-view');
+                if (confirm('AI Pest Detection requires an internet connection. Would you like to save this photo as an offline draft instead?')) {
+                    window.currentPrediction = {
+                        pest: 'Offline Scan (Pending AI)',
+                        confidence: '0%',
+                        pest_confidence: 0,
+                        recommendations: []
+                    };
+                    saveDraftToIndexedDB(true);
+                }
+                return;
+            }
+
             const formData = new FormData();
             formData.append('image_file', globalActiveImageFile);
 
