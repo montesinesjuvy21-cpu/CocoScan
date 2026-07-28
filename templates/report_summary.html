@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CocoScan - Analytics Report</title>
+    {% include 'components/pwa_head.html' %}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -413,9 +414,9 @@
             }
 
             const statusCounts = {
-                pending: {{ data.pending_count | default(0) }},
-                in_progress: {{ data.in_progress_count | default(0) }},
-                resolved: {{ data.resolved_count | default(0) }}
+                pending: Number("{{ data.pending_count | default(0) }}") || 0,
+                in_progress: Number("{{ data.in_progress_count | default(0) }}") || 0,
+                resolved: Number("{{ data.resolved_count | default(0) }}") || 0
             };
 
             // Render status chart first so it prints above other charts
@@ -522,6 +523,7 @@
             }
         });
     </script>
+    {% include 'components/pwa_scripts.html' %}
 </body>
 
 </html>

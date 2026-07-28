@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CocoScan - LGU Analytics</title>
+    {% include 'components/pwa_head.html' %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/weather_widget.css') }}">
 </head>
 <body style="font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; margin: 0;">
@@ -164,5 +165,6 @@
         </section>
     </main>
     </div>
+    {% include 'components/pwa_scripts.html' %}
 </body>
 </html>

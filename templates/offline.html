@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CocoScan - Offline Portal</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2A7B4C">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark-green: #081C10;
+            --primary-green: #2A7B4C;
+            --accent-green: #4ac68f;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --bg-card: #ffffff;
+            --radius-main: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-dark-green) 0%, #113228 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--text-dark);
+        }
+
+        .offline-portal-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 460px;
+            padding: 3rem 2.5rem;
+            border-radius: var(--radius-main);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .icon-pulse-wrapper {
+            width: 90px;
+            height: 90px;
+            background: rgba(42, 123, 76, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            position: relative;
+        }
+
+        .icon-pulse-wrapper::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--primary-green);
+            animation: pulseWave 2s infinite;
+        }
+
+        @keyframes pulseWave {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        .icon-pulse-wrapper i {
+            font-size: 2.2rem;
+            color: var(--primary-green);
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #081C10;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        p.description {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 2rem;
+        }
+
+        .pwa-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(74, 198, 143, 0.15);
+            color: #1a5c37;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .actions-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-green);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(42, 123, 76, 0.3);
+        }
+
+        .btn-primary:hover {
+            background-color: #1e5c38;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(42, 123, 76, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: #f1f5f9;
+            color: var(--text-dark);
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e2e8f0;
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-muted);
+        }
+
+        .btn-outline:hover {
+            color: #081C10;
+            background: rgba(0,0,0,0.03);
+        }
+
+        .status-footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #f59e0b;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-portal-card">
+        <div class="icon-pulse-wrapper">
+            <i class="fa-solid fa-cloud-arrow-down"></i>
+        </div>
+
+        <div class="pwa-badge">
+            <i class="fa-solid fa-bolt"></i> CocoScan Offline Mode Active
+        </div>
+
+        <h1>You're Offline</h1>
+        <p class="description">
+            Your network connection is unavailable right now. Thanks to CocoScan PWA, you can still perform leaf scans in the field and view locally cached reports without an internet connection.
+        </p>
+
+        <div class="actions-stack">
+            <a href="/farmer/scan" class="btn btn-primary">
+                <i class="fa-solid fa-camera"></i> Take Offline Field Scan
+            </a>
+            <a href="/farmer/drafts" class="btn btn-secondary">
+                <i class="fa-solid fa-folder-open"></i> View Saved Offline Drafts
+            </a>
+            <button onclick="window.location.reload()" class="btn btn-outline">
+                <i class="fa-solid fa-rotate-right"></i> Retry Connection
+            </button>
+        </div>
+
+        <div class="status-footer">
+            <span class="status-dot"></span> Field scans will be automatically saved to your local storage until signal is restored.
+        </div>
+    </div>
+
+    <script>
+        // When online status is restored, automatically reload or alert user
+        window.addEventListener('online', () => {
+            window.location.reload();
+        });
+    </script>
+</body>
+</html>

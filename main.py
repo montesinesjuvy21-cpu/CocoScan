@@ -4,7 +4,7 @@ import traceback
 import logging
 import json
 from datetime import datetime, UTC
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory
 import base64
 from io import BytesIO
 from werkzeug.utils import secure_filename
@@ -651,9 +651,24 @@ def send_status_email(user_email, user_name, status):
         logger.error(f"Brevo Email Exception while mailing {user_email}: {str(e)}\n{traceback.format_exc()}")
         return False
     
+@app.route('/sw.js')
+def service_worker():
+    response = send_from_directory('static', 'sw.js')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
+
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
+
+@app.route('/offline')
+def offline_portal():
+    return render_template('offline.html')
+
 @app.route('/favicon.ico')
 def favicon():
-    return '', 204
+    return send_from_directory(os.path.join(app.root_path, 'static', 'icons'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 @app.route('/')
 def splash():
