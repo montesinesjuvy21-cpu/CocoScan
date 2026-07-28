@@ -1308,7 +1308,12 @@
                 method: 'POST',
                 body: formData
             })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(async data => {
                     if (!data.success) {
                         alert(`Error: ${data.error || 'Failed to process image'}`);
@@ -1372,9 +1377,18 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert(`Error: ${error.message || 'Failed to process image'}`);
                     document.getElementById('step-loading-view').classList.remove('active-view');
                     document.getElementById('step-upload-view').classList.add('active-view');
+                    
+                    if (confirm('Failed to connect to the AI Scanner (you might be offline). Would you like to save this photo as an offline draft instead?')) {
+                        window.currentPrediction = {
+                            pest: 'Offline Scan (Pending AI)',
+                            confidence: '0%',
+                            pest_confidence: 0,
+                            recommendations: []
+                        };
+                        saveDraftToIndexedDB(true);
+                    }
                 });
         }
 

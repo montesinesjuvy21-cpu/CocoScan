@@ -5,6 +5,8 @@ const IMAGE_CACHE = 'cocoscan-report-images-v2';
 const PRECACHE_ASSETS = [
     '/manifest.json',
     '/offline',
+    '/farmer/scan',
+    '/farmer/drafts',
     '/static/css/weather_widget.css',
     '/static/js/report_modal.js',
     '/static/icons/icon-192x192.png',
