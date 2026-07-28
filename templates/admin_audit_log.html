@@ -19,47 +19,58 @@
 
 {% block extra_head %}
 <style>
-    /* --- SEARCH AND RESPONSIVE CONTROLS --- */
-    .search-controls-row {
+    /* Search & Filter Bar */
+    .control-actions-form {
         display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: center;
+        flex-direction: column;
+        gap: 0.8rem;
+        margin-bottom: 1rem;
         width: 100%;
-        margin-bottom: 8px;
     }
 
-    .search-bar-box {
+    .search-input-row {
+        width: 100%;
+    }
+
+    .search-box-wrapper {
         position: relative;
-        flex: 1;
-        min-width: 240px;
-    }
-
-    .search-input {
         width: 100%;
-        padding: 14px 16px 14px 44px;
-        border-radius: 32px;
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        background-color: var(--bg-card, #ffffff);
-        font-size: 0.92rem;
-        outline: none;
-        color: var(--text-dark, #0f172a);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
-        transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .search-input:focus {
-        border-color: rgba(82, 130, 101, 0.4);
+    .search-box-wrapper input {
+        width: 100%;
+        padding: 0.9rem 1rem 0.9rem 2.8rem;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 30px;
+        background-color: #ffffff;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .search-box-wrapper input:focus {
+        border-color: rgba(27, 67, 50, 0.4);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     }
 
-    .search-bar-box i {
+    .search-box-wrapper i {
         position: absolute;
         left: 18px;
         top: 50%;
         transform: translateY(-50%);
-        color: #64748b;
+        color: #8a94a6;
         font-size: 1rem;
+    }
+
+    .filter-dropdowns {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        width: 100%;
+        justify-content: space-between;
     }
 
     .chip-filter-btn {
@@ -264,65 +275,73 @@
 {% block user_role %}PCA Administrator{% endblock %}
 
 {% block page_header %}
-<h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">System Audit Log</h1>
-<p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Comprehensive activity trail of user authentication, security interventions, and system events.</p>
+<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 16px;">
+    <div>
+        <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">System Audit Log</h1>
+        <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Comprehensive activity trail of user authentication, security interventions, and system events.</p>
+    </div>
+    <div>
+        <button class="btn-icon-refresh" onclick="spinAndRefresh(this)" title="Refresh Layout"><i class="fa-solid fa-arrows-rotate"></i></button>
+    </div>
+</div>
 {% endblock %}
 
 {% block main_content %}
 <form method="GET" action="{{ url_for('admin_audit_log') }}" class="control-actions-form" id="filterForm">
     <input type="hidden" name="action_filter" id="actionFilter" value="{{ current_action }}">
-    <input type="hidden" name="search" id="searchHidden" value="{{ search }}">
+
+    <div class="search-input-row">
+        <div class="search-box-wrapper">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" name="search" id="searchInput" placeholder="Search by email, action, or details..."
+                value="{{ search }}" autocomplete="off">
+        </div>
+    </div>
+
+    <div class="filter-dropdowns">
+        <div class="filter-button-group" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="chip-filter-btn {% if not current_action %}active-chip{% endif %}"
+                onclick="updateFilter('actionFilter', '')">All ({{ total_records }})</button>
+            <div class="custom-dropdown" style="position:relative;">
+                <button type="button" class="chip-filter-btn {% if current_action %}active-chip{% endif %}"
+                    onclick="toggleDropdown('actionMenu', event)">
+                    {% if current_action == 'LOGIN' %}Login Success
+                    {% elif current_action == 'LOGIN_FAILED' %}Login Failed
+                    {% elif current_action == 'ACCOUNT_LOCKOUT' %}Account Lockout
+                    {% elif current_action == 'PASSWORD_RESET' %}Password Reset
+                    {% elif current_action == '2FA_VERIFIED' %}2FA Verified
+                    {% elif current_action == 'SESSION_TIMEOUT' %}Session Timeout
+                    {% elif current_action %}{{ current_action | replace('_', ' ') | title }}
+                    {% else %}Event Type{% endif %} ▾
+                </button>
+                <div id="actionMenu" class="filter-dropdown-panel">
+                    <button type="button" class="dropdown-item {% if not current_action %}selected{% endif %}"
+                        onclick="updateFilter('actionFilter', '')">All Events</button>
+                    <button type="button" class="dropdown-item {% if current_action == 'LOGIN' %}selected{% endif %}"
+                        onclick="updateFilter('actionFilter', 'LOGIN')">Login Success</button>
+                    <button type="button" class="dropdown-item {% if current_action == 'LOGIN_FAILED' %}selected{% endif %}"
+                        onclick="updateFilter('actionFilter', 'LOGIN_FAILED')">Login Failed</button>
+                    <button type="button" class="dropdown-item {% if current_action == 'ACCOUNT_LOCKOUT' %}selected{% endif %}"
+                        onclick="updateFilter('actionFilter', 'ACCOUNT_LOCKOUT')">Account Lockout</button>
+                    <button type="button" class="dropdown-item {% if current_action == 'PASSWORD_RESET' %}selected{% endif %}"
+                        onclick="updateFilter('actionFilter', 'PASSWORD_RESET')">Password Reset</button>
+                    <button type="button" class="dropdown-item {% if current_action == '2FA_VERIFIED' %}selected{% endif %}"
+                        onclick="updateFilter('actionFilter', '2FA_VERIFIED')">2FA Verified</button>
+                    <button type="button" class="dropdown-item {% if current_action == 'SESSION_TIMEOUT' %}selected{% endif %}"
+                        onclick="updateFilter('actionFilter', 'SESSION_TIMEOUT')">Session Timeout</button>
+                </div>
+            </div>
+        </div>
+
+        {% if current_action or search %}
+        <a href="{{ url_for('admin_audit_log') }}" class="btn-clear-filters">
+            <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+        </a>
+        {% endif %}
+    </div>
 </form>
 
 <div id="tableAndPagination">
-    <div class="search-controls-row" style="display:flex; flex-direction:column; gap:12px; align-items:stretch; width:100%; margin-bottom:12px;">
-        <div class="search-bar-box" style="width:100%;">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" name="search" id="searchInput" class="search-input" placeholder="Search by email, action, or details..."
-                value="{{ search }}" autocomplete="off">
-        </div>
-        <div class="filter-buttons-row" style="display:flex; gap:8px; align-items:center; width:100%; justify-content:space-between; flex-wrap:wrap;">
-            <div class="filter-button-group" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <button type="button" class="chip-filter-btn {% if not current_action %}active-chip{% endif %}"
-                    onclick="updateFilter('actionFilter', '')">All ({{ total_records }})</button>
-                <div class="custom-dropdown" style="position:relative;">
-                    <button type="button" class="chip-filter-btn {% if current_action %}active-chip{% endif %}"
-                        onclick="toggleDropdown('actionMenu', event)">
-                        {% if current_action == 'LOGIN' %}Login Success
-                        {% elif current_action == 'LOGIN_FAILED' %}Login Failed
-                        {% elif current_action == 'ACCOUNT_LOCKOUT' %}Account Lockout
-                        {% elif current_action == 'PASSWORD_RESET' %}Password Reset
-                        {% elif current_action == '2FA_VERIFIED' %}2FA Verified
-                        {% elif current_action == 'SESSION_TIMEOUT' %}Session Timeout
-                        {% elif current_action %}{{ current_action | replace('_', ' ') | title }}
-                        {% else %}Event Type{% endif %} ▾
-                    </button>
-                    <div id="actionMenu" class="filter-dropdown-panel">
-                        <button type="button" class="dropdown-item {% if not current_action %}selected{% endif %}"
-                            onclick="updateFilter('actionFilter', '')">All Events</button>
-                        <button type="button" class="dropdown-item {% if current_action == 'LOGIN' %}selected{% endif %}"
-                            onclick="updateFilter('actionFilter', 'LOGIN')">Login Success</button>
-                        <button type="button" class="dropdown-item {% if current_action == 'LOGIN_FAILED' %}selected{% endif %}"
-                            onclick="updateFilter('actionFilter', 'LOGIN_FAILED')">Login Failed</button>
-                        <button type="button" class="dropdown-item {% if current_action == 'ACCOUNT_LOCKOUT' %}selected{% endif %}"
-                            onclick="updateFilter('actionFilter', 'ACCOUNT_LOCKOUT')">Account Lockout</button>
-                        <button type="button" class="dropdown-item {% if current_action == 'PASSWORD_RESET' %}selected{% endif %}"
-                            onclick="updateFilter('actionFilter', 'PASSWORD_RESET')">Password Reset</button>
-                        <button type="button" class="dropdown-item {% if current_action == '2FA_VERIFIED' %}selected{% endif %}"
-                            onclick="updateFilter('actionFilter', '2FA_VERIFIED')">2FA Verified</button>
-                        <button type="button" class="dropdown-item {% if current_action == 'SESSION_TIMEOUT' %}selected{% endif %}"
-                            onclick="updateFilter('actionFilter', 'SESSION_TIMEOUT')">Session Timeout</button>
-                    </div>
-                </div>
-            </div>
-
-            {% if current_action or search %}
-            <button id="clear-filters-btn" class="btn-clear-filters" style="display:inline-flex;" onclick="window.location.href='{{ url_for('admin_audit_log') }}'; return false;">
-                <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
-            </button>
-            {% endif %}
-        </div>
-    </div>
     <div style="background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--border-light, #e2e8f0); overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
             <thead>

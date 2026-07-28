@@ -2161,6 +2161,7 @@
             modalRoot.setAttribute("aria-hidden", "true");
         }
 
+        const previousMode = currentReportModalMode;
         currentReportModalRecord = null;
         currentReportModalMode = "farmer";
 
@@ -2171,6 +2172,10 @@
 
         if (typeof window.resetWorkflowStateToHome === "function") {
             window.resetWorkflowStateToHome();
+        }
+
+        if (previousMode !== "scan") {
+            window.location.reload();
         }
     }
 
@@ -2484,6 +2489,20 @@
             alert('Unable to prepare print preview.');
         }
     };
+
+    document.addEventListener("click", function (event) {
+        const modalRoot = getModalRoot();
+        if (modalRoot && modalRoot.classList.contains("open-modal") && event.target === modalRoot) {
+            closeReportModal();
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        const modalRoot = getModalRoot();
+        if (event.key === "Escape" && modalRoot && modalRoot.classList.contains("open-modal")) {
+            closeReportModal();
+        }
+    });
 
     window.__cocoScanReportModal = {
         get currentReport() {

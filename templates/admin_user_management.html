@@ -525,9 +525,15 @@
 {% block user_role %}PCA Administrator{% endblock %}
 
 {% block page_header %}
-<h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">User Management</h1>
-<p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview of all registered users and pending
-    applications for system access verification.</p>
+<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 16px;">
+    <div>
+        <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">User Management</h1>
+        <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview of all registered users and pending applications for system access verification.</p>
+    </div>
+    <div>
+        <button class="btn-icon-refresh" onclick="spinAndRefresh(this)" title="Refresh Layout"><i class="fa-solid fa-arrows-rotate"></i></button>
+    </div>
+</div>
 {% endblock %}
 
 {% block main_content %}
