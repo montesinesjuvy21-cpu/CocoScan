@@ -1,14 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CocoScan - Visit Schedules Calendar</title>
-    {% include 'components/pwa_head.html' %}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        /* ==========================================================================
+{% extends 'components/base_layout.html' %}
+{% set sidebar_role = 'Agriculturist' %}
+{% set active_page = 'schedules' %}
+
+{% block title %}CocoScan - Visit Schedules{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ==========================================================================
            1. DESIGN TOKENS & BASE COHESION
            ========================================================================== */
         :root {
@@ -252,60 +250,11 @@
             .month-title { min-width: 140px; font-size: 1rem; }
             .controls-bar { padding: 12px 14px; }
         }
-    </style>
-</head>
-<body>
+</style>
+{% endblock %}
 
-    <div class="mobile-viewport-container">
-        <!-- STICKY APP HEADER -->
-        <header class="mobile-header">
-            <div class="header-content-wrapper">
-                <a href="/agriculturist/dashboard" class="logo-group">
-                    <div class="logo-img-fallback">
-                        <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
-                    </div>
-                    <div>
-                        <h2>CocoScan</h2>
-                        <p>Agri-Expert Portal</p>
-                    </div>
-                </a>
-                <button class="hamburger-btn" onclick="toggleSidebarMenu()" type="button" aria-label="Toggle navigation menu">
-                    <i class="fa-solid fa-bars" id="toggleIcon"></i>
-                </button>
-            </div>
-        </header>
-
-        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
-
-        <!-- SIDEBAR MENU DRAWER -->
-        <aside class="sidebar-wrapper" id="sidebar">
-            <div>
-                <div class="menu-label">Main Menu</div>
-                <ul class="sidebar-menu-list">
-                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
-                    <li><a href="/agriculturist/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
-                    <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i> Active Reports</a></li>
-                    <li><a href="/agriculturist/reviewed" class="menu-item-link"><i class="fa-solid fa-check-double"></i> Resolved</a></li>
-                    <li><a href="/agriculturist/schedules" class="menu-item-link active"><i class="fa-solid fa-calendar-days"></i> Visit Schedules</a></li>
-                    <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
-                </ul>
-            </div>
-
-            <div class="sidebar-user-footer">
-                <div class="user-meta-box">
-                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
-                    <div class="user-identity-text">
-                        <h4>{{ user_name }}</h4>
-                        <p>PCA Agriculturist</p>
-                    </div>
-                </div>
-                <a href="/logout" class="btn-logout-trigger" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
-            </div>
-        </aside>
-
-        <!-- MAIN CONTENT -->
-        <main class="main-content-layout">
-            <header class="section-title-wrap">
+{% block content %}
+<header class="section-title-wrap">
                 <div>
                     <h1>Visit Schedules</h1>
                     <p>Calendar overview of all your confirmed field inspections and farmer visits.</p>
@@ -368,8 +317,10 @@
                     </tbody>
                 </table>
             </div>
-        </main>
-    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+</div>
 
     <!-- DETAILS MODAL -->
     <div class="modal-overlay" id="scheduleDetailModal" onclick="closeModalOnBackdrop(event)">
@@ -621,6 +572,4 @@
             }, 300);
         }
     </script>
-    {% include 'components/pwa_scripts.html' %}
-</body>
-</html>
+{% endblock %}

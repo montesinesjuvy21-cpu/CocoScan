@@ -1,33 +1,10 @@
 {% extends 'components/dashboard_base.html' %}
 
+{% set active_page = 'dashboard' %}
+{% set sidebar_role = 'Admin' %}
 {% block title %}CocoScan - Administrator Dashboard{% endblock %}
 
-{% block sidebar_menu %}
-<li><a href="/admin/dashboard" class="menu-item-link active">
-    <i class="fa-solid fa-gauge-high"></i> Dashboard
-</a></li>
 
-<li><a href="/admin/analytics" class="menu-item-link">
-    <i class="fa-solid fa-chart-line"></i> Analytics
-</a></li>
-
-<li><a href="{{ url_for('overview_reports') }}" class="menu-item-link">
-    <i class="fa-solid fa-file-lines"></i> Reports
-</a></li>
-
-<li><a href="/admin/map" class="menu-item-link">
-    <i class="fa-solid fa-map-location-dot"></i> Map View
-</a></li>
-
-<li class="menu-label-sub">Tools</li>
-<li><a href="/admin/user-management" class="menu-item-link">
-    <i class="fa-solid fa-users-gear"></i> User Management
-</a></li>
-
-<li><a href="/admin/audit-log" class="menu-item-link">
-    <i class="fa-solid fa-clipboard-list"></i> Audit Log
-</a></li>
-{% endblock %}
 
 {% block user_role %}PCA Administrator{% endblock %}
 

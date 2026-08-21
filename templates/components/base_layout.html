@@ -750,14 +750,12 @@
     </style>
     {% endif %}
     {% block extra_head %}{% endblock %}
+{% block extra_css %}{% endblock %}
 </head>
 
 <body>
 
-    {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else ''))|lower %}
-    {% if 'lgu' in role_str or 'admin' in role_str %}
     {% block mobile_restriction_overlay %}{% endblock %}
-    {% endif %}
 
 
     <div class="mobile-viewport-container">
@@ -789,7 +787,7 @@
                             style="color:#fff; font-size: 0.95rem;"></i></div>
                     <div class="user-identity-text">
                         <h4>{{ user_name or 'Account' }}</h4>
-                        <p>{% block user_role %}User{% endblock %}</p>
+                        <p>{% if (sidebar_role|lower) == 'admin' %}PCA Administrator{% elif (sidebar_role|lower) in ['agriculturist', 'agri_expert'] %}PCA Agriculturist{% elif (sidebar_role|lower) == 'lgu' %}LGU Officer{% elif (sidebar_role|lower) == 'farmer' %}Farmer{% else %}{{ sidebar_role|title }}{% endif %}</p>
                     </div>
                 </div>
                 <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
@@ -798,76 +796,8 @@
 
         <!-- Main Workspace Area -->
         <main class="main-content-layout">
-
-            <header class="dashboard-header-container"
-                style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-bottom: 12px; position: relative;">
-                <div style="flex: 1; width: 100%;">
-                    {% block page_header %}
-                    <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">
-                        Dashboard</h1>
-                    <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview</p>
-                    {% endblock %}
-                </div>
-            </header>
-
-            {% block main_content %}
-            <div style="margin-bottom: 18px;">
-                <p id="greeting-banner"
-                    style="font-size: 1.15rem; font-weight: 700; color: #164630; margin: 0; line-height: 1.2;"></p>
-            </div>
-
-            {% block metrics_grid %}
-            <div class="metrics-grid-matrix">
-                <!-- Default metric cards content if not overridden -->
-                <div class="metric-card-node cases">
-                    <div class="metric-data">
-                        <h5>Total Reported</h5>
-                        <div class="metric-count">{{ metrics.total_cases }}</div>
-                        <p>This Month</p>
-                    </div>
-                    <div class="metric-icon-box"><i class="fa-solid fa-bug"></i></div>
-                </div>
-
-                <div class="metric-card-node pending">
-                    <div class="metric-data">
-                        <h5>Pending</h5>
-                        <div class="metric-count">{{ metrics.pending_cases }}</div>
-                        <p>Attention Required</p>
-                    </div>
-                    <div class="metric-icon-box"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                </div>
-
-                <div class="metric-card-node resolved">
-                    <div class="metric-data">
-                        <h5>Resolved</h5>
-                        <div class="metric-count">{{ metrics.resolved_cases }}</div>
-                        <p>This Month</p>
-                    </div>
-                    <div class="metric-icon-box"><i class="fa-solid fa-circle-check"></i></div>
-                </div>
-
-                <div class="metric-card-node affected">
-                    <div class="metric-data">
-                        <h5>Affected Areas</h5>
-                        <div class="metric-count">{{ metrics.affected_areas }}</div>
-                        <p>Farms Logged</p>
-                    </div>
-                    <div class="metric-icon-box"><i class="fa-solid fa-location-dot"></i></div>
-                </div>
-            </div>
-            {% endblock %}
-
-            {% block quick_action %}{% endblock %}
-
-            <!-- Meteorological Conditions & Analytical Risk Core -->
-            {% include 'components/weather_widget.html' %}
-
-            {% block charts %}
-            {% include 'components/chart_cards.html' %}
-            {% endblock %}
-            {% endblock %}
-
-        </main>
+        {% block content %}{% endblock %}
+    </main>
     </div>
     <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
 

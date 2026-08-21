@@ -1,17 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'components/base_layout.html' %}
+{% set sidebar_role = 'Farmer' %}
+{% set active_page = 'scan' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CocoScan - Detect Pest</title>
-    {% include 'components/pwa_head.html' %}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+{% block title %}CocoScan - Scan Pest{% endblock %}
 
-    <style>
-        :root {
+{% block extra_css %}
+<style>
+:root {
             --bg-base: #f4f7f5;
             --bg-card: #ffffff;
             --brand-dark: #0b251a;
@@ -985,72 +980,11 @@
                 display: flex;
             }
         }
-    </style>
-</head>
+</style>
+{% endblock %}
 
-<body>
-
-    <div class="desktop-restriction-overlay">
-        <div class="desktop-card-prompt">
-            <div class="glow-effect"></div>
-            <div class="icon-pulse-container">
-                <div class="ripple-ring ring-1"></div>
-                <div class="ripple-ring ring-2"></div>
-                <i class="fa-solid fa-mobile-screen-button"></i>
-            </div>
-            <h2>Mobile Access Required</h2>
-            <p>You can view your dashboard on any device, but <strong>Launch Scanner</strong> requires a mobile
-                smartphone to utilize its camera for capturing real-time leaf images directly in the field.</p>
-        </div>
-    </div>
-
-    <div class="mobile-viewport-container">
-        <header class="mobile-header">
-            <div class="logo-group">
-                <div class="logo-img-fallback">
-                    <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
-                </div>
-                <div>
-                    <h2>CocoScan</h2>
-                    <p>Coconut Pest Detection</p>
-                </div>
-            </div>
-            <button class="hamburger-btn" onclick="toggleSidebarMenu()">
-                <i class="fa-solid fa-bars" id="toggleIcon"></i>
-            </button>
-        </header>
-
-        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
-
-        <aside class="sidebar-wrapper" id="sidebar">
-            <div>
-                <div class="menu-label">Main Menu</div>
-                <ul class="sidebar-menu-list">
-                    <li><a href="/farmer/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i>
-                            Dashboard</a></li>
-                    <li><a href="/farmer/scan" class="menu-item-link active"><i class="fa-solid fa-camera"></i> Scan
-                            Pest</a></li>
-                    <li><a href="/farmer/drafts" class="menu-item-link"><i class="fa-solid fa-file-pen"></i> Drafts</a>
-                    </li>
-                    <li><a href="/farmer/reports" class="menu-item-link"><i class="fa-solid fa-folder-open"></i> My
-                            Reports</a></li>
-                </ul>
-            </div>
-            <div class="sidebar-user-footer">
-                <div class="user-meta-box">
-                    <div class="user-avatar-circle"><i class="fa-solid fa-user"
-                            style="color:#fff; font-size: 0.95rem;"></i></div>
-                    <div class="user-identity-text">
-                        <h4>{{ user_name }}</h4>
-                        <p>Farmer</p>
-                    </div>
-                </div>
-                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
-            </div>
-        </aside>
-
-        <main class="main-content-layout">
-            <div id="step-upload-view" class="workflow-step-view active-view">
+{% block content %}
+<div id="step-upload-view" class="workflow-step-view active-view">
                 <header class="section-title-wrap">
                     <div>
                         <h1>Detect Pest</h1>
@@ -1103,8 +1037,10 @@
             <div id="step-results-view" class="workflow-step-view">
                 {% include 'components/report_modal.html' %}
             </div>
-        </main>
-    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+</div>
 
     <script id="recent-reports-data" type="application/json">{{ recent_reports | tojson | safe }}</script>
     <script>
@@ -1716,8 +1652,4 @@
 
 
     </script>
-    <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
-    {% include 'components/pwa_scripts.html' %}
-</body>
-
-</html>
+{% endblock %}

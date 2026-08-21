@@ -1,15 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CocoScan - Resolved Reports</title>
-    {% include 'components/pwa_head.html' %}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+{% extends 'components/base_layout.html' %}
+{% set sidebar_role = 'Agriculturist' %}
+{% set active_page = 'resolved' %}
 
-    <style>
-        /* ==========================================================================
+{% block title %}CocoScan - Resolved Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ==========================================================================
            1. DESIGN TOKENS & BASE COHESION
            ========================================================================== */
         :root {
@@ -429,59 +426,11 @@
                 padding-top: 12px;
             }
         }
-       </style>
-</head>
-<body>
+</style>
+{% endblock %}
 
-    <div class="mobile-viewport-container">
-        
-        <header class="mobile-header">
-            <div class="header-content-wrapper">
-                <div class="logo-group">
-                    <div class="logo-img-fallback">
-                        <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
-                    </div>
-                    <div>
-                        <h2>CocoScan</h2>
-                        <p>Coconut Pest Detection</p>
-                    </div>
-                </div>
-                <button class="hamburger-btn" onclick="toggleSidebarMenu()">
-                    <i class="fa-solid fa-bars" id="toggleIcon"></i>
-                </button>
-            </div>
-        </header>
-
-        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
-
-        <aside class="sidebar-wrapper" id="sidebar">
-            <div>
-                <div class="menu-label">Main Menu</div>
-                <ul class="sidebar-menu-list">
-                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
-                    <li><a href="/agriculturist/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
-                    <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i> Active Reports</a></li>
-                    <li><a href="/agriculturist/reviewed" class="menu-item-link active"><i class="fa-solid fa-check-double"></i> Resolved</a></li>
-                    <li><a href="/agriculturist/schedules" class="menu-item-link"><i class="fa-solid fa-calendar-days"></i> Visit Schedules</a></li>
-                    <li><a href="/agriculturist/map" class="menu-item-link"><i class="fa-solid fa-map-location-dot"></i> Map View</a></li>
-                </ul>
-            </div>
-
-            <div class="sidebar-user-footer">
-                <div class="user-meta-box">
-                    <div class="user-avatar-circle"><i class="fa-solid fa-user" style="color:#fff; font-size: 0.95rem;"></i></div>
-                    <div class="user-identity-text">
-                        <h4>{{user_name}}</h4>
-                        <p>PCA Agriculturist</p>
-                    </div>
-                </div>
-                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
-            </div>
-        </aside>
-
-        <main class="main-content-layout">
-            
-            <header class="section-title-wrap">
+{% block content %}
+<header class="section-title-wrap">
                 <div>
                     <h1>Resolved Reports</h1>
                     <p>Completed cases that have been closed with a final outcome</p>
@@ -519,9 +468,10 @@
 
             <div class="pagination-meta" id="pagination-summary"></div>
             <div class="pagination-container" id="pagination-wrapper" style="display: none;"></div>
+{% endblock %}
 
-        </main>
-    </div>
+{% block extra_scripts %}
+</div>
 
     <!-- Shared report summary modal reused across the app -->
     {% include 'components/report_modal.html' %}
@@ -977,7 +927,4 @@
             }, 300);
         }
     </script>
-    <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
-    {% include 'components/pwa_scripts.html' %}
-</body>
-</html>
+{% endblock %}

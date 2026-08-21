@@ -1,24 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'components/base_layout.html' %}
+{% set sidebar_role = session.get('user_role', 'Admin') %}
+{% set active_page = 'map' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CocoScan - Map View</title>
-    {% include 'components/pwa_head.html' %}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+{% block title %}CocoScan - Map View{% endblock %}
 
-    <!-- Leaflet Map Engine Infrastructure -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-
-    <style>
-        /* ==========================================================================
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+/* ==========================================================================
            1. DESIGN TOKENS & BASE COHESION
            ========================================================================== */
         :root {
@@ -760,127 +751,11 @@
                 gap: 20px;
             }
         }
-    </style>
+</style>
+{% endblock %}
 
-    {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else ''))|lower %}
-    {% if 'lgu' in role_str or 'admin' in role_str %}
-    <style>
-        @media (max-width: 900px) {
-            .desktop-restriction-overlay {
-                display: flex !important;
-            }
-
-            .mobile-viewport-container {
-                display: none !important;
-            }
-        }
-    </style>
-    {% endif %}
-</head>
-
-<body>
-
-    {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else ''))|lower %}
-    {% if 'lgu' in role_str or 'admin' in role_str %}
-    <div class="desktop-restriction-overlay">
-        <div class="desktop-card-prompt">
-            <div class="glow-effect"></div>
-            <div class="icon-pulse-container">
-                <div class="ripple-ring ring-1"></div>
-                <div class="ripple-ring ring-2"></div>
-                <i class="fa-solid fa-mobile-screen-button"></i>
-            </div>
-            <h2>Mobile Access Required</h2>
-            <p>This area is restricted on mobile. Please use a desktop or larger screen to access map view and other tools.</p>
-        </div>
-    </div>
-    {% endif %}
-
-
-    <div class="mobile-viewport-container">
-
-        <!-- HEADER APPARATUS -->
-        <header class="mobile-header">
-            <div class="header-content-wrapper">
-                <div class="logo-group">
-                    <div class="logo-img-fallback">
-                        <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
-                    </div>
-                    <div>
-                        <h2>CocoScan</h2>
-                        <p>Coconut Pest Detection</p>
-                    </div>
-                </div>
-                <button class="hamburger-btn" onclick="toggleSidebarMenu()">
-                    <i class="fa-solid fa-bars" id="toggleIcon"></i>
-                </button>
-            </div>
-        </header>
-
-        <div class="sidebar-backdrop" id="backdrop" onclick="toggleSidebarMenu()"></div>
-
-        <!-- NAVIGATION DRAWER MATRIX -->
-        <aside class="sidebar-wrapper" id="sidebar">
-            <div>
-                <div class="menu-label">Main Menu</div>
-                <ul class="sidebar-menu-list">
-                    {% if user_role == 'admin' %}
-                    <li><a href="/admin/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i>
-                            Dashboard</a></li>
-                    <li><a href="/admin/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i>
-                            Analytics</a></li>
-                    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i
-                                class="fa-solid fa-file-lines"></i> Reports</a></li>
-                    <li><a href="/admin/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i>
-                            Map View</a></li>
-                    <li class="menu-label-sub">Tools</li>
-                    <li><a href="/admin/user-management" class="menu-item-link"><i class="fa-solid fa-users-gear"></i>
-                            User Management</a></li>
-                    <li><a href="/admin/audit-log" class="menu-item-link"><i class="fa-solid fa-clipboard-list"></i>
-                            Audit Log</a></li>
-                    {% elif user_role == 'lgu' %}
-                    <li><a href="/lgu/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i>
-                            Dashboard</a></li>
-                    <li><a href="/lgu/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i>
-                            Analytics</a></li>
-                    <li><a href="{{ url_for('overview_reports') }}" class="menu-item-link"><i
-                                class="fa-solid fa-folder-open"></i> Reports</a></li>
-                    <li><a href="/lgu/map" class="menu-item-link active"><i class="fa-solid fa-map-location-dot"></i>
-                            Map View</a></li>
-                    {% else %}
-                    <li><a href="/agriculturist/dashboard" class="menu-item-link"><i class="fa-solid fa-gauge-high"></i>
-                            Dashboard</a></li>
-                    <li><a href="/agriculturist/analytics" class="menu-item-link"><i class="fa-solid fa-chart-line"></i>
-                            Analytics</a></li>
-                    <li><a href="/agriculturist/pending" class="menu-item-link"><i class="fa-solid fa-list-ul"></i>
-                            Active Reports</a></li>
-                    <li><a href="/agriculturist/reviewed" class="menu-item-link"><i
-                                class="fa-solid fa-check-double"></i> Resolved</a></li>
-                    <li><a href="/agriculturist/schedules" class="menu-item-link"><i class="fa-solid fa-calendar-days"></i> Visit Schedules</a></li>
-                    <li><a href="/agriculturist/map" class="menu-item-link active"><i
-                                class="fa-solid fa-map-location-dot"></i> Map View</a></li>
-                    {% endif %}
-                </ul>
-            </div>
-
-            <div class="sidebar-user-footer">
-                <div class="user-meta-box">
-                    <div class="user-avatar-circle"><i class="fa-solid fa-user"
-                            style="color:#fff; font-size: 0.95rem;"></i></div>
-                    <div class="user-identity-text">
-                        <h4>{{user_name}}</h4>
-                        <p>{% if user_role == 'admin' %}PCA Administrator{% elif user_role == 'lgu' %}LGU Officer{% else
-                            %}PCA Agriculturist{% endif %}</p>
-                    </div>
-                </div>
-                <a href="/logout" class="btn-logout-trigger"><i class="fa-solid fa-right-from-bracket"></i></a>
-            </div>
-        </aside>
-
-        <!-- MAIN CANVAS WORKSPACE -->
-        <main class="main-content-layout">
-
-            <header class="section-title-wrap">
+{% block content %}
+<header class="section-title-wrap">
                 <div>
                     <h1>Map View</h1>
                     <p>Interactive map showing affected locations with pest identification color coding</p>
@@ -948,9 +823,12 @@
                 </section>
 
             </div>
+{% endblock %}
 
-        </main>
-    </div>
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+</div>
 
     <!-- ==========================================================================
         CORE CORE DATA INTERACTION & MAP LIFECYCLE SCRIPTS
@@ -1361,8 +1239,4 @@
     </script>
 
     {% include 'components/report_modal.html' %}
-    <script src="{{ url_for('static', filename='js/report_modal.js') }}"></script>
-    {% include 'components/pwa_scripts.html' %}
-</body>
-
-</html>
+{% endblock %}

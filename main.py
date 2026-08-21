@@ -5,6 +5,7 @@ import logging
 import json
 from datetime import datetime, UTC
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory
+from app.route_utils import require_role, fetch_user_reports
 import base64
 from io import BytesIO
 from werkzeug.utils import secure_filename
@@ -73,6 +74,16 @@ def _normalize_availability_slots(value):
 load_dotenv()
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+def _get_real_ip():
+    """Retrieve the real IP address of the client, handling reverse proxies (X-Forwarded-For)."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote_addr or ""
+
+
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback_local_secret")
 # Upload configuration
 # Limit uploads to 25 MB by default
@@ -116,7 +127,7 @@ def check_session_timeout():
                 user_email = session.get('user_email', '')
                 user_role = session.get('user_role', '')
                 session.clear()
-                security_service.log_audit(user_email, user_role, "SESSION_TIMEOUT", "Session expired due to 15 minutes of inactivity", request.remote_addr)
+                security_service.log_audit(user_email, user_role, "SESSION_TIMEOUT", "Session expired due to 15 minutes of inactivity", _get_real_ip())
                 flash("Your session has expired due to 15 minutes of inactivity. Please log in again.", "warning")
                 return redirect(url_for('login'))
             session['last_active'] = now
@@ -707,7 +718,7 @@ def login():
             user_query = supabase.table("users").select("*").eq("email", email).execute()
             
             if not user_query.data:
-                new_cnt, locked_until, lock_reason = security_service.record_login_failure(email, request.remote_addr)
+                new_cnt, locked_until, lock_reason = security_service.record_login_failure(email, _get_real_ip())
                 if locked_until:
                     flash(f"{lock_reason}", "error")
                 else:
@@ -717,7 +728,7 @@ def login():
             user_data = user_query.data[0]
             
             if not verify_password(password, user_data.get('password_hash', '')):
-                new_cnt, locked_until, lock_reason = security_service.record_login_failure(email, request.remote_addr)
+                new_cnt, locked_until, lock_reason = security_service.record_login_failure(email, _get_real_ip())
                 if locked_until:
                     flash(f"{lock_reason}", "error")
                 else:
@@ -769,7 +780,7 @@ def login():
             session['user_name'] = user_name
             session['last_active'] = time.time()
             
-            security_service.log_audit(email, user_role, "LOGIN", "User successfully logged in", request.remote_addr)
+            security_service.log_audit(email, user_role, "LOGIN", "User successfully logged in", _get_real_ip())
             logger.info(f"User {email} successfully logged in with role: {session['user_role']}")
             
             if session['user_role'] == 'admin':
@@ -1315,14 +1326,11 @@ def _build_report_modal_payload(item, *, supporting_images=None, weather=None, d
 
 # Farmer
 @app.route('/farmer/dashboard')
+@require_role('farmer')
 def farmer_dashboard():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'farmer':
-        flash("Unauthorized access path.", "error")
-        return redirect(url_for('login'))
-        
     try:
         # Fetch the real profile name details from cloud instance
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
@@ -1379,14 +1387,11 @@ def farmer_dashboard():
         return render_template('500.html'), 503
 
 @app.route('/farmer/scan')
+@require_role('farmer')
 def farmer_scan():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'farmer':
-        flash("Unauthorized access path. Please log in.", "error")
-        return redirect(url_for('login'))
-        
     try:
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Farmer"
@@ -1413,6 +1418,7 @@ def farmer_scan():
         return render_template('500.html'), 503
 
 @app.route('/farmer/predict', methods=['POST'])
+@require_role('farmer')
 def farmer_predict():
     """Process image prediction using the full inference pipeline"""
     import base64
@@ -1421,9 +1427,6 @@ def farmer_predict():
     
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-    
-    if not user_id or user_role != 'farmer':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
     
     try:
         # Debug: log incoming files/form keys
@@ -1496,14 +1499,11 @@ def farmer_predict():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/farmer/reports')
+@require_role('farmer')
 def farmer_reports():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'farmer':
-        flash("Unauthorized access path. Please log in.", "error")
-        return redirect(url_for('login'))
-
     user_name = "Farmer"
     reports_data = []
 
@@ -1548,13 +1548,10 @@ def farmer_reports():
         return render_template('farmer_reports.html', user_name=user_name, reports_data=[])
 
 @app.route('/farmer/drafts')
+@require_role('farmer')
 def farmer_drafts():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-    if not user_id or user_role != 'farmer':
-        flash("Unauthorized access path. Please log in.", "error")
-        return redirect(url_for('login'))
-
     user_name = "Farmer"
     try:
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
@@ -1567,14 +1564,11 @@ def farmer_drafts():
 
 # Agriculturist
 @app.route('/agriculturist/dashboard')
+@require_role('agri_expert')
 def agri_dashboard():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'agri_expert':
-        flash("Unauthorized access path.", "error")
-        return redirect(url_for('login'))
-        
     try:
         # Fetch the real profile name details
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
@@ -1633,25 +1627,20 @@ def agri_dashboard():
         return render_template('500.html'), 503
 
 @app.route('/agriculturist/analytics')
+@require_role('agri_expert')
 def agriculturist_analytics():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'agri_expert':
-        return redirect(url_for('login'))
-
     user_name = session.get('user_name', 'Agriculturist')
     return render_template('shared_analytics.html', user_name=user_name, user_role=user_role)
 
 @app.route('/lgu/dashboard')
+@require_role('lgu')
 def lgu_dashboard():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'lgu':
-        flash("Unauthorized access path.", "error")
-        return redirect(url_for('login'))
-        
     try:
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "LGU Officer"
@@ -1709,14 +1698,11 @@ def lgu_dashboard():
         return render_template('500.html'), 503
 
 @app.route('/lgu/analytics')
+@require_role('lgu')
 def lgu_analytics():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'lgu':
-        flash("Unauthorized access path.", "error")
-        return redirect(url_for('login'))
-
     try:
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "LGU Officer"
@@ -1778,7 +1764,7 @@ def api_analytics():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role not in ['lgu', 'admin']:
+    if not user_id or user_role not in ['lgu', 'admin', 'agri_expert']:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
     try:
@@ -1851,7 +1837,7 @@ def report_summary():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role not in ['lgu', 'admin']:
+    if not user_id or user_role not in ['lgu', 'admin', 'agri_expert']:
         flash("Unauthorized access.", "error")
         return redirect(url_for('login'))
 
@@ -2238,15 +2224,12 @@ def debug_reports():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/agriculturist/pending')
+@require_role('agri_expert')
 def agri_active_reports():
     """Fetches active workflow reports from Supabase and renders the active reports queue."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'agri_expert':
-        flash("Unauthorized access path.", "error")
-        return redirect(url_for('login'))
-        
     try:
         # Load user profile for layout presentation layer
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
@@ -2301,15 +2284,12 @@ def agri_active_reports():
         return redirect(url_for('agri_dashboard'))
 
 @app.route('/agriculturist/reviewed')
+@require_role('agri_expert')
 def agri_resolved_reports():
     """Fetches reports with 'Recommendation Issued' status from Supabase and renders the archive."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'agri_expert':
-        flash("Unauthorized access path.", "error")
-        return redirect(url_for('login'))
-        
     try:
         # Load user profile for layout presentation layer
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
@@ -2361,10 +2341,6 @@ def render_map_view(required_role):
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != required_role:
-        flash("Unauthorized access path.", "error")
-        return redirect(url_for('login'))
-        
     try:
         search_query = request.args.get("search", "").strip()
         pest_filter = (request.args.get("pest", "all") or "all").strip() or "all"
@@ -2426,16 +2402,15 @@ def render_map_view(required_role):
         return redirect(url_for(dash_map.get(user_role, 'dashboard')))
 
 @app.route('/agriculturist/map')
+@require_role('agri_expert')
 def agriculturist_map():
     return render_map_view('agri_expert')
 
 @app.route('/agriculturist/schedules')
+@require_role('agri_expert')
 def agri_schedules():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-    if not user_id or user_role != 'agri_expert':
-        flash("Unauthorized access path.", "error")
-        return redirect(url_for('login'))
     try:
         user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
         user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
@@ -2498,21 +2473,20 @@ def agri_schedules():
         return redirect(url_for('agri_dashboard'))
 
 @app.route('/lgu/map')
+@require_role('lgu')
 def lgu_map():
     return render_map_view('lgu')
 
 @app.route('/admin/map')
+@require_role('admin')
 def admin_map():
     return render_map_view('admin')
 
 @app.route('/farmer/follow-up-report', methods=['POST'])
+@require_role('farmer')
 def farmer_follow_up_report():
     """Reopen a previously reviewed report when the farmer submits a new update."""
     user_id = _get_current_app_user_id()
-    user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'farmer':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         data = request.get_json(silent=True) or {}
@@ -2560,13 +2534,10 @@ def farmer_follow_up_report():
         return jsonify({'success': False, 'message': 'The follow-up could not be saved.'}), 500
     
 @app.route('/agriculturist/submit-assessment', methods=['POST'])
+@require_role('agri_expert')
 def agriculturist_submit_assessment():
     """Save the agriculturist assessment notes and advance the report to assessment issued."""
     user_id = _get_current_app_user_id()
-    user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'agri_expert':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -2629,13 +2600,10 @@ def agriculturist_submit_assessment():
 
 
 @app.route('/farmer/submit-assessment-feedback', methods=['POST'])
+@require_role('farmer')
 def farmer_submit_assessment_feedback():
     """Let the farmer confirm whether the assessment resolved the issue or request a visit."""
     user_id = _get_current_app_user_id()
-    user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'farmer':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -2786,12 +2754,9 @@ def request_visit_reschedule(report_id):
 
 
 @app.route('/agriculturist/finalize-visit-schedule', methods=['POST'])
+@require_role('agri_expert')
 def agriculturist_finalize_visit_schedule():
     user_id = _get_current_app_user_id()
-    user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'agri_expert':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -2915,13 +2880,11 @@ def agriculturist_finalize_visit_schedule():
 
 
 @app.route('/agriculturist/review-visit-request', methods=['POST'])
+@require_role('agri_expert')
 def agriculturist_review_visit_request():
     """Accept or reject a farmer visit request."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'agri_expert':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -2957,13 +2920,11 @@ def agriculturist_review_visit_request():
 
 
 @app.route('/agriculturist/request-visit', methods=['POST'])
+@require_role('agri_expert')
 def agriculturist_request_visit():
     """Advance a case into the on-site visit workflow."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'agri_expert':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         data = request.get_json(silent=True) or {}
@@ -2989,13 +2950,11 @@ def agriculturist_request_visit():
 
 
 @app.route('/farmer/provide-availability', methods=['POST'])
+@require_role('farmer')
 def farmer_provide_availability():
     """Let the farmer share time slots for the requested visit."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'farmer':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         data = request.get_json(silent=True) or {}
@@ -3018,13 +2977,11 @@ def farmer_provide_availability():
 
 
 @app.route('/agriculturist/select-visit-schedule', methods=['POST'])
+@require_role('agri_expert')
 def agriculturist_select_visit_schedule():
     """Select the farmer availability slot for the visit."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'agri_expert':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         data = request.get_json(silent=True) or {}
@@ -3047,13 +3004,11 @@ def agriculturist_select_visit_schedule():
 
 
 @app.route('/agriculturist/complete-visit', methods=['POST'])
+@require_role('agri_expert')
 def agriculturist_complete_visit():
     """Record that the on-site visit was completed."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'agri_expert':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -3086,13 +3041,11 @@ def agriculturist_complete_visit():
 
 
 @app.route('/agriculturist/submit-final-remarks', methods=['POST'])
+@require_role('agri_expert')
 def agriculturist_submit_final_remarks():
     """Save final remarks and move the report into the final remarks stage."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'agri_expert':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         payload = request.get_json(silent=True) or {}
@@ -3124,13 +3077,11 @@ def agriculturist_submit_final_remarks():
 
 
 @app.route('/agriculturist/mark-resolved', methods=['POST'])
+@require_role('agri_expert')
 def agriculturist_mark_resolved():
     """Allow the agriculturist to finalise the case as resolved."""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-
-    if not user_id or user_role != 'agri_expert':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
 
     try:
         data = request.get_json(silent=True) or {}
@@ -3167,14 +3118,12 @@ def api_geocode():
     })
     
 @app.route('/farmer/submit-report', methods=['POST'])
+@require_role('farmer')
 def farmer_submit_report():
     """Processes pest scan data from the frontend and inserts it into the Supabase 'reports' table"""
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'farmer':
-        return jsonify({'success': False, 'message': 'Unauthorized user session'}), 403
-
     try:
         # 1. Extract data sent by your scanning interface/form
         pest_type = request.form.get('pest_type', 'Unknown Pest').strip()
@@ -3312,6 +3261,7 @@ def farmer_submit_report():
 
 # Admin
 @app.route('/admin/dashboard')
+@require_role('admin')
 def admin_dashboard():
     current_role = str(session.get('user_role', '')).strip().lower()
     if current_role != 'admin':
@@ -3358,17 +3308,16 @@ def admin_dashboard():
     )
 
 @app.route('/admin/analytics')
+@require_role('admin')
 def admin_analytics():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    if not user_id or user_role != 'admin':
-        return redirect(url_for('login'))
-
     user_name = session.get('user_name', 'Administrator')
     return render_template('shared_analytics.html', user_name=user_name, user_role=user_role)
 
 @app.route('/admin/user-management')
+@require_role('admin')
 def admin_user_management():
     current_role = str(session.get('user_role', '')).strip().lower()
     if current_role != 'admin':
@@ -3451,6 +3400,7 @@ def admin_user_management():
     )
 
 @app.route('/admin/update-user-status', methods=['POST'])
+@require_role('admin')
 def update_user_status():
     """Asynchronous API endpoint that saves status, runs email notice, and records logs"""
     if normalize_role(session.get('user_role')) != 'admin':
@@ -3495,6 +3445,7 @@ def update_user_status():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/admin/resend-email', methods=['POST'])
+@require_role('admin')
 def resend_user_email():
     """Endpoint to resend status notification email for a specific user"""
     if normalize_role(session.get('user_role')) != 'admin':
@@ -3748,7 +3699,7 @@ def reset_password():
             supabase.table("users").update({"password_hash": new_hash}).eq("email", email).execute()
             
             security_service.reset_forgot_password_attempts(email)
-            security_service.log_audit(email, "User", "PASSWORD_RESET", "Password successfully reset via OTP", request.remote_addr)
+            security_service.log_audit(email, "User", "PASSWORD_RESET", "Password successfully reset via OTP", _get_real_ip())
             
             session.pop('reset_email_pending', None)
             session.pop('reset_email_verified', None)
@@ -3788,8 +3739,8 @@ def verify_2fa():
             session['user_name'] = name
             session['last_active'] = time.time()
             
-            security_service.log_audit(email, role, "2FA_VERIFIED", "User verified 2FA code successfully", request.remote_addr)
-            security_service.log_audit(email, role, "LOGIN", "User successfully logged in", request.remote_addr)
+            security_service.log_audit(email, role, "2FA_VERIFIED", "User verified 2FA code successfully", _get_real_ip())
+            security_service.log_audit(email, role, "LOGIN", "User successfully logged in", _get_real_ip())
             
             flash("Two-factor authentication verified!", "success")
             if role == 'admin':
@@ -3836,6 +3787,7 @@ def resend_2fa():
 
 
 @app.route('/admin/audit-log')
+@require_role('admin')
 def admin_audit_log():
     """Admin Audit Log page with standardized reporting pagination and filtering"""
     if 'user_id' not in session or session.get('user_role') != 'admin':
