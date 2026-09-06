@@ -6,7 +6,16 @@ from app import security_service
 logger = logging.getLogger(__name__)
 
 def normalize_role(value) -> str:
-    return str(value or "").strip().lower()
+    raw = str(value or "").strip().lower()
+    if raw in ['admin', 'administrator']:
+        return 'admin'
+    if raw in ['agri_expert', 'agriculturist', 'agriculture_expert', 'expert']:
+        return 'agri_expert'
+    if raw in ['lgu', 'lgu_officer']:
+        return 'lgu'
+    if raw in ['farmer']:
+        return 'farmer'
+    return raw
 
 def require_role(*roles):
     """

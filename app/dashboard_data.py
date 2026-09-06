@@ -78,9 +78,19 @@ def build_dashboard_chart_payload(reports: list[Mapping[str, Any]], group_by_day
         }
 
     if group_by_day:
-        month_labels = sorted(monthly_counts.keys(), key=lambda item: datetime.strptime(item, "%b %d").timetuple().tm_yday)
+        def _sort_day_key(k):
+            try:
+                return datetime.strptime(f"2024 {k}", "%Y %b %d").timetuple().tm_yday
+            except Exception:
+                return 0
+        month_labels = sorted(monthly_counts.keys(), key=_sort_day_key)
     else:
-        month_labels = sorted(monthly_counts.keys(), key=lambda item: datetime.strptime(item, "%b").month)
+        def _sort_month_key(k):
+            try:
+                return datetime.strptime(k, "%b").month
+            except Exception:
+                return 0
+        month_labels = sorted(monthly_counts.keys(), key=_sort_month_key)
         
     top_pests = [pest for pest, _ in pest_counter.most_common(3)] or ["Unknown Pest"]
 

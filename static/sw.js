@@ -1,6 +1,6 @@
-const CACHE_NAME = 'cocoscan-app-shell-v3';
-const RUNTIME_CACHE = 'cocoscan-pages-runtime-v3';
-const IMAGE_CACHE = 'cocoscan-report-images-v3';
+const CACHE_NAME = 'cocoscan-app-shell-v4';
+const RUNTIME_CACHE = 'cocoscan-pages-runtime-v4';
+const IMAGE_CACHE = 'cocoscan-report-images-v4';
 
 const PRECACHE_ASSETS = [
     '/manifest.json',
@@ -13,7 +13,7 @@ const PRECACHE_ASSETS = [
     '/static/icons/icon-512x512.png',
     '/static/icons/favicon.ico',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    'https://cdn.jsdelivr.net/npm/chart.js'
+    'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'
 ];
 
 // Install event: Precache core app shell

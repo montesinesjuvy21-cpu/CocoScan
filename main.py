@@ -114,7 +114,16 @@ supabase: Client = create_client(url, key)
 
 
 def normalize_role(value) -> str:
-    return str(value or "").strip().lower()
+    raw = str(value or "").strip().lower()
+    if raw in ['admin', 'administrator']:
+        return 'admin'
+    if raw in ['agri_expert', 'agriculturist', 'agriculture_expert', 'expert']:
+        return 'agri_expert'
+    if raw in ['lgu', 'lgu_officer']:
+        return 'lgu'
+    if raw in ['farmer']:
+        return 'farmer'
+    return raw
 
 
 @app.before_request
@@ -681,6 +690,11 @@ def offline_portal():
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static', 'icons'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+@app.route('/<path:filename>.map')
+@app.route('/chart.umd.min.js.map')
+def sourcemap_fallback(filename=None):
+    return ('', 204)
+
 @app.route('/')
 def splash():
     """Renders the initial welcome splash screen loader entry point"""
@@ -689,6 +703,18 @@ def splash():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page route: Authenticates users against Supabase credentials with lockout & 2FA protection"""
+    if request.method == 'GET':
+        # Filter flashed messages so only login/account-relevant notices appear on the login screen
+        flashes = session.pop('_flashes', [])
+        login_keywords = ['session', 'log in', 'login', 'account', 'approval', 'register', 'password', 'verification', 'credentials', 'signed out', 'logged out', 'inactivity', 'attempt']
+        filtered_flashes = [
+            (cat, msg) for cat, msg in flashes 
+            if any(k in str(msg).lower() for k in login_keywords)
+        ]
+        if filtered_flashes:
+            session['_flashes'] = filtered_flashes
+        return render_template('login.html')
+
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -1832,7 +1858,31 @@ def api_analytics():
 
     except Exception as e:
         logger.error(f"Error in analytics API: {str(e)}")
-        return jsonify({'success': False, 'message': 'Failed to load analytics data', 'error': str(e)}), 500
+        return jsonify({
+            'success': True,
+            'status_breakdown': {
+                'rhinoceros beetle': {'pending': 0, 'in_progress': 0, 'resolved': 0},
+                'brontispa': {'pending': 0, 'in_progress': 0, 'resolved': 0},
+                'total': {'pending': 0, 'in_progress': 0, 'resolved': 0}
+            },
+            'dashboard_payload': {
+                'trend_labels': ['No data'],
+                'trend_datasets': [{
+                    'label': 'No reports yet',
+                    'data': [0],
+                    'borderColor': '#94a3b8',
+                    'backgroundColor': 'rgba(148, 163, 184, 0.15)',
+                    'borderWidth': 2,
+                    'tension': 0.2,
+                    'pointRadius': 3,
+                    'fill': True
+                }],
+                'distribution_labels': ['No reports yet'],
+                'distribution_data': [0]
+            },
+            'message': 'Loaded fallback analytics data',
+            'error': str(e)
+        }), 200
 
 @app.route('/report_summary')
 def report_summary():
@@ -2064,32 +2114,43 @@ def render_map_view(required_role):
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
     
-    try:
-        search_query = request.args.get("search", "").strip()
-        pest_filter = (request.args.get("pest", "all") or "all").strip() or "all"
+    search_query = request.args.get("search", "").strip()
+    pest_filter = (request.args.get("pest", "all") or "all").strip() or "all"
+    user_name = session.get('user_name') or ("Agriculturist" if required_role == 'agri_expert' else required_role.upper())
 
-        # Load user profile for layout presentation layer
-        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
-        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else ("Agriculturist" if required_role == 'agri_expert' else required_role.upper())
-        
-        # Retrieve all spatial records containing geographical metrics (select all fields for modal)
-        reports_response = supabase.table("reports")\
-            .select("*")\
-            .order("created_at", desc=True)\
-            .execute()
-            
-        raw_reports = reports_response.data or []
-        supporting_map = _fetch_report_supporting_images([item.get("id") for item in raw_reports])
-        raw_reports = _enrich_reports_with_reviewer_info(raw_reports)
+    try:
+        if user_id:
+            try:
+                user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
+                if user_query.data:
+                    user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() or user_name
+            except Exception as u_err:
+                logger.debug(f"User name lookup in map view skipped: {u_err}")
+
+        try:
+            reports_response = supabase.table("reports").select("*").order("created_at", desc=True).execute()
+            raw_reports = reports_response.data or []
+        except Exception as r_err:
+            logger.warning(f"Unable to fetch spatial reports from Supabase: {r_err}")
+            raw_reports = []
+
+        try:
+            supporting_map = _fetch_report_supporting_images([item.get("id") for item in raw_reports])
+        except Exception:
+            supporting_map = {}
+
+        try:
+            raw_reports = _enrich_reports_with_reviewer_info(raw_reports)
+        except Exception:
+            pass
+
         map_reports_list = []
-        
-        # Aggregate tracking data parameters
         for item in raw_reports:
             try:
                 lat = float(item.get("latitude"))
                 lng = float(item.get("longitude"))
             except (ValueError, TypeError):
-                continue  # Skip records missing physical coordinates
+                continue
                 
             record = dict(item)
             record["id"] = item.get("id")
@@ -2102,7 +2163,7 @@ def render_map_view(required_role):
             record["status"] = normalize_report_status(item.get("status"), default="Under Review")
             record["supporting_images"] = supporting_map.get(str(item.get("id")), [])
             record["additional_images"] = supporting_map.get(str(item.get("id")), [])
-            record["cases_count"] = 1 # Serves as baseline cluster weight variable
+            record["cases_count"] = 1
             map_reports_list.append(record)
 
         filtered_map_reports = filter_map_reports(map_reports_list, search_query=search_query, pest_filter=pest_filter)
@@ -2120,9 +2181,16 @@ def render_map_view(required_role):
         
     except Exception as e:
         logger.error(f"Error serving geospatial map canvas metrics: {str(e)}")
-        flash("Failed to initialize location mapping environment.", "error")
-        dash_map = {"agri_expert": "agri_dashboard", "lgu": "lgu_dashboard", "admin": "admin_dashboard"}
-        return redirect(url_for(dash_map.get(user_role, 'dashboard')))
+        # Render empty map layout rather than kicking the user back with an error flash
+        return render_template(
+            'map_view.html', 
+            user_name=user_name,
+            user_role=user_role,
+            map_reports=[],
+            recent_map_reports=[],
+            search_query=search_query,
+            pest_filter=pest_filter
+        )
 
 @app.route('/agriculturist/map')
 @require_role('agri_expert')
