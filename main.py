@@ -1768,8 +1768,8 @@ def api_analytics():
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
     try:
-        from dateutil.parser import parse
         import calendar
+        from dateutil.parser import parse
         month_str = request.args.get('month')
         week_str = request.args.get('week')
 
@@ -1792,22 +1792,22 @@ def api_analytics():
             except ValueError:
                 pass
 
-        query = supabase.table('reports').select('*')
-        if start_date_str:
-            query = query.gte('created_at', start_date_str)
-        if end_date_str:
-            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
+        try:
+            reports_response = supabase.table('reports').select('*').order('created_at', desc=True).execute()
+            reports = getattr(reports_response, 'data', []) or []
+        except Exception as db_error:
+            logger.warning(f"Unable to fetch analytics reports from Supabase: {db_error}")
+            reports = []
 
-        reports_response = query.order('created_at', desc=True).execute()
-        reports = getattr(reports_response, 'data', []) or []
-        pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
+        reports = _filter_reports_by_date_window(reports, start_date_str, end_date_str)
         
         status_breakdown = {
             'rhinoceros beetle': {'pending': 0, 'in_progress': 0, 'resolved': 0},
-            'brontispa': {'pending': 0, 'in_progress': 0, 'resolved': 0}
+            'brontispa': {'pending': 0, 'in_progress': 0, 'resolved': 0},
+            'total': {'pending': 0, 'in_progress': 0, 'resolved': 0}
         }
 
-        for r in pest_reports:
+        for r in reports:
             pest_raw = str(r.get('pest_type') or '').strip().lower()
             status = str(r.get('status') or '').strip().lower()
             
@@ -1816,11 +1816,13 @@ def api_analytics():
                 mapped_status = 'pending'
             elif is_resolved_report_status(status):
                 mapped_status = 'resolved'
+                
             if pest_raw in status_breakdown:
                 status_breakdown[pest_raw][mapped_status] += 1
+            status_breakdown['total'][mapped_status] += 1
                 
         # Generate chart payload using existing dashboard logic
-        dashboard_payload = build_dashboard_chart_payload(pest_reports, group_by_day=bool(month_str))
+        dashboard_payload = build_dashboard_chart_payload(reports, group_by_day=bool(month_str))
 
         return jsonify({
             'success': True,
@@ -1830,7 +1832,7 @@ def api_analytics():
 
     except Exception as e:
         logger.error(f"Error in analytics API: {str(e)}")
-        return jsonify({'success': False, 'message': 'Failed to load analytics data'}), 500
+        return jsonify({'success': False, 'message': 'Failed to load analytics data', 'error': str(e)}), 500
 
 @app.route('/report_summary')
 def report_summary():
@@ -1844,90 +1846,12 @@ def report_summary():
     try:
         import calendar
         from dateutil.parser import parse
-        month_str = request.args.get('month')
-        week_str = request.args.get('week')
-        
-        start_date_str = None
-        end_date_str = None
-        explanation = "This report covers all historical data across all active regions."
-        
-        if month_str:
-            try:
-                year, month = map(int, month_str.split('-'))
-                last_day = calendar.monthrange(year, month)[1]
-                month_name = calendar.month_name[month]
-                if week_str:
-                    week = int(week_str)
-                    start_day = (week - 1) * 7 + 1
-                    end_day = min(week * 7, last_day) if week < 4 else last_day
-                    start_date_str = f"{year}-{month:02d}-{start_day:02d}"
-                    end_date_str = f"{year}-{month:02d}-{end_day:02d}"
-                    explanation = f"This report covers data gathered during {month_name} {year}, specifically Week {week} ({month_name} {start_day} to {end_day})."
-                else:
-                    start_date_str = f"{year}-{month:02d}-01"
-                    end_date_str = f"{year}-{month:02d}-{last_day:02d}"
-                    explanation = f"This report covers data gathered for the entire month of {month_name} {year}."
-            except ValueError:
-                pass
-
-        query = supabase.table('reports').select('*')
-        if start_date_str:
-            query = query.gte('created_at', start_date_str)
-        if end_date_str:
-            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
-
-        reports_response = query.order('created_at', desc=True).execute()
-        reports = getattr(reports_response, 'data', []) or []
-        pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
-        
-        rhino_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'rhinoceros beetle')
-        brontispa_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'brontispa')
-
-        pending_count = sum(1 for r in pest_reports if is_pending_report_status(str(r.get('status') or '').strip().lower()))
-        resolved_count = sum(1 for r in pest_reports if is_resolved_report_status(str(r.get('status') or '').strip().lower()))
-        in_progress_count = len(pest_reports) - (pending_count + resolved_count)
-
-        location_counts = {}
-        for r in pest_reports:
-            loc = str(r.get('barangay') or '').strip()
-            if loc:
-                location_counts[loc] = location_counts.get(loc, 0) + 1
-            
-        locations = sorted([{'name': k, 'count': v} for k, v in location_counts.items()], key=lambda x: x['count'], reverse=True)
-
         from datetime import datetime
-        generated_at = datetime.now().strftime("%B %d, %Y %I:%M %p")
-        
-        # Generate chart payload using existing dashboard logic
-        dashboard_payload = build_dashboard_chart_payload(pest_reports, group_by_day=bool(month_str))
 
-        data = {
-            'explanation': explanation,
-            'generated_at': generated_at,
-            'total_reports': len(pest_reports),
-            'rhino_count': rhino_count,
-            'brontispa_count': brontispa_count,
-            'pending_count': pending_count,
-            'resolved_count': resolved_count,
-            'in_progress_count': in_progress_count,
-            'locations': locations,
-            'dashboard_payload': dashboard_payload
-        }
-
-        return render_template('report_summary.html', data=data)
-    except Exception as e:
-        logger.error(f"Error generating report summary: {str(e)}")
-        flash("Failed to generate report.", "error")
-        return redirect(url_for('login'))
-
-    try:
-        import calendar
-        from dateutil.parser import parse
         month_str = request.args.get('month')
         week_str = request.args.get('week')
-        
-        start_date_str = None
-        end_date_str = None
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
         explanation = "This report covers all historical data across all active regions."
         
         if month_str:
@@ -1974,10 +1898,8 @@ def report_summary():
             
         locations = sorted([{'name': k, 'count': v} for k, v in location_counts.items()], key=lambda x: x['count'], reverse=True)
 
-        from datetime import datetime
         generated_at = datetime.now().strftime("%B %d, %Y %I:%M %p")
-
-        # Human-friendly period labels for the report header
+        
         start_label = start_date_str or 'Beginning'
         end_label = end_date_str or 'Present'
         try:
@@ -1986,11 +1908,9 @@ def report_summary():
             if end_date_str:
                 end_label = datetime.strptime(end_date_str.split('T')[0], '%Y-%m-%d').strftime('%b %d, %Y')
         except Exception:
-            # leave raw strings if parsing fails
             pass
-        
-        # Generate chart payload using existing dashboard logic
-        dashboard_payload = build_dashboard_chart_payload(pest_reports, group_by_day=bool(month_str))
+
+        dashboard_payload = build_dashboard_chart_payload(reports, group_by_day=bool(month_str))
 
         data = {
             'explanation': explanation,
@@ -2005,203 +1925,6 @@ def report_summary():
             'in_progress_count': in_progress_count,
             'locations': locations,
             'dashboard_payload': dashboard_payload
-        }
-
-        return render_template('report_summary.html', data=data)
-    except Exception as e:
-        logger.error(f"Error generating report summary: {str(e)}")
-        flash("Failed to generate report.", "error")
-        return redirect(url_for('login'))
-
-    try:
-        import calendar
-        from dateutil.parser import parse
-        month_str = request.args.get('month')
-        week_str = request.args.get('week')
-        
-        start_date_str = None
-        end_date_str = None
-        explanation = "This report covers all historical data across all active regions."
-        
-        if month_str:
-            try:
-                year, month = map(int, month_str.split('-'))
-                last_day = calendar.monthrange(year, month)[1]
-                month_name = calendar.month_name[month]
-                if week_str:
-                    week = int(week_str)
-                    start_day = (week - 1) * 7 + 1
-                    end_day = min(week * 7, last_day) if week < 4 else last_day
-                    start_date_str = f"{year}-{month:02d}-{start_day:02d}"
-                    end_date_str = f"{year}-{month:02d}-{end_day:02d}"
-                    explanation = f"This report covers data gathered during {month_name} {year}, specifically Week {week} ({month_name} {start_day} to {end_day})."
-                else:
-                    start_date_str = f"{year}-{month:02d}-01"
-                    end_date_str = f"{year}-{month:02d}-{last_day:02d}"
-                    explanation = f"This report covers data gathered for the entire month of {month_name} {year}."
-            except ValueError:
-                pass
-
-        query = supabase.table('reports').select('*')
-        if start_date_str:
-            query = query.gte('created_at', start_date_str)
-        if end_date_str:
-            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
-
-        reports_response = query.order('created_at', desc=True).execute()
-        reports = getattr(reports_response, 'data', []) or []
-        pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
-        
-        rhino_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'rhinoceros beetle')
-        brontispa_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'brontispa')
-
-        pending_count = sum(1 for r in pest_reports if is_pending_report_status(str(r.get('status') or '').strip().lower()))
-        resolved_count = sum(1 for r in pest_reports if is_resolved_report_status(str(r.get('status') or '').strip().lower()))
-        in_progress_count = len(pest_reports) - (pending_count + resolved_count)
-
-        location_counts = {}
-        monthly_counts = {}
-        pest_counter = {}
-
-        for r in pest_reports:
-            loc = str(r.get('barangay') or '').strip()
-            if loc:
-                location_counts[loc] = location_counts.get(loc, 0) + 1
-            
-            created_at = r.get('created_at')
-            if not created_at: continue
-            
-            try:
-                dt = parse(created_at)
-                if month_str:
-                    time_key = dt.strftime('%b %d')
-                    sort_key = dt.strftime('%Y-%m-%d')
-                else:
-                    time_key = dt.strftime('%b')
-                    sort_key = str(dt.month).zfill(2)
-            except:
-                continue
-
-            pest_raw = str(r.get('pest_type') or '').strip().lower()
-            pest_name = 'Rhinoceros Beetle' if pest_raw == 'rhinoceros beetle' else 'Brontispa'
-            if (time_key, sort_key) not in monthly_counts:
-                monthly_counts[(time_key, sort_key)] = {}
-            monthly_counts[(time_key, sort_key)][pest_name] = monthly_counts[(time_key, sort_key)].get(pest_name, 0) + 1
-            pest_counter[pest_name] = pest_counter.get(pest_name, 0) + 1
-
-        sorted_time_keys = sorted(monthly_counts.keys(), key=lambda x: x[1])
-        time_labels = [k[0] for k in sorted_time_keys]
-        
-        top_pests = ['Rhinoceros Beetle', 'Brontispa']
-        trend_datasets = []
-        for i, pest_name in enumerate(top_pests):
-            color = "#164630" if i == 0 else "#d97706"
-            bg = "rgba(22, 70, 48, 0.15)" if i == 0 else "rgba(217, 119, 6, 0.15)"
-            trend_datasets.append({
-                "label": pest_name,
-                "data": [monthly_counts[k].get(pest_name, 0) for k in sorted_time_keys],
-                "borderColor": color,
-                "backgroundColor": bg,
-                "borderWidth": 2,
-                "tension": 0.2,
-                "pointRadius": 3,
-                "fill": True,
-            })
-            
-        if not time_labels:
-            time_labels = ["No data"]
-            trend_datasets = [{
-                "label": "No reports yet",
-                "data": [0],
-                "borderColor": "#94a3b8",
-                "backgroundColor": "rgba(148, 163, 184, 0.15)",
-                "borderWidth": 2,
-                "tension": 0.2,
-                "pointRadius": 3,
-                "fill": True,
-            }]
-            
-        dist_labels = [p for p in top_pests if pest_counter.get(p, 0) > 0]
-        dist_data = [pest_counter[p] for p in dist_labels]
-        if not dist_labels:
-            dist_labels = ["No reports yet"]
-            dist_data = [0]
-            
-        dashboard_payload = {
-            "trend_labels": time_labels,
-            "trend_datasets": trend_datasets,
-            "distribution_labels": dist_labels,
-            "distribution_data": dist_data,
-        }
-
-        locations = sorted([{'name': k, 'count': v} for k, v in location_counts.items()], key=lambda x: x['count'], reverse=True)
-
-        from datetime import datetime
-        generated_at = datetime.now().strftime("%B %d, %Y %I:%M %p")
-
-        data = {
-            'explanation': explanation,
-            'generated_at': generated_at,
-            'total_reports': len(pest_reports),
-            'rhino_count': rhino_count,
-            'brontispa_count': brontispa_count,
-            'pending_count': pending_count,
-            'resolved_count': resolved_count,
-            'in_progress_count': in_progress_count,
-            'locations': locations,
-            'dashboard_payload': dashboard_payload
-        }
-
-        return render_template('report_summary.html', data=data)
-    except Exception as e:
-        logger.error(f"Error generating report summary: {str(e)}")
-        flash("Failed to generate report.", "error")
-        return redirect(url_for('login'))
-
-    try:
-        start_date_str = request.args.get('start_date')
-        end_date_str = request.args.get('end_date')
-
-        query = supabase.table('reports').select('*')
-        if start_date_str:
-            query = query.gte('created_at', start_date_str)
-        if end_date_str:
-            query = query.lte('created_at', end_date_str + 'T23:59:59Z')
-
-        reports_response = query.order('created_at', desc=True).execute()
-        reports = getattr(reports_response, 'data', []) or []
-
-        # Filter to Rhino and Brontispa
-        pest_reports = [r for r in reports if str(r.get('pest_type') or '').strip().lower() in ['rhinoceros beetle', 'brontispa']]
-        
-        rhino_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'rhinoceros beetle')
-        brontispa_count = sum(1 for r in pest_reports if str(r.get('pest_type') or '').strip().lower() == 'brontispa')
-
-        pending_count = sum(1 for r in pest_reports if is_pending_report_status(str(r.get('status') or '').strip().lower()))
-        resolved_count = sum(1 for r in pest_reports if is_resolved_report_status(str(r.get('status') or '').strip().lower()))
-        in_progress_count = len(pest_reports) - (pending_count + resolved_count)
-
-        location_counts = {}
-        for r in pest_reports:
-            loc = str(r.get('barangay') or '').strip()
-            if loc:
-                location_counts[loc] = location_counts.get(loc, 0) + 1
-        locations = sorted([{'name': k, 'count': v} for k, v in location_counts.items()], key=lambda x: x['count'], reverse=True)
-
-        from datetime import datetime
-        generated_at = datetime.now().strftime("%B %d, %Y %I:%M %p")
-
-        data = {
-            'start_date': start_date_str or 'All Time',
-            'end_date': end_date_str or 'Present',
-            'generated_at': generated_at,
-            'total_reports': len(pest_reports),
-            'rhino_count': rhino_count,
-            'brontispa_count': brontispa_count,
-            'pending_count': pending_count,
-            'resolved_count': resolved_count,
-            'in_progress_count': in_progress_count,
-            'locations': locations
         }
 
         return render_template('report_summary.html', data=data)

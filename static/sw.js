@@ -1,6 +1,6 @@
-const CACHE_NAME = 'cocoscan-app-shell-v2';
-const RUNTIME_CACHE = 'cocoscan-pages-runtime-v2';
-const IMAGE_CACHE = 'cocoscan-report-images-v2';
+const CACHE_NAME = 'cocoscan-app-shell-v3';
+const RUNTIME_CACHE = 'cocoscan-pages-runtime-v3';
+const IMAGE_CACHE = 'cocoscan-report-images-v3';
 
 const PRECACHE_ASSETS = [
     '/manifest.json',
@@ -92,9 +92,10 @@ self.addEventListener('fetch', (event) => {
     }
 
     // 2. HTML Navigation & Report Dashboards: Stale-While-Revalidate (SWR)
-    if (request.mode === 'navigate' || url.pathname.includes('/reports') || url.pathname.includes('/dashboard') || 
+    if (request.mode === 'navigate' || (!url.pathname.startsWith('/api/') && (
+        url.pathname.includes('/reports') || url.pathname.includes('/dashboard') || 
         url.pathname.includes('/scan') || url.pathname.includes('/drafts') || url.pathname.includes('/schedules') ||
-        url.pathname.includes('/analytics') || url.pathname.includes('/map')) {
+        url.pathname.includes('/analytics') || url.pathname.includes('/map')))) {
 
         event.respondWith(
             caches.open(RUNTIME_CACHE).then(async (cache) => {
@@ -186,9 +187,10 @@ self.addEventListener('fetch', (event) => {
                 return new Response(JSON.stringify({
                     success: false,
                     offline: true,
+                    message: "You are currently offline or the server is temporarily unreachable.",
                     error: "You are currently offline. Working in local mode."
                 }), {
-                    status: 503,
+                    status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
             }

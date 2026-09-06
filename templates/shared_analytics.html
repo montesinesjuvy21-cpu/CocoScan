@@ -506,9 +506,31 @@
 
             try {
                 const response = await fetch('/api/analytics?' + params.toString(), { cache: 'no-store' });
-                const data = await response.json();
-                if (!data.success) {
-                    alert('Error loading analytics: ' + data.message);
+                if (!response.ok) {
+                    let errMsg = `Server returned status ${response.status}`;
+                    try {
+                        const errJson = await response.json();
+                        if (errJson && (errJson.message || errJson.error)) {
+                            errMsg = errJson.message || errJson.error;
+                        }
+                    } catch (_) {}
+                    console.warn('Analytics fetch responded with non-200 status:', response.status, errMsg);
+                    renderStatusChart({ total: { pending: 0, in_progress: 0, resolved: 0 } });
+                    return;
+                }
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonErr) {
+                    console.warn('Analytics JSON parsing failed:', jsonErr);
+                    renderStatusChart({ total: { pending: 0, in_progress: 0, resolved: 0 } });
+                    return;
+                }
+
+                if (!data || !data.success) {
+                    console.warn('Analytics data error:', data ? data.message : 'Empty response');
+                    renderStatusChart((data && data.status_breakdown) || { total: { pending: 0, in_progress: 0, resolved: 0 } });
                     return;
                 }
 
@@ -521,7 +543,8 @@
                 }
                 renderStatusChart(data.status_breakdown || {});
             } catch (error) {
-                console.error('Analytics fetch failed', error);
+                console.warn('Analytics fetch failed', error);
+                renderStatusChart({ total: { pending: 0, in_progress: 0, resolved: 0 } });
             }
         }
 

@@ -130,3 +130,75 @@ class AnalyticsApiTests(unittest.TestCase):
         self.assertIn("Healthy Coconut Leaf", payload["dashboard_payload"]["distribution_labels"])
         self.assertEqual(payload["status_breakdown"]["total"]["pending"], 2)
         self.assertEqual(payload["status_breakdown"]["total"]["resolved"], 1)
+
+    def test_api_analytics_filters_by_week(self):
+        class FakeResponse:
+            def __init__(self, data):
+                self.data = data
+
+        class FakeQuery:
+            def __init__(self, rows):
+                self.rows = rows
+
+            def select(self, *args, **kwargs):
+                return self
+
+            def order(self, *args, **kwargs):
+                return self
+
+            def execute(self):
+                return FakeResponse(self.rows)
+
+        class FakeSupabaseClient:
+            def table(self, _table_name):
+                return FakeQuery([
+                    {
+                        "id": "report-1",
+                        "created_at": "2026-07-02T10:00:00Z",  # Week 1 (Days 1-7)
+                        "pest_type": "Rhinoceros Beetle",
+                        "status": "Under Review",
+                    },
+                    {
+                        "id": "report-2",
+                        "created_at": "2026-07-15T11:00:00Z",  # Week 3 (Days 15-21)
+                        "pest_type": "Brontispa",
+                        "status": "Resolved",
+                    },
+                ])
+
+        original_supabase = main.supabase
+        main.supabase = FakeSupabaseClient()
+        self.addCleanup(setattr, main, "supabase", original_supabase)
+
+        with self.client.session_transaction() as session:
+            session["user_id"] = "user-1"
+            session["user_role"] = "lgu"
+
+        response = self.client.get("/api/analytics?month=2026-07&week=1")
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["status_breakdown"]["rhinoceros beetle"]["pending"], 1)
+        self.assertEqual(payload["status_breakdown"]["brontispa"]["resolved"], 0)
+        self.assertEqual(payload["status_breakdown"]["total"]["pending"], 1)
+
+    def test_api_analytics_handles_database_error_gracefully(self):
+        class BrokenSupabaseClient:
+            def table(self, _table_name):
+                raise RuntimeError("Database connection failed")
+
+        original_supabase = main.supabase
+        main.supabase = BrokenSupabaseClient()
+        self.addCleanup(setattr, main, "supabase", original_supabase)
+
+        with self.client.session_transaction() as session:
+            session["user_id"] = "user-1"
+            session["user_role"] = "lgu"
+
+        response = self.client.get("/api/analytics?month=2026-07")
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["status_breakdown"]["total"]["pending"], 0)
+        self.assertEqual(payload["status_breakdown"]["total"]["resolved"], 0)
+

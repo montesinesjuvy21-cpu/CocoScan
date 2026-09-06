@@ -16,4 +16,4 @@ class ModelPathTests(unittest.TestCase):
 
             resolved = resolve_model_path('PEST_MODEL_PATH', 'pest_classifier_YOLO.tflite', model_dir=model_dir, env_value='cocoscan-model/models/pest_classifier.tflite')
 
-            self.assertEqual(resolved, target)
+            self.assertEqual(os.path.realpath(resolved), os.path.realpath(target))
