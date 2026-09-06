@@ -707,6 +707,25 @@
     </div>
     {% endif %}
 </div>
+
+<div class="modal-overlay-container" id="confirmationModal">
+    <div class="modal-dialog-box">
+        <div class="modal-title-text" id="modalTitle">Confirm Status Change</div>
+        <div class="modal-body-desc" id="modalDescription">Are you sure you want to proceed with executing this profile
+            verification action?</div>
+        <div class="modal-btn-row">
+            <button type="button" class="btn-modal-dismiss" onclick="closeConfirmationModal()">Cancel</button>
+            <button type="button" id="modalConfirmBtn"
+                style="padding: 8px 18px; border-radius: 6px; font-weight:600; cursor:pointer; font-size:0.85rem; border:none; color:white;">Proceed</button>
+        </div>
+    </div>
+</div>
+
+<div class="undo-toast-wrapper" id="undoToast">
+    <div>Action staged. Changes will apply automatically...</div>
+    <button type="button" class="btn-undo-trigger" onclick="executeActionUndo()">Undo</button>
+    <div class="toast-countdown-slider" id="toastSlider"></div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -755,9 +774,6 @@
         window.updateFilter = function (inputId, value) {
             document.getElementById(inputId).value = value;
             document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.style.display = 'none');
-
-            // Full reload when changing dropdowns so the button labels/active state updates 
-            // OR we could update it dynamically, but full reload is safer for jinja state
             filterForm.submit();
         };
 
@@ -766,30 +782,7 @@
             document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.style.display = 'none');
         });
     });
-</script>
 
-<div class="modal-overlay-container" id="confirmationModal">
-    <div class="modal-dialog-box">
-        <div class="modal-title-text" id="modalTitle">Confirm Status Change</div>
-        <div class="modal-body-desc" id="modalDescription">Are you sure you want to proceed with executing this profile
-            verification action?</div>
-        <div class="modal-btn-row">
-            <button type="button" class="btn-modal-dismiss" onclick="closeConfirmationModal()">Cancel</button>
-            <button type="button" id="modalConfirmBtn"
-                style="padding: 8px 18px; border-radius: 6px; font-weight:600; cursor:pointer; font-size:0.85rem; border:none; color:white;">Proceed</button>
-        </div>
-    </div>
-</div>
-
-<div class="undo-toast-wrapper" id="undoToast">
-    <div>Action staged. Changes will apply automatically...</div>
-    <button type="button" class="btn-undo-trigger" onclick="executeActionUndo()">Undo</button>
-    <div class="toast-countdown-slider" id="toastSlider"></div>
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
     // System operational queues variables
     let pendingExecutionTimeout = null;
     let targetUserId = null;
