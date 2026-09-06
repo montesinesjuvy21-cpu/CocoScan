@@ -13,8 +13,8 @@
             <div class="ripple-ring ring-2"></div>
             <i class="fa-solid fa-mobile-screen-button"></i>
         </div>
-        <h2>Mobile Access Required</h2>
-        <p>This area is restricted on mobile. Please use a desktop or larger screen to access analytics, map view, and other tools.</p>
+        <h2>Desktop Access Required</h2>
+        <p>This area is restricted on mobile. Please use a desktop or larger screen to access audit logs, analytics, and other admin tools.</p>
     </div>
 </div>
 {% endblock %}
@@ -251,8 +251,8 @@
 
 {% block user_role %}PCA Administrator{% endblock %}
 
-{% block page_header %}
-<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 16px;">
+{% block content %}
+<div class="dashboard-header-container" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 16px; margin-bottom: 24px;">
     <div>
         <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">System Audit Log</h1>
         <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Comprehensive activity trail of user authentication, security interventions, and system events.</p>
@@ -261,9 +261,7 @@
         <button class="btn-icon-refresh" onclick="spinAndRefresh(this)" title="Refresh Layout"><i class="fa-solid fa-arrows-rotate"></i></button>
     </div>
 </div>
-{% endblock %}
 
-{% block main_content %}
 <form method="GET" action="{{ url_for('admin_audit_log') }}" class="control-actions-form" id="filterForm">
     <input type="hidden" name="action_filter" id="actionFilter" value="{{ current_action }}">
 
@@ -402,7 +400,9 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const filterForm = document.getElementById('filterForm');

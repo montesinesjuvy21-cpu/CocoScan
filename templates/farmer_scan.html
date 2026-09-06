@@ -4,6 +4,21 @@
 
 {% block title %}CocoScan - Scan Pest{% endblock %}
 
+{% block mobile_restriction_overlay %}
+<div class="desktop-restriction-overlay">
+    <div class="desktop-card-prompt">
+        <div class="glow-effect"></div>
+        <div class="icon-pulse-container">
+            <div class="ripple-ring ring-1"></div>
+            <div class="ripple-ring ring-2"></div>
+            <i class="fa-solid fa-mobile-screen-button"></i>
+        </div>
+        <h2>Mobile Access Required</h2>
+        <p>You can view your dashboard on any device, but <strong>Scan Pest</strong> requires a mobile smartphone to utilize its camera for capturing real-time leaf images directly in the field.</p>
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_css %}
 <style>
 :root {
@@ -963,21 +978,21 @@
         /* --- RESPONSIVE WORKSPACE MEDIA TETHER --- */
         @media (min-width: 501px) {
             .desktop-restriction-overlay {
-                display: flex;
+                display: flex !important;
             }
 
             .mobile-viewport-container {
-                display: none;
+                display: none !important;
             }
         }
 
         @media (max-width: 500px) {
             .desktop-restriction-overlay {
-                display: none;
+                display: none !important;
             }
 
             .mobile-viewport-container {
-                display: flex;
+                display: flex !important;
             }
         }
 </style>

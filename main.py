@@ -3108,7 +3108,7 @@ def admin_analytics():
 @app.route('/admin/user-management')
 @require_role('admin')
 def admin_user_management():
-    current_role = str(session.get('user_role', '')).strip().lower()
+    current_role = normalize_role(session.get('user_role'))
     if current_role != 'admin':
         return redirect(url_for('login'))
 
@@ -3579,7 +3579,7 @@ def resend_2fa():
 @require_role('admin')
 def admin_audit_log():
     """Admin Audit Log page with standardized reporting pagination and filtering"""
-    if 'user_id' not in session or session.get('user_role') != 'admin':
+    if 'user_id' not in session or normalize_role(session.get('user_role')) != 'admin':
         flash("Please log in as an administrator to access this page.", "error")
         return redirect(url_for('login'))
         
