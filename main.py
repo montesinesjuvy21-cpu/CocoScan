@@ -1795,7 +1795,6 @@ def api_analytics():
 
     try:
         import calendar
-        from dateutil.parser import parse
         month_str = request.args.get('month')
         week_str = request.args.get('week')
 
@@ -1895,7 +1894,6 @@ def report_summary():
 
     try:
         import calendar
-        from dateutil.parser import parse
         from datetime import datetime
 
         month_str = request.args.get('month')
