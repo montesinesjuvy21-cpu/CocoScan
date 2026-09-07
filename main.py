@@ -1,4 +1,3 @@
-from typing import Any, Dict, List, Optional
 import os
 import time
 import traceback
@@ -1237,7 +1236,7 @@ def get_current_weather(latitude=14.0708, longitude=121.3256, location_name="San
     if cached and now < cached.get("expires_at", 0):
         return cached["data"].copy()
 
-    weather: dict[str, Any] = {
+    weather = {
         "location": location_name,
         "temp": "--",
         "humidity": "--",

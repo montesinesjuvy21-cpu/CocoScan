@@ -1079,6 +1079,107 @@
             resetInactivityTimer();
         })();
     </script>
+    <script>
+        (function() {
+            function setButtonLoading(btn, customText) {
+                if (!btn || btn.classList.contains('btn-loading')) return;
+                if (!btn.dataset.defaultHtml) {
+                    btn.dataset.defaultHtml = btn.innerHTML;
+                }
+                const currentText = (btn.textContent || btn.innerText || '').trim();
+                let loadingText = customText;
+                if (!loadingText) {
+                    const lower = currentText.toLowerCase();
+                    if (lower.includes('filter') || lower.includes('search')) loadingText = 'Filtering...';
+                    else if (lower.includes('send') || lower.includes('resend')) loadingText = 'Sending...';
+                    else if (lower.includes('verify')) loadingText = 'Verifying...';
+                    else if (lower.includes('save') || lower.includes('update')) loadingText = 'Saving...';
+                    else if (lower.includes('delete') || lower.includes('remove')) loadingText = 'Removing...';
+                    else if (lower.includes('submit')) loadingText = 'Submitting...';
+                    else loadingText = 'Processing...';
+                }
+
+                const minWidth = btn.offsetWidth;
+                const minHeight = btn.offsetHeight;
+                if (minWidth) btn.style.minWidth = minWidth + 'px';
+                if (minHeight) btn.style.minHeight = minHeight + 'px';
+
+                btn.classList.add('btn-loading');
+                btn.setAttribute('aria-busy', 'true');
+                btn.innerHTML = `
+                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> ${loadingText}
+                    </span>
+                    <span class="btn-loading-bar"></span>
+                `;
+            }
+
+            function resetButtonLoading(btn) {
+                if (!btn) return;
+                btn.classList.remove('btn-loading');
+                btn.removeAttribute('aria-busy');
+                btn.style.minWidth = '';
+                btn.style.minHeight = '';
+                if (btn.dataset.defaultHtml) {
+                    btn.innerHTML = btn.dataset.defaultHtml;
+                    delete btn.dataset.defaultHtml;
+                }
+            }
+
+            function initFormLoaders() {
+                document.querySelectorAll('form').forEach(form => {
+                    if (form.dataset.loadingInitialized) return;
+                    form.dataset.loadingInitialized = 'true';
+
+                    const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"], button:not([type]), .submit-primary, .btn-primary');
+
+                    form.addEventListener('submit', function(e) {
+                        if (e.defaultPrevented) return;
+                        if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+                            return;
+                        }
+                        if (form.dataset.submitting === 'true') {
+                            e.preventDefault();
+                            return;
+                        }
+                        form.dataset.submitting = 'true';
+
+                        const activeBtn = form.querySelector('button[type="submit"], .submit-primary, .btn-primary, button:not([type])');
+                        if (activeBtn) {
+                            setButtonLoading(activeBtn);
+                        }
+                    });
+
+                    submitButtons.forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            if (btn.classList.contains('btn-loading') || form.dataset.submitting === 'true') {
+                                return;
+                            }
+                            if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+                                return;
+                            }
+                            setButtonLoading(btn);
+                        });
+                    });
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initFormLoaders);
+            } else {
+                initFormLoaders();
+            }
+
+            window.addEventListener('pageshow', function() {
+                document.querySelectorAll('form').forEach(form => {
+                    form.dataset.submitting = 'false';
+                    form.querySelectorAll('.btn-loading').forEach(btn => {
+                        resetButtonLoading(btn);
+                    });
+                });
+            });
+        })();
+    </script>
     {% block extra_scripts %}{% endblock %}
     {% include 'components/pwa_scripts.html' %}
 </body>

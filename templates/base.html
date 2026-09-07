@@ -187,12 +187,13 @@
 
         /* Loading Button State & Animated Loading Bar */
         .btn-primary.btn-loading,
-        .btn-control.btn-loading {
+        .btn-control.btn-loading,
+        .btn-loading {
             position: relative !important;
             overflow: hidden !important;
             pointer-events: none !important;
             cursor: wait !important;
-            opacity: 0.88 !important;
+            opacity: 0.92 !important;
         }
 
         .btn-loading-bar {
@@ -203,7 +204,8 @@
             height: 4px;
             background: rgba(255, 255, 255, 0.35);
             overflow: hidden;
-            border-radius: 0 0 var(--radius-input) var(--radius-input);
+            border-radius: 0 0 var(--radius-input, 10px) var(--radius-input, 10px);
+            z-index: 5;
         }
 
         .btn-loading-bar::after {
@@ -271,42 +273,107 @@
     {% block scripts %}{% endblock %}
     {% include 'components/pwa_scripts.html' %}
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('form').forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    if (e.defaultPrevented) return;
-                    const submitBtn = this.querySelector('button[type="submit"]');
-                    if (submitBtn && !submitBtn.classList.contains('btn-loading')) {
-                        if (typeof this.checkValidity === 'function' && !this.checkValidity()) {
+        (function() {
+            function setButtonLoading(btn, customText) {
+                if (!btn || btn.classList.contains('btn-loading')) return;
+                if (!btn.dataset.defaultHtml) {
+                    btn.dataset.defaultHtml = btn.innerHTML;
+                }
+                const currentText = (btn.textContent || btn.innerText || '').trim();
+                let loadingText = customText;
+                if (!loadingText) {
+                    const lower = currentText.toLowerCase();
+                    if (lower.includes('login') || lower.includes('log in')) loadingText = 'Logging in...';
+                    else if (lower.includes('sign up') || lower.includes('signup') || lower.includes('register') || lower.includes('create account')) loadingText = 'Creating Account...';
+                    else if (lower.includes('send') || lower.includes('resend')) loadingText = 'Sending Code...';
+                    else if (lower.includes('verify')) loadingText = 'Verifying...';
+                    else if (lower.includes('reset')) loadingText = 'Resetting Password...';
+                    else if (lower.includes('save')) loadingText = 'Saving...';
+                    else if (lower.includes('submit')) loadingText = 'Submitting...';
+                    else loadingText = 'Processing...';
+                }
+
+                // Lock button dimensions so layout does not shift
+                const minWidth = btn.offsetWidth;
+                const minHeight = btn.offsetHeight;
+                if (minWidth) btn.style.minWidth = minWidth + 'px';
+                if (minHeight) btn.style.minHeight = minHeight + 'px';
+
+                btn.classList.add('btn-loading');
+                btn.setAttribute('aria-busy', 'true');
+                btn.innerHTML = `
+                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> ${loadingText}
+                    </span>
+                    <span class="btn-loading-bar"></span>
+                `;
+            }
+
+            function resetButtonLoading(btn) {
+                if (!btn) return;
+                btn.classList.remove('btn-loading');
+                btn.removeAttribute('aria-busy');
+                btn.style.minWidth = '';
+                btn.style.minHeight = '';
+                if (btn.dataset.defaultHtml) {
+                    btn.innerHTML = btn.dataset.defaultHtml;
+                    delete btn.dataset.defaultHtml;
+                }
+            }
+
+            function initFormLoaders() {
+                document.querySelectorAll('form').forEach(form => {
+                    if (form.dataset.loadingInitialized) return;
+                    form.dataset.loadingInitialized = 'true';
+
+                    const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"], button:not([type]), .btn-primary');
+
+                    form.addEventListener('submit', function(e) {
+                        if (e.defaultPrevented) return;
+                        if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
                             return;
                         }
-                        const currentText = submitBtn.innerText.trim();
-                        let loadingText = 'Processing...';
-                        const lower = currentText.toLowerCase();
-                        if (lower.includes('login') || lower.includes('log in')) loadingText = 'Logging in...';
-                        else if (lower.includes('sign up') || lower.includes('signup')) loadingText = 'Creating Account...';
-                        else if (lower.includes('send')) loadingText = 'Sending Code...';
-                        else if (lower.includes('verify')) loadingText = 'Verifying...';
-                        else if (lower.includes('submit')) loadingText = 'Submitting...';
+                        if (form.dataset.submitting === 'true') {
+                            e.preventDefault();
+                            return;
+                        }
+                        form.dataset.submitting = 'true';
 
-                        submitBtn.classList.add('btn-loading');
-                        submitBtn.disabled = true;
-                        submitBtn.innerHTML = `
-                            <span style="display:inline-flex; align-items:center; gap:8px;">
-                                <i class="fa-solid fa-circle-notch fa-spin"></i> ${loadingText}
-                            </span>
-                            <span class="btn-loading-bar"></span>
-                        `;
-                        // Re-submit natively since disabling might stop standard form submission in some browsers
-                        setTimeout(() => {
-                            if (typeof form.requestSubmit === 'function') {
-                                // Form is already submitting
+                        const activeBtn = form.querySelector('button[type="submit"], .btn-primary, button:not([type])');
+                        if (activeBtn) {
+                            setButtonLoading(activeBtn);
+                        }
+                    });
+
+                    submitButtons.forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            if (btn.classList.contains('btn-loading') || form.dataset.submitting === 'true') {
+                                return;
                             }
-                        }, 10);
-                    }
+                            if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+                                return;
+                            }
+                            setButtonLoading(btn);
+                        });
+                    });
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initFormLoaders);
+            } else {
+                initFormLoaders();
+            }
+
+            window.addEventListener('pageshow', function() {
+                document.querySelectorAll('form').forEach(form => {
+                    form.dataset.submitting = 'false';
+                    form.querySelectorAll('.btn-loading').forEach(btn => {
+                        resetButtonLoading(btn);
+                    });
                 });
             });
-        });
+        })();
     </script>
 </body>
 </html>

@@ -1,0 +1,15 @@
+{
+  "include": [
+    "app",
+    "tests",
+    "main.py"
+  ],
+  "exclude": [
+    "**/__pyrefly_virtual__",
+    ".venv",
+    "__pycache__"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.11"
+}
