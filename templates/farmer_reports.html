@@ -1931,6 +1931,18 @@
                 return;
             }
 
+            const submitBtn = document.querySelector('#followup-modal .submit-primary');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('btn-loading');
+                submitBtn.innerHTML = `
+                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Submitting Follow Up...
+                    </span>
+                    <span class="btn-loading-bar"></span>
+                `;
+            }
+
             fetch('/farmer/follow-up-report', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1946,10 +1958,20 @@
                         window.location.reload();
                         return;
                     }
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove('btn-loading');
+                        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Follow Up';
+                    }
                     alert(data.message || 'Unable to submit the follow-up right now.');
                 })
                 .catch(error => {
                     console.error('Follow-up submission error:', error);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove('btn-loading');
+                        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Follow Up';
+                    }
                     alert('Unable to submit the follow-up right now.');
                 });
         }

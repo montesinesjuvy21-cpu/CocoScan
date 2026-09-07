@@ -158,6 +158,8 @@
 
         /* Buttons */
         .btn-primary {
+            position: relative;
+            overflow: hidden;
             width: 100%;
             padding: 0.85rem;
             background-color: var(--primary-green);
@@ -169,6 +171,10 @@
             cursor: pointer;
             transition: background-color 0.2s ease, transform 0.1s ease;
             margin-top: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .btn-primary:hover {
@@ -177,6 +183,46 @@
 
         .btn-primary:active {
             transform: scale(0.99);
+        }
+
+        /* Loading Button State & Animated Loading Bar */
+        .btn-primary.btn-loading,
+        .btn-control.btn-loading {
+            position: relative !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
+            cursor: wait !important;
+            opacity: 0.88 !important;
+        }
+
+        .btn-loading-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.35);
+            overflow: hidden;
+            border-radius: 0 0 var(--radius-input) var(--radius-input);
+        }
+
+        .btn-loading-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 50%;
+            background: #ffffff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+            border-radius: 4px;
+            animation: btn-loading-bar-anim 1.2s infinite ease-in-out;
+        }
+
+        @keyframes btn-loading-bar-anim {
+            0% { left: -50%; }
+            50% { left: 35%; width: 60%; }
+            100% { left: 100%; width: 50%; }
         }
 
         /* Footer Utilities */
@@ -224,5 +270,43 @@
 
     {% block scripts %}{% endblock %}
     {% include 'components/pwa_scripts.html' %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (e.defaultPrevented) return;
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn && !submitBtn.classList.contains('btn-loading')) {
+                        if (typeof this.checkValidity === 'function' && !this.checkValidity()) {
+                            return;
+                        }
+                        const currentText = submitBtn.innerText.trim();
+                        let loadingText = 'Processing...';
+                        const lower = currentText.toLowerCase();
+                        if (lower.includes('login') || lower.includes('log in')) loadingText = 'Logging in...';
+                        else if (lower.includes('sign up') || lower.includes('signup')) loadingText = 'Creating Account...';
+                        else if (lower.includes('send')) loadingText = 'Sending Code...';
+                        else if (lower.includes('verify')) loadingText = 'Verifying...';
+                        else if (lower.includes('submit')) loadingText = 'Submitting...';
+
+                        submitBtn.classList.add('btn-loading');
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = `
+                            <span style="display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i> ${loadingText}
+                            </span>
+                            <span class="btn-loading-bar"></span>
+                        `;
+                        // Re-submit natively since disabling might stop standard form submission in some browsers
+                        setTimeout(() => {
+                            if (typeof form.requestSubmit === 'function') {
+                                // Form is already submitting
+                            }
+                        }, 10);
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

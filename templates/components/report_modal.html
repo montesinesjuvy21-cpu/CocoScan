@@ -247,6 +247,40 @@
                 transform: none;
                 box-shadow: none;
             }
+            .btn-control.btn-loading {
+                position: relative !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+                cursor: wait !important;
+                opacity: 0.88 !important;
+            }
+            .btn-control .btn-loading-bar {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 4px;
+                background: rgba(255, 255, 255, 0.35);
+                overflow: hidden;
+                border-radius: 0 0 14px 14px;
+            }
+            .btn-control .btn-loading-bar::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                height: 100%;
+                width: 50%;
+                background: #ffffff;
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+                border-radius: 4px;
+                animation: btn-loading-bar-anim 1.2s infinite ease-in-out;
+            }
+            @keyframes btn-loading-bar-anim {
+                0% { left: -50%; }
+                50% { left: 35%; width: 60%; }
+                100% { left: 100%; width: 50%; }
+            }
             .expert-notes-help-text {
                 font-style: italic;
                 color: #64748b;

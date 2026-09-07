@@ -435,6 +435,29 @@
         node.innerHTML = "";
     }
 
+    function setButtonLoading(button, isLoading, loadingText = "Saving...") {
+        if (!button) return;
+        if (isLoading) {
+            if (!button.dataset.defaultHtml) {
+                button.dataset.defaultHtml = button.innerHTML;
+            }
+            button.disabled = true;
+            button.classList.add("btn-loading", "is-disabled");
+            button.innerHTML = `
+                <span style="display:inline-flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> ${loadingText}
+                </span>
+                <span class="btn-loading-bar"></span>
+            `;
+        } else {
+            button.disabled = false;
+            button.classList.remove("btn-loading", "is-disabled");
+            if (button.dataset.defaultHtml) {
+                button.innerHTML = button.dataset.defaultHtml;
+            }
+        }
+    }
+
     function setReportModalSubmissionState(isSubmitting, pendingLabel = "Submitting your report…") {
         const scanSubmitButton = document.getElementById("report-scan-submit-btn");
         const agriSubmitButton = document.getElementById("report-agri-submit-btn");
@@ -446,14 +469,20 @@
             const shouldDisable = isSubmitting;
             button.disabled = shouldDisable;
             button.classList.toggle("is-disabled", shouldDisable);
+            button.classList.toggle("btn-loading", shouldDisable);
             button.setAttribute("aria-busy", isSubmitting ? "true" : "false");
 
             if (isSubmitting) {
                 if (!button.dataset.defaultHtml) {
                     button.dataset.defaultHtml = button.innerHTML;
                 }
-                const icon = "fa-solid fa-spinner fa-spin";
-                button.innerHTML = `<i class="${icon}"></i> ${pendingLabel}`;
+                const icon = "fa-solid fa-circle-notch fa-spin";
+                button.innerHTML = `
+                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                        <i class="${icon}"></i> ${pendingLabel}
+                    </span>
+                    <span class="btn-loading-bar"></span>
+                `;
             } else if (button.dataset.defaultHtml) {
                 button.innerHTML = button.dataset.defaultHtml;
             }
@@ -1166,7 +1195,8 @@
         toggleOtherInput();
 
         modal.querySelector('#visit-reschedule-modal-close')?.addEventListener('click', () => modal.remove());
-        modal.querySelector('#visit-reschedule-save-btn')?.addEventListener('click', async () => {
+        modal.querySelector('#visit-reschedule-save-btn')?.addEventListener('click', async (e) => {
+            const saveBtn = e.target.closest('button');
             const reason = reasonSelect?.value || "";
             const details = modal.querySelector('#visit-reschedule-other-details')?.value?.trim() || "";
             if (reason === 'Other' && !details) {
@@ -1178,6 +1208,7 @@
                 alert("Please select a reason before submitting the reschedule request.");
                 return;
             }
+            setButtonLoading(saveBtn, true, "Submitting...");
             try {
                 const response = await fetch(`/reports/${report.id}/request-reschedule`, {
                     method: "POST",
@@ -1187,6 +1218,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The reschedule request could not be submitted.");
+                    setButtonLoading(saveBtn, false);
                     return;
                 }
                 report.visitArchived = false;
@@ -1198,6 +1230,7 @@
                 alert(data.message || "Reschedule request submitted.");
             } catch (error) {
                 alert("The reschedule request could not be submitted right now.");
+                setButtonLoading(saveBtn, false);
             }
         });
     }
@@ -1267,7 +1300,8 @@
         document.body.appendChild(modal);
 
         modal.querySelector('#visit-schedule-modal-close')?.addEventListener('click', () => modal.remove());
-        modal.querySelector('#visit-schedule-save-btn')?.addEventListener('click', async () => {
+        modal.querySelector('#visit-schedule-save-btn')?.addEventListener('click', async (e) => {
+            const saveBtn = e.target.closest('button');
             const confirmedDate = modal.querySelector('#visit-confirmed-date')?.value || "";
             const startTime = modal.querySelector('#visit-start-time')?.value || "";
             const endTime = modal.querySelector('#visit-end-time')?.value || "";
@@ -1275,6 +1309,7 @@
                 alert("Please enter the confirmed date and visit window.");
                 return;
             }
+            setButtonLoading(saveBtn, true, "Saving Schedule...");
             try {
                 const response = await fetch("/agriculturist/finalize-visit-schedule", {
                     method: "POST",
@@ -1284,6 +1319,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The schedule could not be finalized.");
+                    setButtonLoading(saveBtn, false);
                     return;
                 }
                 report.status = "Visit Scheduled";
@@ -1301,6 +1337,7 @@
                 alert(data.message || "The visit schedule has been finalized.");
             } catch (error) {
                 alert("The schedule could not be finalized right now.");
+                setButtonLoading(saveBtn, false);
             }
         });
     }
@@ -1804,7 +1841,7 @@
         return schedules.slice(0, 3);
     }
 
-    async function submitWorkflowAction(actionName) {
+    async function submitWorkflowAction(actionName, clickedBtn = null) {
         const workflowInput = document.getElementById("workflow-detail-input");
         const report = currentReportModalRecord;
         if (!report?.id) {
@@ -1812,12 +1849,16 @@
             return;
         }
 
+        const activeBtn = clickedBtn || (typeof event !== 'undefined' && event?.target?.closest ? event.target.closest('button') : null) || document.querySelector('#workflow-actions-buttons button') || document.querySelector('#report-farmer-feedback-card button');
+        setButtonLoading(activeBtn, true, "Submitting...");
+
         const formData = new FormData();
         formData.append("report_id", report.id);
 
         if (actionName === "submit-assessment") {
             const detail = (workflowInput?.value || "").trim();
             if (!detail) {
+                setButtonLoading(activeBtn, false);
                 alert("Please provide assessment notes before submitting.");
                 return;
             }
@@ -1827,6 +1868,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The assessment could not be saved.");
+                    setButtonLoading(activeBtn, false);
                     return;
                 }
                 report.status = "assessment_issued";
@@ -1842,6 +1884,7 @@
                 window.location.reload();
             } catch (error) {
                 alert("The assessment could not be saved right now.");
+                setButtonLoading(activeBtn, false);
             }
             return;
         }
@@ -1855,6 +1898,7 @@
             } else {
                 const reason = document.getElementById("farmer-visit-reason")?.value?.trim() || "";
                 if (!reason) {
+                    setButtonLoading(activeBtn, false);
                     alert("Please provide a reason before submitting the visit request.");
                     return;
                 }
@@ -1867,6 +1911,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The feedback could not be saved.");
+                    setButtonLoading(activeBtn, false);
                     return;
                 }
                 report.status = feedbackChoice === "resolved" ? "resolved" : "Awaiting Confirmed Schedule";
@@ -1887,6 +1932,7 @@
                 window.location.reload();
             } catch (error) {
                 alert("The feedback could not be saved right now.");
+                setButtonLoading(activeBtn, false);
             }
             return;
         }
@@ -1904,6 +1950,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The selected schedule could not be saved.");
+                    setButtonLoading(activeBtn, false);
                     return;
                 }
                 report.status = "visit_scheduled";
@@ -1914,6 +1961,7 @@
                 window.location.reload();
             } catch (error) {
                 alert("The selected schedule could not be saved right now.");
+                setButtonLoading(activeBtn, false);
             }
             return;
         }
@@ -1924,6 +1972,7 @@
             const preferredTime = TIME_WINDOW_DEFINITIONS[proposedWindow]?.label || "Morning";
             formData.append("decision", "accept");
             if (!proposedDate) {
+                setButtonLoading(activeBtn, false);
                 alert("Please select a proposed date before continuing.");
                 return;
             }
@@ -1934,6 +1983,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The proposed schedule could not be saved.");
+                    setButtonLoading(activeBtn, false);
                     return;
                 }
                 report.status = "visit_scheduled";
@@ -1944,6 +1994,7 @@
                 window.location.reload();
             } catch (error) {
                 alert("The proposed schedule could not be saved right now.");
+                setButtonLoading(activeBtn, false);
             }
             return;
         }
@@ -1963,6 +2014,7 @@
                     const preferredDate = document.getElementById("visit-review-date")?.value || "";
                     const preferredTime = document.getElementById("visit-review-time")?.value || "";
                     if (!preferredDate || !preferredTime) {
+                        setButtonLoading(activeBtn, false);
                         alert("Please confirm the visit date and time before accepting the request.");
                         return;
                     }
@@ -1971,6 +2023,7 @@
                 }
             } else {
                 if (!detail) {
+                    setButtonLoading(activeBtn, false);
                     alert("Please add a rejection reason before submitting.");
                     return;
                 }
@@ -1981,6 +2034,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The visit review could not be saved.");
+                    setButtonLoading(activeBtn, false);
                     return;
                 }
                 report.status = decision === "accept" ? "visit_scheduled" : "assessment_issued";
@@ -1994,6 +2048,7 @@
                 window.location.reload();
             } catch (error) {
                 alert("The visit review could not be saved right now.");
+                setButtonLoading(activeBtn, false);
             }
             return;
         }
@@ -2002,10 +2057,12 @@
             const detail = (workflowInput?.value || "").trim();
             const visitImages = document.getElementById("workflow-visit-images")?.files || [];
             if (!detail) {
+                setButtonLoading(activeBtn, false);
                 alert("Please add a visit summary before submitting.");
                 return;
             }
             if (!visitImages.length) {
+                setButtonLoading(activeBtn, false);
                 alert("Please upload at least one visit image before submitting.");
                 return;
             }
@@ -2016,6 +2073,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The visit summary could not be saved.");
+                    setButtonLoading(activeBtn, false);
                     return;
                 }
                 report.status = "resolved";
@@ -2027,6 +2085,7 @@
                 window.location.reload();
             } catch (error) {
                 alert("The visit summary could not be saved right now.");
+                setButtonLoading(activeBtn, false);
             }
             return;
         }
@@ -2035,6 +2094,7 @@
             const detail = (workflowInput?.value || "").trim();
             const additionalNotes = document.getElementById("workflow-additional-notes")?.value?.trim() || "";
             if (!detail) {
+                setButtonLoading(activeBtn, false);
                 alert("Please provide final remarks before submitting.");
                 return;
             }
@@ -2047,6 +2107,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The final remarks could not be saved.");
+                    setButtonLoading(activeBtn, false);
                     return;
                 }
                 report.status = "final_remarks_issued";
@@ -2057,6 +2118,7 @@
                 window.location.reload();
             } catch (error) {
                 alert("The final remarks could not be saved right now.");
+                setButtonLoading(activeBtn, false);
             }
             return;
         }
@@ -2071,6 +2133,7 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     alert(data.message || "The case could not be marked resolved.");
+                    setButtonLoading(activeBtn, false);
                     return;
                 }
                 report.status = "resolved";
@@ -2081,10 +2144,12 @@
                 window.location.reload();
             } catch (error) {
                 alert("The case could not be marked resolved right now.");
+                setButtonLoading(activeBtn, false);
             }
             return;
         }
 
+        setButtonLoading(activeBtn, false);
         alert("This workflow step is not available yet.");
     }
 
