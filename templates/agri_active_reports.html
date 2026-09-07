@@ -334,21 +334,24 @@
             min-width: 0;
         }
         .report-row-action { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; width:100%; }
-        .report-row-action .unread-badge,
-        .report-row-action .status-badge-pill {
+        .unread-badge,
+        .status-badge-pill {
             flex-shrink: 0;
             white-space: nowrap;
         }
-        .report-row-action .unread-badge {
+        .unread-badge {
             background-color: #ef4444;
             color: #ffffff;
             padding: 4px 10px;
             border-radius: 999px;
             font-size: 0.78rem;
             font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             box-shadow: 0 2px 4px rgba(239, 68, 68, 0.18);
         }
-        .report-row-action .status-badge-pill {
+        .status-badge-pill {
             padding: 6px 12px;
         }
         .report-row-node:hover {
@@ -1027,10 +1030,10 @@
                         </td>
                         <td style="padding: 16px 12px; font-size: 0.9rem; font-weight: 600;">${highlightSearchText(String(item.pest || item.pest_type || ""), activeSearchQuery)}</td>
                         <td style="padding: 16px 12px; font-size: 0.9rem;">
-                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                 ${unreadBadgeHTML}
-                                <span class="report-status-badge" style="background-color: ${statusBadge.backgroundColor}; color: ${statusBadge.color}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-                                    <i class="fa-solid fa-circle-dot" style="font-size: 0.65rem;"></i> ${escapeHtml(statusLabel)}
+                                <span class="status-badge-pill" style="display:inline-flex; align-items:center; gap:6px; border-radius:999px; font-size:0.78rem; font-weight:700; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">
+                                    <i class="fa-solid fa-circle-dot"></i> ${escapeHtml(statusLabel)}
                                 </span>
                             </div>
                         </td>

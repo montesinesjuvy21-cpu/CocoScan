@@ -552,23 +552,26 @@
             width: 100%;
         }
 
-        .report-row-action .unread-badge,
-        .report-row-action .status-badge-pill {
+        .unread-badge,
+        .status-badge-pill {
             flex-shrink: 0;
             white-space: nowrap;
         }
 
-        .report-row-action .unread-badge {
+        .unread-badge {
             background-color: #ef4444;
             color: #ffffff;
             padding: 4px 10px;
             border-radius: 999px;
             font-size: 0.78rem;
             font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             box-shadow: 0 2px 4px rgba(239, 68, 68, 0.18);
         }
 
-        .report-row-action .status-badge-pill {
+        .status-badge-pill {
             padding: 6px 12px;
         }
 
