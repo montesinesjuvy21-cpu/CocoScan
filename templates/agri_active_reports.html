@@ -1183,14 +1183,12 @@
             
             const mainContent = document.querySelector('main') || document.body;
             if (mainContent) {
-                mainContent.style.transition = 'opacity 0.25s ease';
-                mainContent.style.opacity = '0.5';
+                mainContent.style.transition = 'opacity 0.15s ease';
+                mainContent.style.opacity = '0.6';
             }
-            setTimeout(() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set('_r', Date.now());
-                window.location.href = url.toString();
-            }, 300);
+            const url = new URL(window.location.href);
+            url.searchParams.set('_r', Date.now());
+            window.location.replace(url.toString());
         }
     </script>
 {% endblock %}

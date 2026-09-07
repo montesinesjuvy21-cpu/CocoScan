@@ -1,58 +1,194 @@
-<div class="weather-analytics-card">
+<div class="weather-analytics-card" id="weather-analytics-card-root">
     <div class="weather-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
         <div>
             <h4>Current Weather</h4>
-            <h3>{{ weather.location }}</h3>
+            <h3 id="weather-location-val">{{ weather.location or "San Pablo City, Laguna" }}</h3>
         </div>
-        {% if weather.is_down %}
-        <span class="weather-status-pill weather-status-pill--offline">
+        <span id="weather-status-pill" class="weather-status-pill weather-status-pill--offline" style="{% if not weather.is_down %}display:none;{% endif %}">
             <i class="fa-solid fa-circle-exclamation" style="margin-right: 2px;"></i> Offline
         </span>
-        {% endif %}
     </div>
 
     <div class="weather-stats-grid">
         <div class="weather-stat-node">
             <div class="stat-icon-wrap"><i class="fa-solid fa-temperature-half"></i></div>
             <h6>Temperature</h6>
-            <p>{{ weather.temp }}{% if weather.temp != '--' %}<span>°C</span>{% endif %}</p>
+            <p><span id="weather-temp-val">{{ weather.temp }}</span><span id="weather-temp-unit" style="{% if weather.temp == '--' %}display:none;{% endif %}">°C</span></p>
         </div>
         <div class="weather-stat-node">
             <div class="stat-icon-wrap"><i class="fa-solid fa-droplet"></i></div>
             <h6>Humidity</h6>
-            <p>{{ weather.humidity }}{% if weather.humidity != '--' %}<span>%</span>{% endif %}</p>
+            <p><span id="weather-humidity-val">{{ weather.humidity }}</span><span id="weather-humidity-unit" style="{% if weather.humidity == '--' %}display:none;{% endif %}">%</span></p>
         </div>
         <div class="weather-stat-node">
             <div class="stat-icon-wrap"><i class="fa-solid fa-cloud-showers-heavy"></i></div>
             <h6>Rainfall</h6>
-            <p>{{ weather.rainfall }}{% if weather.rainfall != '--' %}<span>mm</span>{% endif %}</p>
+            <p><span id="weather-rainfall-val">{{ weather.rainfall }}</span><span id="weather-rainfall-unit" style="{% if weather.rainfall == '--' %}display:none;{% endif %}">mm</span></p>
         </div>
         <div class="weather-stat-node">
             <div class="stat-icon-wrap"><i class="fa-solid fa-wind"></i></div>
             <h6>Wind</h6>
-            <p>{{ weather.wind }}{% if weather.wind != '--' %}<span>km/h</span>{% endif %}</p>
+            <p><span id="weather-wind-val">{{ weather.wind }}</span><span id="weather-wind-unit" style="{% if weather.wind == '--' %}display:none;{% endif %}">km/h</span></p>
         </div>
     </div>
 
-    {% if weather.is_down %}
-    <div class="weather-alert-banner weather-alert-banner--offline">
+    <div id="weather-alert-offline" class="weather-alert-banner weather-alert-banner--offline" style="{% if not weather.is_down %}display:none;{% endif %}">
         <i class="fa-solid fa-triangle-exclamation" style="margin-top:1px; flex-shrink: 0; color: #ef4444;"></i>
         <span>Unable to fetch real-time atmospheric updates. Please check your connection.</span>
     </div>
-    {% else %}
-    <div class="weather-alert-banner dynamic-risk-card" style="--risk-bg: {{ risk.bg }}; --risk-border: {{ risk.border or 'rgba(0,0,0,0.04)' }}; --risk-color: {{ risk.color }};">
-        {% if risk.level == 'High Risk' %}
-            <i class="fa-solid fa-triangle-exclamation risk-icon"></i>
-        {% elif risk.level == 'Moderate Risk' %}
-            <i class="fa-solid fa-circle-exclamation risk-icon"></i>
-        {% elif risk.level == 'Low Risk' %}
-            <i class="fa-solid fa-circle-check risk-icon" style="color: #10b981;"></i>
-        {% else %}
-            <i class="fa-solid fa-circle-info risk-icon"></i>
-        {% endif %}
-        <span class="risk-text">
+
+    <div id="weather-alert-risk" class="weather-alert-banner dynamic-risk-card" style="--risk-bg: {{ risk.bg or '#d1fae5' }}; --risk-border: {{ risk.border or 'rgba(0,0,0,0.04)' }}; --risk-color: {{ risk.color or '#065f46' }}; {% if weather.is_down %}display:none;{% endif %}">
+        <i id="weather-risk-icon" class="fa-solid {% if risk.level == 'High Risk' %}fa-triangle-exclamation{% elif risk.level == 'Moderate Risk' %}fa-circle-exclamation{% elif risk.level == 'Low Risk' %}fa-circle-check{% else %}fa-circle-info{% endif %} risk-icon" style="{% if risk.level == 'Low Risk' %}color: #10b981;{% endif %}"></i>
+        <span id="weather-risk-text" class="risk-text">
              {{ risk.text | safe }}
         </span>
     </div>
-    {% endif %}
 </div>
+
+<script>
+(function initWeatherWidgetRecovery() {
+    const STORAGE_KEY = 'cocoscan_weather_cache_v2';
+    const CACHE_MAX_AGE_MS = 15 * 60 * 1000; // 15 minutes
+
+    function computeClientRisk(temp, humidity, rainfall) {
+        const t = Number(temp);
+        const h = Number(humidity);
+        if (isNaN(t) || isNaN(h)) {
+            return {
+                level: 'Moderate',
+                color: '#b45309',
+                bg: '#fef3c7',
+                border: '#fde68a',
+                icon: 'fa-circle-exclamation',
+                text: '<strong>Moderate Risk</strong>: Environmental monitoring active.'
+            };
+        }
+        if (t >= 32 && h >= 75) {
+            return {
+                level: 'High Risk',
+                color: '#991b1b',
+                bg: '#fee2e2',
+                border: '#fca5a5',
+                icon: 'fa-triangle-exclamation',
+                text: '<strong>High Risk</strong>: Accelerated breeding climate detected for both Brontispa and Rhinoceros Beetles. Inspect young fronds immediately.'
+            };
+        } else if (h >= 80) {
+            return {
+                level: 'Moderate Risk',
+                color: '#92400e',
+                bg: '#fef3c7',
+                border: '#fde68a',
+                icon: 'fa-circle-exclamation',
+                text: '<strong>Moderate Risk</strong>: High moisture levels favor Rhinoceros Beetle breeding nests and localized larval development.'
+            };
+        } else if (t >= 31 && h < 65) {
+            return {
+                level: 'Moderate Risk',
+                color: '#92400e',
+                bg: '#fef3c7',
+                border: '#fde68a',
+                icon: 'fa-circle-exclamation',
+                text: '<strong>Moderate Risk</strong>: Warm, dry foliage layout accelerates early-stage Brontispa leaf-incubation cycles.'
+            };
+        } else {
+            return {
+                level: 'Low Risk',
+                color: '#065f46',
+                bg: '#d1fae5',
+                border: '#a7f3d0',
+                icon: 'fa-circle-check',
+                text: '<strong>Low Risk</strong>: Current climate conditions are within baseline stability parameters for pest development.'
+            };
+        }
+    }
+
+    function applyWeatherData(data) {
+        if (!data || data.temp === undefined || data.temp === '--') return;
+        const tempEl = document.getElementById('weather-temp-val');
+        const tempUnit = document.getElementById('weather-temp-unit');
+        const humEl = document.getElementById('weather-humidity-val');
+        const humUnit = document.getElementById('weather-humidity-unit');
+        const rainEl = document.getElementById('weather-rainfall-val');
+        const rainUnit = document.getElementById('weather-rainfall-unit');
+        const windEl = document.getElementById('weather-wind-val');
+        const windUnit = document.getElementById('weather-wind-unit');
+        const pillEl = document.getElementById('weather-status-pill');
+        const offlineAlert = document.getElementById('weather-alert-offline');
+        const riskAlert = document.getElementById('weather-alert-risk');
+        const riskIcon = document.getElementById('weather-risk-icon');
+        const riskText = document.getElementById('weather-risk-text');
+
+        if (tempEl) tempEl.textContent = data.temp;
+        if (tempUnit) tempUnit.style.display = 'inline';
+        if (humEl) humEl.textContent = data.humidity;
+        if (humUnit) humUnit.style.display = 'inline';
+        if (rainEl) rainEl.textContent = data.rainfall;
+        if (rainUnit) rainUnit.style.display = 'inline';
+        if (windEl) windEl.textContent = data.wind;
+        if (windUnit) windUnit.style.display = 'inline';
+
+        if (pillEl) pillEl.style.display = 'none';
+        if (offlineAlert) offlineAlert.style.display = 'none';
+        if (riskAlert) {
+            riskAlert.style.display = 'flex';
+            const risk = computeClientRisk(data.temp, data.humidity, data.rainfall);
+            riskAlert.style.setProperty('--risk-bg', risk.bg);
+            riskAlert.style.setProperty('--risk-border', risk.border);
+            riskAlert.style.setProperty('--risk-color', risk.color);
+            if (riskIcon) {
+                riskIcon.className = `fa-solid ${risk.icon} risk-icon`;
+                if (risk.level === 'Low Risk') riskIcon.style.color = '#10b981';
+                else riskIcon.style.color = '';
+            }
+            if (riskText) riskText.innerHTML = risk.text;
+        }
+    }
+
+    async function fetchFreshWeather() {
+        try {
+            const resp = await fetch('https://api.open-meteo.com/v1/forecast?latitude=14.0708&longitude=121.3256&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m', {
+                cache: 'no-store'
+            });
+            if (!resp.ok) return;
+            const resData = await resp.json();
+            const cur = resData?.current || {};
+            if (cur.temperature_2m !== undefined) {
+                const weatherData = {
+                    temp: Math.round(cur.temperature_2m),
+                    humidity: Math.round(cur.relative_humidity_2m),
+                    rainfall: cur.precipitation !== undefined ? cur.precipitation : 0.0,
+                    wind: Math.round(cur.wind_speed_10m || 0),
+                    cachedAt: Date.now()
+                };
+                applyWeatherData(weatherData);
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(weatherData));
+                } catch (e) {}
+            }
+        } catch (e) {
+            // Client fetch error - fallback will stay in place
+        }
+    }
+
+    // Check if initial render is missing values or marked offline
+    const isOffline = document.getElementById('weather-alert-offline')?.style.display !== 'none';
+    const tempVal = document.getElementById('weather-temp-val')?.textContent?.trim();
+
+    try {
+        const rawCache = localStorage.getItem(STORAGE_KEY);
+        if (rawCache) {
+            const cached = JSON.parse(rawCache);
+            if (cached && (Date.now() - (cached.cachedAt || 0)) < CACHE_MAX_AGE_MS) {
+                if (isOffline || tempVal === '--') {
+                    applyWeatherData(cached);
+                }
+            }
+        }
+    } catch (e) {}
+
+    // Always revalidate in background if server had an issue or data is older than 5 mins
+    if (isOffline || tempVal === '--' || typeof window.fetch === 'function') {
+        setTimeout(fetchFreshWeather, 200);
+    }
+})();
+</script>
