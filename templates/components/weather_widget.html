@@ -1,10 +1,15 @@
+<style>
+    .weather-widget-hidden {
+        display: none !important;
+    }
+</style>
 <div class="weather-analytics-card" id="weather-analytics-card-root">
     <div class="weather-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
         <div>
             <h4>Current Weather</h4>
             <h3 id="weather-location-val">{{ weather.location or "San Pablo City, Laguna" }}</h3>
         </div>
-        <span id="weather-status-pill" class="weather-status-pill weather-status-pill--offline" style="{% if not weather.is_down %}display:none;{% endif %}">
+        <span id="weather-status-pill" class="weather-status-pill weather-status-pill--offline {% if not weather.is_down %}weather-widget-hidden{% endif %}">
             <i class="fa-solid fa-circle-exclamation" style="margin-right: 2px;"></i> Offline
         </span>
     </div>
@@ -13,31 +18,31 @@
         <div class="weather-stat-node">
             <div class="stat-icon-wrap"><i class="fa-solid fa-temperature-half"></i></div>
             <h6>Temperature</h6>
-            <p><span id="weather-temp-val">{{ weather.temp }}</span><span id="weather-temp-unit" style="{% if weather.temp == '--' %}display:none;{% endif %}">°C</span></p>
+            <p><span id="weather-temp-val">{{ weather.temp }}</span><span id="weather-temp-unit" class="{% if weather.temp == '--' %}weather-widget-hidden{% endif %}">°C</span></p>
         </div>
         <div class="weather-stat-node">
             <div class="stat-icon-wrap"><i class="fa-solid fa-droplet"></i></div>
             <h6>Humidity</h6>
-            <p><span id="weather-humidity-val">{{ weather.humidity }}</span><span id="weather-humidity-unit" style="{% if weather.humidity == '--' %}display:none;{% endif %}">%</span></p>
+            <p><span id="weather-humidity-val">{{ weather.humidity }}</span><span id="weather-humidity-unit" class="{% if weather.humidity == '--' %}weather-widget-hidden{% endif %}">%</span></p>
         </div>
         <div class="weather-stat-node">
             <div class="stat-icon-wrap"><i class="fa-solid fa-cloud-showers-heavy"></i></div>
             <h6>Rainfall</h6>
-            <p><span id="weather-rainfall-val">{{ weather.rainfall }}</span><span id="weather-rainfall-unit" style="{% if weather.rainfall == '--' %}display:none;{% endif %}">mm</span></p>
+            <p><span id="weather-rainfall-val">{{ weather.rainfall }}</span><span id="weather-rainfall-unit" class="{% if weather.rainfall == '--' %}weather-widget-hidden{% endif %}">mm</span></p>
         </div>
         <div class="weather-stat-node">
             <div class="stat-icon-wrap"><i class="fa-solid fa-wind"></i></div>
             <h6>Wind</h6>
-            <p><span id="weather-wind-val">{{ weather.wind }}</span><span id="weather-wind-unit" style="{% if weather.wind == '--' %}display:none;{% endif %}">km/h</span></p>
+            <p><span id="weather-wind-val">{{ weather.wind }}</span><span id="weather-wind-unit" class="{% if weather.wind == '--' %}weather-widget-hidden{% endif %}">km/h</span></p>
         </div>
     </div>
 
-    <div id="weather-alert-offline" class="weather-alert-banner weather-alert-banner--offline" style="{% if not weather.is_down %}display:none;{% endif %}">
+    <div id="weather-alert-offline" class="weather-alert-banner weather-alert-banner--offline {% if not weather.is_down %}weather-widget-hidden{% endif %}">
         <i class="fa-solid fa-triangle-exclamation" style="margin-top:1px; flex-shrink: 0; color: #ef4444;"></i>
         <span>Unable to fetch real-time atmospheric updates. Please check your connection.</span>
     </div>
 
-    <div id="weather-alert-risk" class="weather-alert-banner dynamic-risk-card" style="--risk-bg: {{ risk.bg or '#d1fae5' }}; --risk-border: {{ risk.border or 'rgba(0,0,0,0.04)' }}; --risk-color: {{ risk.color or '#065f46' }}; {% if weather.is_down %}display:none;{% endif %}">
+    <div id="weather-alert-risk" class="weather-alert-banner dynamic-risk-card {% if weather.is_down %}weather-widget-hidden{% endif %}" style="--risk-bg: {{ risk.bg | default('#d1fae5', true) }}; --risk-border: {{ risk.border | default('rgba(0,0,0,0.04)', true) }}; --risk-color: {{ risk.color | default('#065f46', true) }};">
         <i id="weather-risk-icon" class="fa-solid {% if risk.level == 'High Risk' %}fa-triangle-exclamation{% elif risk.level == 'Moderate Risk' %}fa-circle-exclamation{% elif risk.level == 'Low Risk' %}fa-circle-check{% else %}fa-circle-info{% endif %} risk-icon" style="{% if risk.level == 'Low Risk' %}color: #10b981;{% endif %}"></i>
         <span id="weather-risk-text" class="risk-text">
              {{ risk.text | safe }}
@@ -119,18 +124,18 @@
         const riskText = document.getElementById('weather-risk-text');
 
         if (tempEl) tempEl.textContent = data.temp;
-        if (tempUnit) tempUnit.style.display = 'inline';
+        if (tempUnit) tempUnit.classList.remove('weather-widget-hidden');
         if (humEl) humEl.textContent = data.humidity;
-        if (humUnit) humUnit.style.display = 'inline';
+        if (humUnit) humUnit.classList.remove('weather-widget-hidden');
         if (rainEl) rainEl.textContent = data.rainfall;
-        if (rainUnit) rainUnit.style.display = 'inline';
+        if (rainUnit) rainUnit.classList.remove('weather-widget-hidden');
         if (windEl) windEl.textContent = data.wind;
-        if (windUnit) windUnit.style.display = 'inline';
+        if (windUnit) windUnit.classList.remove('weather-widget-hidden');
 
-        if (pillEl) pillEl.style.display = 'none';
-        if (offlineAlert) offlineAlert.style.display = 'none';
+        if (pillEl) pillEl.classList.add('weather-widget-hidden');
+        if (offlineAlert) offlineAlert.classList.add('weather-widget-hidden');
         if (riskAlert) {
-            riskAlert.style.display = 'flex';
+            riskAlert.classList.remove('weather-widget-hidden');
             const risk = computeClientRisk(data.temp, data.humidity, data.rainfall);
             riskAlert.style.setProperty('--risk-bg', risk.bg);
             riskAlert.style.setProperty('--risk-border', risk.border);
@@ -171,7 +176,7 @@
     }
 
     // Check if initial render is missing values or marked offline
-    const isOffline = document.getElementById('weather-alert-offline')?.style.display !== 'none';
+    const isOffline = document.getElementById('weather-alert-offline') && !document.getElementById('weather-alert-offline').classList.contains('weather-widget-hidden');
     const tempVal = document.getElementById('weather-temp-val')?.textContent?.trim();
 
     try {
