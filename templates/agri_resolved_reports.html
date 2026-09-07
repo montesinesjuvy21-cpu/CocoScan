@@ -288,6 +288,38 @@
             background-color: #1a4d32; color: #ffffff; border-color: #1a4d32;
         }
 
+        /* --- VIEW TOGGLE CONTROLS --- */
+        .view-toggle-group {
+            display: inline-flex;
+            background: #e2e8f0;
+            border-radius: 20px;
+            padding: 3px;
+            gap: 2px;
+            align-items: center;
+        }
+        .view-toggle-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .view-toggle-btn:hover {
+            color: var(--brand-dark);
+        }
+        .view-toggle-btn.active-view-mode {
+            background: #ffffff;
+            color: var(--brand-dark);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
         /* --- AGRICULTURIST DYNAMIC CARDS STACK --- */
         .reports-feed-stack { display: flex; flex-direction: column; gap: 10px; }
         
@@ -442,8 +474,12 @@
             </header>
 
             <div class="search-controls-row">
+                <div class="search-bar-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="report-search" class="search-input" type="search" placeholder="Search farmer or pest" aria-label="Search farmer or pest">
+                </div>
                 <div class="filter-buttons-row" style="display:flex; gap:8px; align-items:center; width:100%; position:relative; z-index:70; flex-wrap:wrap; justify-content:space-between;">
-                    <div class="filter-button-group" style="display:flex; gap:8px; flex:1 1 220px; min-width:0; flex-wrap:wrap;">
+                    <div class="filter-button-group" style="display:flex; gap:8px; flex:1 1 220px; min-width:0; flex-wrap:wrap; align-items:center;">
                         <button id="filter-all-btn" class="chip-filter-btn">All</button>
                         <button id="filter-barangay-btn" class="chip-filter-btn">Barangay ▾</button>
                         <button id="filter-status-btn" class="chip-filter-btn">Status ▾</button>
@@ -452,9 +488,19 @@
                             <input type="date" id="report-date-filter" aria-label="Filter by date" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; background: transparent;">
                         </div>
                     </div>
-                    <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
-                        <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
-                    </button>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <div class="view-toggle-group">
+                            <button type="button" id="view-cards-btn" class="view-toggle-btn active-view-mode" onclick="setViewMode('cards')" title="Card View">
+                                <i class="fa-solid fa-grip"></i> Cards
+                            </button>
+                            <button type="button" id="view-table-btn" class="view-toggle-btn" onclick="setViewMode('table')" title="Table View">
+                                <i class="fa-solid fa-table-list"></i> Table
+                            </button>
+                        </div>
+                        <button id="clear-filters-btn" class="btn-clear-filters" onclick="clearAllActiveFilters()">
+                            <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+                        </button>
+                    </div>
                 </div>
                 <div id="barangay-dropdown" class="filter-dropdown" style="position:absolute; width:0; height:0; margin:0; padding:0; pointer-events:none;">
                     <div class="filter-dropdown-panel" style="display:none; position:fixed; z-index:80; background:var(--bg-card); border:1px solid var(--border-light); box-shadow:0 6px 18px rgba(0,0,0,0.06); border-radius:8px; padding:8px; min-width:220px; max-height:320px; overflow:auto; pointer-events:auto;"></div>
@@ -464,7 +510,26 @@
                 </div>
             </div>
 
+            <!-- Dynamic card framework area mirroring the structure of farmer reports -->
             <div class="reports-feed-stack" id="reports-list-container"></div>
+
+            <!-- Dynamic table layout matching overview reports -->
+            <div id="reports-table-container" style="background: white; border-radius: 16px; padding: 20px; border: 1px solid var(--border-light); overflow-x: auto; display: none;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--bg-base); text-align: left;">
+                            <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Date</th>
+                            <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Farmer / Location</th>
+                            <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Pest Type</th>
+                            <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Status</th>
+                            <th style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-table-body">
+                        <!-- Populated dynamically by javascript -->
+                    </tbody>
+                </table>
+            </div>
 
             <div class="pagination-meta" id="pagination-summary"></div>
             <div class="pagination-container" id="pagination-wrapper" style="display: none;"></div>
@@ -496,8 +561,29 @@
         let activeBarangayFilter = "all";
         let activeDateFilter = "";
         let currentPage = 1;
-        const recordsPerPage = 6; 
+        let currentViewMode = localStorage.getItem('agri_resolved_view_mode') || 'cards';
         let selectedReportRecord = null;
+
+        function getRecordsPerPage() {
+            return currentViewMode === 'table' ? 10 : 6;
+        }
+
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            try { localStorage.setItem('agri_resolved_view_mode', mode); } catch (e) {}
+            updateViewModeButtons();
+            currentPage = 1;
+            renderReportsGrid();
+        }
+
+        function updateViewModeButtons() {
+            const cardsBtn = document.getElementById('view-cards-btn');
+            const tableBtn = document.getElementById('view-table-btn');
+            if (cardsBtn && tableBtn) {
+                cardsBtn.classList.toggle('active-view-mode', currentViewMode === 'cards');
+                tableBtn.classList.toggle('active-view-mode', currentViewMode === 'table');
+            }
+        }
 
         document.addEventListener("DOMContentLoaded", () => {
             initSearchAndFilters();
@@ -505,6 +591,7 @@
         });
 
         function initSearchAndFilters() {
+            const searchInput = document.getElementById('report-search');
             const allBtn = document.getElementById('filter-all-btn');
             const barangayBtn = document.getElementById('filter-barangay-btn');
             const statusBtn = document.getElementById('filter-status-btn');
@@ -512,6 +599,15 @@
             const dateInput = document.getElementById('report-date-filter');
             const barangayPanel = document.querySelector('#barangay-dropdown .filter-dropdown-panel');
             const statusPanel = document.querySelector('#status-dropdown .filter-dropdown-panel');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    activeSearchQuery = e.target.value.toLowerCase().trim();
+                    currentPage = 1;
+                    evaluateClearFilterButtonState();
+                    renderReportsGrid();
+                });
+            }
 
             const barangays = window.COCOSCAN_BARANGAYS || [
 "Bagong Bayan II-A","Bagong Pook VI-C","Barangay I-A","Barangay I-B","Barangay II-A","Barangay II-B","Barangay II-C","Barangay II-D","Barangay II-E","Barangay II-F","Barangay III-A","Barangay III-B","Barangay III-C","Barangay III-D","Barangay III-E","Barangay III-F","Barangay IV-A","Barangay IV-B","Barangay IV-C","Barangay V-A","Barangay V-B","Barangay V-C","Barangay V-D","Barangay VI-A","Barangay VI-B","Bautista","Concepcion","Del Remedio","Dolores","San Antonio 1","San Antonio 2","San Bartolome","San Buenaventura","San Crispin","San Cristobal","San Diego","San Francisco","San Gabriel","San Gregorio","San Ignacio","San Isidro","San Joaquin","San Jose","San Juan","San Lorenzo","San Lucas 1","San Lucas 2","San Marcos","San Mateo","San Miguel","San Nicolas","San Pedro","San Rafael","San Roque","San Vicente","Santa Ana","Santa Catalina","Santa Cruz","Santa Elena","Santa Filomena","Santa Isabel","Santa Maria","Santa Maria Magdalena","Santa Monica","Santa Veronica","Santiago I","Santiago II","Santisimo Rosario","Santo Angel","Santo Cristo","Santo Niño","Soledad","Atisan","Balagtas","Dapdap","Dolores","Sta. Catalina","Sta. Cruz","Sta. Elena"
@@ -715,6 +811,10 @@
                 dateInput.value = "";
                 dateInput.style.display = 'none';
             }
+            const searchInput = document.getElementById("report-search");
+            if (searchInput) {
+                searchInput.value = "";
+            }
 
             activeSearchQuery = "";
             activeStatusFilter = "all";
@@ -770,58 +870,120 @@
 
         function renderReportsGrid() {
             updateFilterButtonStates();
-            const container = document.getElementById("reports-list-container");
-            const countLabel = document.getElementById("chip-count-label");
-            if (!container) return;
-            container.innerHTML = "";
+            updateViewModeButtons();
+            const cardsContainer = document.getElementById("reports-list-container");
+            const tableContainer = document.getElementById("reports-table-container");
+            const tableBody = document.getElementById("reports-table-body");
+            const allBtn = document.getElementById('filter-all-btn');
+            if (!cardsContainer || !tableContainer || !tableBody) return;
 
-            if (countLabel) countLabel.textContent = `All (${reports.length})`;
+            cardsContainer.innerHTML = "";
+            tableBody.innerHTML = "";
+
+            if (currentViewMode === 'cards') {
+                cardsContainer.style.display = "";
+                tableContainer.style.display = "none";
+            } else {
+                cardsContainer.style.display = "none";
+                tableContainer.style.display = "block";
+            }
+
+            if (allBtn) allBtn.textContent = `All (${reports.length})`;
 
             let processedRecords = reports.filter(item => {
+                const farmerText = String(item.farmer || item.farmer_name || "").toLowerCase();
+                const pestText = String(item.pest || item.pest_type || "").toLowerCase();
+                const locText = String(item.location || item.full_location || item.barangay || "").toLowerCase();
+                const matchesSearch = !activeSearchQuery || farmerText.includes(activeSearchQuery) || pestText.includes(activeSearchQuery) || locText.includes(activeSearchQuery);
                 const matchesStatus = activeStatusFilter === 'all' || normalizeStatusKey(item.status) === normalizeStatusKey(activeStatusFilter);
-                const matchesDate = !activeDateFilter || String(item.date || "") === activeDateFilter;
+                const matchesDate = !activeDateFilter || String(item.date || "") === activeDateFilter || String(item.formatted_date || "").includes(activeDateFilter);
                 const itemBarangay = String(item.barangay || item.location || "").toLowerCase();
                 const matchesBarangay = (activeBarangayFilter === 'all') || (itemBarangay === activeBarangayFilter.toLowerCase()) || (itemBarangay.includes(activeBarangayFilter.toLowerCase()));
-                return matchesStatus && matchesDate && matchesBarangay;
+                return matchesSearch && matchesStatus && matchesDate && matchesBarangay;
             });
 
             if (processedRecords.length === 0) {
-                container.innerHTML = `
-                    <div class="premium-empty-state-card">
-                        <div class="empty-state-icon-circle"><i class="fa-solid fa-folder-open"></i></div>
-                        <h3>No Resolved Reports</h3>
-                        <p>No historical records match your current filtration settings criteria.</p>
-                    </div>`;
+                if (currentViewMode === 'cards') {
+                    cardsContainer.innerHTML = `
+                        <div class="premium-empty-state-card">
+                            <div class="empty-state-icon-circle"><i class="fa-solid fa-folder-open"></i></div>
+                            <h3>No Resolved Reports</h3>
+                            <p>No historical records match your current filtration settings criteria.</p>
+                        </div>`;
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="5" style="padding: 0; border: none; background: white;">
+                        <div style="text-align:center; padding: 60px 20px; background: white; border-radius: 16px; margin: 10px 0;">
+                            <div style="width: 68px; height: 68px; background: #eef5f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                                <i class="fa-solid fa-folder-open" style="font-size: 28px; color: #1a4d32;"></i>
+                            </div>
+                            <h3 style="color: #0f172a; margin: 0 0 8px; font-size: 1.25rem; font-weight: 700;">No Resolved Reports</h3>
+                            <p style="color: #64748b; margin: 0; font-size: 0.92rem; max-width: 400px; display: inline-block; line-height: 1.5;">No historical records match your current filtration settings criteria.</p>
+                        </div>
+                    </td></tr>`;
+                }
                 updatePaginationController(0);
                 return;
             }
 
+            const recordsPerPage = getRecordsPerPage();
             const totalMatches = processedRecords.length;
             const startIndex = (currentPage - 1) * recordsPerPage;
             const endIndex = startIndex + recordsPerPage;
             const paginatedRecords = processedRecords.slice(startIndex, endIndex);
 
             paginatedRecords.forEach(item => {
-                const card = document.createElement("div");
-                card.className = "report-row-node";
                 const statusLabel = "Resolved";
                 const statusBadge = { backgroundColor: "#ecfdf5", color: "#065f46" };
+                const dateFormatted = item.formatted_date || item.date || item.time_string || item.timestamp || "";
 
-                card.innerHTML = `
-                    <div class="report-main-meta">
-                        <h4>${highlightSearchText(item.pest || "", activeSearchQuery)}</h4>
-                        <p>Farmer: <strong>${highlightSearchText(item.farmer || "", activeSearchQuery)}</strong></p>
-                        <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${item.location || ""}</div>
-                    </div>
-                    <div class="report-row-action">
-                        <span class="status-badge-pill" style="display:inline-flex; align-items:center; gap:6px; border-radius:999px; font-size:0.78rem; font-weight:700; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">
-                            <i class="fa-solid fa-circle-check"></i> ${statusLabel}
-                        </span>
-                        <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.95rem"></i>
-                    </div>`;
-                
-                card.onclick = () => openReviewModal(item);
-                container.appendChild(card);
+                if (currentViewMode === 'cards') {
+                    const card = document.createElement("div");
+                    card.className = "report-row-node";
+                    card.innerHTML = `
+                        <div class="report-main-meta">
+                            <h4>${highlightSearchText(item.pest || "", activeSearchQuery)}</h4>
+                            <p>Farmer: <strong>${highlightSearchText(item.farmer || "", activeSearchQuery)}</strong></p>
+                            <div class="meta-location"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.location || "")}</div>
+                        </div>
+                        <div class="report-row-action">
+                            <span class="status-badge-pill" style="display:inline-flex; align-items:center; gap:6px; border-radius:999px; font-size:0.78rem; font-weight:700; background:${statusBadge.backgroundColor}; color:${statusBadge.color};">
+                                <i class="fa-solid fa-circle-check"></i> ${statusLabel}
+                            </span>
+                            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.95rem"></i>
+                        </div>`;
+                    
+                    card.tabIndex = 0;
+                    card.onclick = () => openReviewModal(item);
+                    card.addEventListener('keydown', (evt) => { if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); openReviewModal(item); } });
+                    cardsContainer.appendChild(card);
+                } else {
+                    const tr = document.createElement('tr');
+                    tr.style.cssText = "border-bottom: 1px solid var(--bg-base, #f1f5f9); transition: background-color 0.2s;";
+                    tr.innerHTML = `
+                        <td style="padding: 16px 12px; font-size: 0.9rem; white-space: nowrap;">${escapeHtml(dateFormatted)}</td>
+                        <td style="padding: 16px 12px; font-size: 0.9rem;">
+                            <div style="font-weight: 600; color: var(--text-dark);">${highlightSearchText(item.farmer || "Unknown Farmer", activeSearchQuery)}</div>
+                            <div style="color: var(--primary-green); font-size: 0.78rem; font-weight: 500; margin-top: 2px;">
+                                <i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.location || "")}
+                            </div>
+                        </td>
+                        <td style="padding: 16px 12px; font-size: 0.9rem; font-weight: 600;">${highlightSearchText(item.pest || "", activeSearchQuery)}</td>
+                        <td style="padding: 16px 12px; font-size: 0.9rem;">
+                            <span class="report-status-badge" style="background-color: ${statusBadge.backgroundColor}; color: ${statusBadge.color}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-circle-check" style="font-size: 0.65rem;"></i> ${statusLabel}
+                            </span>
+                        </td>
+                        <td style="padding: 16px 12px; text-align: center;">
+                            <button type="button" class="view-report-btn" data-report-id="${item.id}" style="cursor: pointer; border: none; display: inline-block; text-decoration: none; padding: 6px 14px; font-size: 0.82rem; font-weight: 600; border-radius: 6px; background-color: var(--brand-accent, #10b981); color: white; transition: opacity 0.2s;">View</button>
+                        </td>
+                    `;
+                    tr.querySelector('.view-report-btn').onclick = (e) => {
+                        e.stopPropagation();
+                        openReviewModal(item);
+                    };
+                    tr.onclick = () => openReviewModal(item);
+                    tableBody.appendChild(tr);
+                }
             });
 
             updatePaginationController(totalMatches);
@@ -832,6 +994,7 @@
             if (!paginationBlock) return;
             paginationBlock.innerHTML = "";
 
+            const recordsPerPage = getRecordsPerPage();
             const totalPagesCalculated = Math.ceil(totalMatchedCount / recordsPerPage);
             const paginationSummary = document.getElementById("pagination-summary");
             if (paginationSummary) {

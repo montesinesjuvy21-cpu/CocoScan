@@ -2161,7 +2161,6 @@
             modalRoot.setAttribute("aria-hidden", "true");
         }
 
-        const previousMode = currentReportModalMode;
         currentReportModalRecord = null;
         currentReportModalMode = "farmer";
 
@@ -2174,8 +2173,19 @@
             window.resetWorkflowStateToHome();
         }
 
-        if (previousMode !== "scan") {
-            window.location.reload();
+        // Clean up URL query params if report_id or mode were set
+        if (window.location.search) {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('report_id') || params.has('mode')) {
+                    params.delete('report_id');
+                    params.delete('mode');
+                    const newQuery = params.toString() ? '?' + params.toString() : '';
+                    window.history.replaceState({}, '', window.location.pathname + newQuery);
+                }
+            } catch (e) {
+                console.debug("Query param cleanup skipped", e);
+            }
         }
     }
 
