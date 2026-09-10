@@ -32,10 +32,13 @@
         <div class="icon-pulse-container">
             <div class="ripple-ring ring-1"></div>
             <div class="ripple-ring ring-2"></div>
-            <i class="fa-solid fa-mobile-screen-button"></i>
+            <i class="fa-solid fa-desktop"></i>
         </div>
-        <h2>Mobile Access Required</h2>
-        <p>This area is restricted on mobile. Please use a desktop or larger screen to access analytics, map view, and other tools.</p>
+        <h2>Desktop Access Required</h2>
+        <p>This area is restricted on mobile devices. Please use a desktop or larger screen to access LGU dashboard, analytics, and overview tools.</p>
+        <button type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/login'; }" class="btn-restriction-back">
+            <i class="fa-solid fa-arrow-left"></i> Go Back
+        </button>
     </div>
 </div>
 {% endblock %}

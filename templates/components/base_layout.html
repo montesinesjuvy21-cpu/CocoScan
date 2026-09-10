@@ -367,6 +367,50 @@
             line-height: 1.6;
         }
 
+        .btn-restriction-back {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 22px;
+            padding: 10px 20px;
+            width: auto;
+            max-width: 170px;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            background: rgba(74, 198, 143, 0.12);
+            color: #4ac68f;
+            border: 1px solid rgba(74, 198, 143, 0.3);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .btn-restriction-back i {
+            color: #4ac68f;
+            font-size: 0.85rem;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+
+        .btn-restriction-back:hover {
+            background: #4ac68f;
+            color: #081C10 !important;
+            border-color: #4ac68f;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(74, 198, 143, 0.35);
+        }
+
+        .btn-restriction-back:hover i {
+            color: #081C10 !important;
+            transform: translateX(-3px);
+        }
+
+        .btn-restriction-back:active {
+            transform: translateY(0);
+        }
+
         .main-content-layout,
         .dashboard-header-container,
         .metrics-grid-matrix,
@@ -775,7 +819,7 @@
     </style>
 
     {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else ''))|lower %}
-    {% if 'lgu' in role_str or 'admin' in role_str %}
+    {% if 'lgu' in role_str or 'admin' in role_str or 'agri' in role_str %}
     <style>
         @media (max-width: 900px) {
             .desktop-restriction-overlay {

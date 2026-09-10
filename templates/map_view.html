@@ -4,6 +4,24 @@
 
 {% block title %}CocoScan - Map View{% endblock %}
 
+{% block mobile_restriction_overlay %}
+<div class="desktop-restriction-overlay">
+    <div class="desktop-card-prompt">
+        <div class="glow-effect"></div>
+        <div class="icon-pulse-container">
+            <div class="ripple-ring ring-1"></div>
+            <div class="ripple-ring ring-2"></div>
+            <i class="fa-solid fa-desktop"></i>
+        </div>
+        <h2>Desktop Access Required</h2>
+        <p>This area is restricted on mobile devices. Please use a desktop or larger screen to access the GIS map view and spatial analytics.</p>
+        <button type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/login'; }" class="btn-restriction-back">
+            <i class="fa-solid fa-arrow-left"></i> Go Back
+        </button>
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css" />

@@ -139,6 +139,15 @@
             border: none;
         }
 
+        .btn i {
+            color: inherit;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover i {
+            color: inherit;
+        }
+
         .btn-primary {
             background-color: var(--primary-green);
             color: #ffffff;
@@ -196,32 +205,21 @@
             <i class="fa-solid fa-cloud-arrow-down"></i>
         </div>
 
-        <div id="offline-badge" class="pwa-badge">
+        <div id="offline-badge" class="pwa-badge" style="display: none;">
             <i class="fa-solid fa-bolt"></i> CocoScan Offline Mode Active
         </div>
 
-        <h1 id="offline-title">You're Offline</h1>
+        <h1 id="offline-title">Can't load right now, you're offline</h1>
         <p id="offline-desc" class="description">
-            Your network connection is unavailable right now. Thanks to CocoScan PWA, you can still perform leaf scans in the field and view locally cached reports without an internet connection.
+            This portal and administrative features require an active internet connection. Please check your network and reconnect to continue.
         </p>
 
-        <div class="actions-stack">
-            <a id="btn-farmer-scan" href="/farmer/scan" class="btn btn-primary" style="display:none;">
-                <i class="fa-solid fa-camera"></i> Open Field Scanner
-            </a>
-            <a id="btn-farmer-drafts" href="/farmer/drafts" class="btn btn-secondary" style="display:none;">
-                <i class="fa-solid fa-folder-open"></i> View Saved Offline Drafts
-            </a>
-            <button onclick="window.location.reload()" class="btn btn-primary" id="btn-retry" style="display:none;">
-                <i class="fa-solid fa-rotate-right"></i> Retry Connection
-            </button>
-            <button onclick="window.location.reload()" class="btn btn-outline" id="btn-farmer-retry" style="display:none;">
-                <i class="fa-solid fa-rotate-right"></i> Retry Connection
-            </button>
+        <div id="offline-actions" class="actions-stack">
+            <!-- Dynamic Role-Based Action Buttons Rendered Below -->
         </div>
 
         <div class="status-footer">
-            <span class="status-dot"></span> <span id="offline-footer-text">Field scans will be automatically saved to your local storage until signal is restored.</span>
+            <span class="status-dot"></span> <span id="offline-footer-text">CocoScan will automatically reload and reconnect when your internet connection is restored.</span>
         </div>
     </div>
 
@@ -233,30 +231,45 @@
             const title = document.getElementById('offline-title');
             const desc = document.getElementById('offline-desc');
             const badge = document.getElementById('offline-badge');
-            const btnScan = document.getElementById('btn-farmer-scan');
-            const btnDrafts = document.getElementById('btn-farmer-drafts');
-            const btnFarmerRetry = document.getElementById('btn-farmer-retry');
-            const btnRetry = document.getElementById('btn-retry');
+            const actions = document.getElementById('offline-actions');
             const footerText = document.getElementById('offline-footer-text');
 
             if (isFarmer) {
                 if (title) title.textContent = "You're Offline";
                 if (desc) desc.textContent = "Your network connection is unavailable right now. Thanks to CocoScan PWA, you can still perform leaf scans in the field and view locally saved drafts without an internet connection.";
                 if (badge) badge.style.display = "inline-flex";
-                if (btnScan) btnScan.style.display = "flex";
-                if (btnDrafts) btnDrafts.style.display = "flex";
-                if (btnFarmerRetry) btnFarmerRetry.style.display = "flex";
-                if (btnRetry) btnRetry.style.display = "none";
                 if (footerText) footerText.textContent = "Field scans will be automatically saved to your local storage until signal is restored.";
+                if (actions) {
+                    actions.innerHTML = `
+                        <a href="/farmer/scan" class="btn btn-primary">
+                            <i class="fa-solid fa-camera"></i> Open Field Scanner
+                        </a>
+                        <a href="/farmer/drafts" class="btn btn-secondary">
+                            <i class="fa-solid fa-folder-open"></i> View Saved Offline Drafts
+                        </a>
+                        <button type="button" onclick="window.location.reload()" class="btn btn-outline">
+                            <i class="fa-solid fa-rotate-right"></i> Retry Connection
+                        </button>
+                        <button type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/login'; }" class="btn btn-outline" style="margin-top: -4px;">
+                            <i class="fa-solid fa-arrow-left"></i> Go Back
+                        </button>
+                    `;
+                }
             } else {
                 if (title) title.textContent = "Can't load right now, you're offline";
                 if (desc) desc.textContent = "This portal and administrative features require an active internet connection. Please check your network and reconnect to continue.";
                 if (badge) badge.style.display = "none";
-                if (btnScan) btnScan.style.display = "none";
-                if (btnDrafts) btnDrafts.style.display = "none";
-                if (btnFarmerRetry) btnFarmerRetry.style.display = "none";
-                if (btnRetry) btnRetry.style.display = "flex";
                 if (footerText) footerText.textContent = "CocoScan will automatically reload and reconnect when your internet connection is restored.";
+                if (actions) {
+                    actions.innerHTML = `
+                        <button type="button" onclick="window.location.reload()" class="btn btn-primary">
+                            <i class="fa-solid fa-rotate-right"></i> Retry Connection
+                        </button>
+                        <button type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/login'; }" class="btn btn-secondary">
+                            <i class="fa-solid fa-arrow-left"></i> Go Back
+                        </button>
+                    `;
+                }
             }
 
             // When online status is restored, automatically reload
