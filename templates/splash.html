@@ -148,12 +148,19 @@
     // Smooth timing matrix matching the cinematic layout transition
     setTimeout(() => {
         // Simple subtle fadeout injection just before shifting paths
-        document.querySelector('.creative-splash').style.transition = 'all 0.5s ease';
-        document.querySelector('.creative-splash').style.opacity = '0';
-        document.querySelector('.creative-splash').style.transform = 'scale(0.98)';
+        const splashCard = document.querySelector('.creative-splash');
+        if (splashCard) {
+            splashCard.style.transition = 'all 0.5s ease';
+            splashCard.style.opacity = '0';
+            splashCard.style.transform = 'scale(0.98)';
+        }
         
         setTimeout(() => {
-            window.location.href = "{{ url_for('login') }}";
+            if (!navigator.onLine && localStorage.getItem('cocoscan_user_role') === 'farmer') {
+                window.location.href = "/farmer/scan";
+            } else {
+                window.location.href = "{{ url_for('login') }}";
+            }
         }, 500);
     }, 2800); // 2.8 seconds total presentation time
 </script>

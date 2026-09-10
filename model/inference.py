@@ -26,6 +26,12 @@ _cached_model_path: Optional[Path] = None
 
 def _import_tflite_interpreter():
     try:
+        from ai_edge_litert.interpreter import Interpreter
+        return Interpreter
+    except ImportError:
+        pass
+
+    try:
         from tflite_runtime.interpreter import Interpreter # type: ignore
         return Interpreter
     except ImportError:
@@ -44,7 +50,7 @@ def _import_tflite_interpreter():
         pass
 
     raise RuntimeError(
-        "Neither tflite-runtime nor TensorFlow Lite is installed."
+        "Neither ai-edge-litert, tflite-runtime, nor TensorFlow Lite is installed."
     )
 
 
@@ -99,7 +105,7 @@ def _validate_leaf_image(image: Image.Image):
     green_ratio = green_mean / max(red_mean, blue_mean, 1.0)
 
     if green_mean < GREEN_MEAN_THRESHOLD or green_ratio < LEAF_GREEN_RATIO_THRESHOLD:
-        raise ValueError("Image does not appear to be a coconut leaf or plant sample.")
+        raise ValueError("Image does not appear to be a coconut leaf or plant sample. Please capture a clear photo of a coconut frond or leaf.")
 
 
 def _prepare_input(image: Image.Image, input_details):

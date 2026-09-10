@@ -1,12 +1,14 @@
-const CACHE_NAME = 'cocoscan-app-shell-v4';
-const RUNTIME_CACHE = 'cocoscan-pages-runtime-v4';
-const IMAGE_CACHE = 'cocoscan-report-images-v4';
+const CACHE_NAME = 'cocoscan-app-shell-v5';
+const RUNTIME_CACHE = 'cocoscan-pages-runtime-v5';
+const IMAGE_CACHE = 'cocoscan-report-images-v5';
 
 const PRECACHE_ASSETS = [
-    '/manifest.json',
-    '/offline',
+    '/',
+    '/login',
     '/farmer/scan',
     '/farmer/drafts',
+    '/manifest.json',
+    '/offline',
     '/static/css/weather_widget.css',
     '/static/js/report_modal.js',
     '/static/icons/icon-192x192.png',
@@ -91,21 +93,24 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 2. HTML Navigation & Report Dashboards: Stale-While-Revalidate (SWR)
+    // 2. HTML Navigation & Dashboards: Stale-While-Revalidate (SWR) with App Shell Fallback
     if (request.mode === 'navigate' || (!url.pathname.startsWith('/api/') && (
         url.pathname.includes('/reports') || url.pathname.includes('/dashboard') || 
         url.pathname.includes('/scan') || url.pathname.includes('/drafts') || url.pathname.includes('/schedules') ||
-        url.pathname.includes('/analytics') || url.pathname.includes('/map')))) {
+        url.pathname.includes('/analytics') || url.pathname.includes('/map') || url.pathname === '/' || url.pathname === '/login'))) {
 
         event.respondWith(
-            caches.open(RUNTIME_CACHE).then(async (cache) => {
-                const cachedResponse = await cache.match(request);
+            (async () => {
+                const runtimeCache = await caches.open(RUNTIME_CACHE);
+                const appShellCache = await caches.open(CACHE_NAME);
+                
+                // Check if exact URL or pathname is in either cache
+                const cachedResponse = await runtimeCache.match(request) || await appShellCache.match(request) || await caches.match(url.pathname);
 
                 // Background network revalidation
                 const networkFetchPromise = fetch(request).then((networkResponse) => {
                     if (networkResponse && networkResponse.status === 200) {
-                        cache.put(request, networkResponse.clone());
-                        // If we served a cached response first, notify client that cache was refreshed
+                        runtimeCache.put(request, networkResponse.clone());
                         if (cachedResponse) {
                             notifyClients({ type: 'CACHE_UPDATED', url: request.url });
                         }
@@ -118,27 +123,33 @@ self.addEventListener('fetch', (event) => {
 
                 // If in cache, return instantly (0ms latency!)
                 if (cachedResponse) {
-                    // Trigger network fetch in background without blocking
                     networkFetchPromise;
                     return cachedResponse;
                 }
 
-                // If not in cache, wait for network fetch
+                // If not in cache, wait for network
                 const networkResponse = await networkFetchPromise;
                 if (networkResponse) {
                     return networkResponse;
                 }
 
-                // If both cache and network fail, return the offline fallback portal
+                // If both network and exact cache failed during navigation, try cached app shell fallbacks:
                 if (request.mode === 'navigate') {
-                    const offlineFallback = await caches.match('/offline');
-                    if (offlineFallback) {
-                        return offlineFallback;
+                    // Try farmer scan or drafts or login or splash before resorting to /offline
+                    const fallbackCandidate = 
+                        await caches.match('/farmer/scan') || 
+                        await caches.match('/farmer/drafts') ||
+                        await caches.match('/login') ||
+                        await caches.match('/') ||
+                        await caches.match('/offline');
+                    
+                    if (fallbackCandidate) {
+                        return fallbackCandidate;
                     }
                 }
 
                 return new Response('Offline: Resource unavailable', { status: 503, statusText: 'Service Unavailable' });
-            })
+            })()
         );
         return;
     }

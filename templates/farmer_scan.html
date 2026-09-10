@@ -1226,21 +1226,115 @@
             });
         }
 
-        function executePseudoInferenceEngine() {
+        async function executePseudoInferenceEngine() {
             document.getElementById('step-upload-view').classList.remove('active-view');
             document.getElementById('step-loading-view').classList.add('active-view');
 
-            if (!globalActiveImageFile) {
+            if (!globalActiveImageFile && !globalActiveImagePayload) {
                 alert('Please capture a coconut leaf photo before scanning.');
                 document.getElementById('step-loading-view').classList.remove('active-view');
                 document.getElementById('step-upload-view').classList.add('active-view');
                 return;
             }
 
+            // Offline Mode: Save raw draft directly without attempting online inference
             if (!navigator.onLine) {
                 document.getElementById('step-loading-view').classList.remove('active-view');
                 document.getElementById('step-upload-view').classList.add('active-view');
-                if (confirm('AI Pest Detection requires an internet connection. Would you like to save this photo as an offline draft instead?')) {
+                
+                window.currentPrediction = {
+                    pest: 'Offline Scan (Pending AI)',
+                    confidence: '0%',
+                    pest_confidence: 0,
+                    recommendations: []
+                };
+                
+                saveDraftToIndexedDB(true);
+                return;
+            }
+
+            const formData = new FormData();
+            if (globalActiveImageFile) {
+                formData.append('image_file', globalActiveImageFile);
+            } else if (globalActiveImagePayload) {
+                const file = dataURLToFile(globalActiveImagePayload, 'capture.jpg');
+                formData.append('image_file', file);
+            }
+
+            try {
+                const response = await fetch('/farmer/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json().catch(() => null);
+
+                if (!response.ok || !data || !data.success) {
+                    document.getElementById('step-loading-view').classList.remove('active-view');
+                    document.getElementById('step-upload-view').classList.add('active-view');
+                    const errorMsg = data?.error || data?.message || `Validation error (${response.status})`;
+                    alert(`Image Validation Notice: ${errorMsg}`);
+                    return;
+                }
+
+                const activeDate = new Date();
+                const captureTimestamp = globalPrimaryGPS?.timestamp ? new Date(globalPrimaryGPS.timestamp) : activeDate;
+                const formattedTimestamp = formatTimestampInManila(isNaN(captureTimestamp.getTime()) ? activeDate : captureTimestamp);
+
+                let locationStr = globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable';
+                if (globalPrimaryGPS) {
+                    try {
+                        const geoResp = await fetch(`/api/geocode?lat=${globalPrimaryGPS.latitude}&lon=${globalPrimaryGPS.longitude}`);
+                        if (geoResp.ok) {
+                            const geoData = await geoResp.json();
+                            if (geoData.success && geoData.display_name) {
+                                locationStr = geoData.display_name;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Reverse geocoding failed", e);
+                    }
+                }
+
+                window.currentPrediction = {
+                    ...data,
+                    pest: data.pest,
+                    confidence: `${data.pest_confidence}%`,
+                    timestamp: formattedTimestamp,
+                    location_text: locationStr,
+                    gps: globalPrimaryGPS ? {
+                        latitude: globalPrimaryGPS.latitude,
+                        longitude: globalPrimaryGPS.longitude,
+                        accuracy: globalPrimaryGPS.accuracy,
+                        source: 'camera_gps'
+                    } : {},
+                    notes: document.getElementById('field-notes-capture').value.trim(),
+                    farmer: '{{ user_name|default("Farmer") }}',
+                    primary_image: globalActiveImagePayload || defaultImages[data.pest],
+                    additional_images: supportingImages.map((file) => URL.createObjectURL(file)),
+                    initial_recommendations: Array.isArray(data.recommendations) ? data.recommendations : [],
+                    status: 'Ready to Submit'
+                };
+
+                renderSupportingPreviews();
+                if (typeof window.openReportModal === 'function') {
+                    window.openReportModal(window.currentPrediction, 'scan');
+                } else {
+                    setTimeout(() => {
+                        if (typeof window.openReportModal === 'function') window.openReportModal(window.currentPrediction, 'scan');
+                        else console.warn('openReportModal not available after inference');
+                    }, 150);
+                }
+
+                document.getElementById('step-loading-view').classList.remove('active-view');
+                document.getElementById('step-results-view').classList.add('active-view');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) {
+                console.error('Inference network error:', error);
+                document.getElementById('step-loading-view').classList.remove('active-view');
+                document.getElementById('step-upload-view').classList.add('active-view');
+                
+                if (confirm('Could not connect to the AI Scanner. Would you like to save this photo as an offline draft to process later?')) {
                     window.currentPrediction = {
                         pest: 'Offline Scan (Pending AI)',
                         confidence: '0%',
@@ -1249,98 +1343,7 @@
                     };
                     saveDraftToIndexedDB(true);
                 }
-                return;
             }
-
-            const formData = new FormData();
-            formData.append('image_file', globalActiveImageFile);
-
-            fetch('/farmer/predict', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(async data => {
-                    if (!data.success) {
-                        alert(`Error: ${data.error || 'Failed to process image'}`);
-                        document.getElementById('step-loading-view').classList.remove('active-view');
-                        document.getElementById('step-upload-view').classList.add('active-view');
-                        return;
-                    }
-
-                    const activeDate = new Date();
-                    const captureTimestamp = globalPrimaryGPS?.timestamp ? new Date(globalPrimaryGPS.timestamp) : activeDate;
-                    const formattedTimestamp = formatTimestampInManila(isNaN(captureTimestamp.getTime()) ? activeDate : captureTimestamp);
-
-                    let locationStr = globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable';
-                    if (globalPrimaryGPS) {
-                        try {
-                            const geoResp = await fetch(`/api/geocode?lat=${globalPrimaryGPS.latitude}&lon=${globalPrimaryGPS.longitude}`);
-                            if (geoResp.ok) {
-                                const geoData = await geoResp.json();
-                                if (geoData.success && geoData.display_name) {
-                                    locationStr = geoData.display_name;
-                                }
-                            }
-                        } catch (e) {
-                            console.warn("Reverse geocoding failed", e);
-                        }
-                    }
-
-                    window.currentPrediction = {
-                        ...data,
-                        pest: data.pest,
-                        confidence: `${data.pest_confidence}%`,
-                        timestamp: formattedTimestamp,
-                        location_text: locationStr,
-                        gps: globalPrimaryGPS ? {
-                            latitude: globalPrimaryGPS.latitude,
-                            longitude: globalPrimaryGPS.longitude,
-                            accuracy: globalPrimaryGPS.accuracy,
-                            source: 'camera_gps'
-                        } : {},
-                        notes: document.getElementById('field-notes-capture').value.trim(),
-                        farmer: '{{ user_name|default("Farmer") }}',
-                        primary_image: globalActiveImagePayload || defaultImages[data.pest],
-                        additional_images: supportingImages.map((file) => URL.createObjectURL(file)),
-                        initial_recommendations: Array.isArray(data.recommendations) ? data.recommendations : [],
-                        status: 'Ready to Submit'
-                    };
-
-                    renderSupportingPreviews();
-                    if (typeof window.openReportModal === 'function') {
-                        window.openReportModal(window.currentPrediction, 'scan');
-                    } else {
-                        setTimeout(() => {
-                            if (typeof window.openReportModal === 'function') window.openReportModal(window.currentPrediction, 'scan');
-                            else console.warn('openReportModal not available after inference');
-                        }, 150);
-                    }
-
-                    document.getElementById('step-loading-view').classList.remove('active-view');
-                    document.getElementById('step-results-view').classList.add('active-view');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('step-loading-view').classList.remove('active-view');
-                    document.getElementById('step-upload-view').classList.add('active-view');
-                    
-                    if (confirm('Failed to connect to the AI Scanner (you might be offline). Would you like to save this photo as an offline draft instead?')) {
-                        window.currentPrediction = {
-                            pest: 'Offline Scan (Pending AI)',
-                            confidence: '0%',
-                            pest_confidence: 0,
-                            recommendations: []
-                        };
-                        saveDraftToIndexedDB(true);
-                    }
-                });
         }
 
         function abortReportSubmission() {
@@ -1450,26 +1453,26 @@
         }
 
         function saveDraftToIndexedDB(isOfflineSubmit = false) {
-            const compiledPest = document.getElementById('report-pest-title')?.textContent || window.currentPrediction?.pest || 'Unknown Pest';
+            const compiledPest = document.getElementById('report-pest-title')?.textContent || window.currentPrediction?.pest || (isOfflineSubmit ? 'Offline Scan (Pending AI)' : 'Unknown Pest');
             const compiledConfidence = document.getElementById('report-confidence')?.textContent || window.currentPrediction?.confidence || '0%';
             const additionalNotes = document.getElementById('field-notes-capture').value.trim();
 
-            if (!globalActiveImagePayload || !compiledPest) {
-                alert('Please perform a scan first before saving a draft.');
+            if (!globalActiveImagePayload) {
+                alert('Please capture or select a photo first before saving a draft.');
                 return;
             }
 
             const draft = {
                 saved_at: new Date().toISOString(),
-                status: isOfflineSubmit ? 'offline-draft' : 'draft',
+                status: isOfflineSubmit ? 'offline_draft' : 'draft',
                 pest: compiledPest,
                 confidence: compiledConfidence,
                 farmer_notes: additionalNotes,
                 recommendations: Array.isArray(window.currentPrediction?.recommendations) ? window.currentPrediction.recommendations : [],
-                primary_image_name: globalActiveImageFile?.name || 'camera_capture.jpg',
+                primary_image_name: globalActiveImageFile?.name || 'offline_capture.jpg',
                 primary_image_data: globalActiveImagePayload,
                 gps: globalPrimaryGPS,
-                location_source: 'camera_gps',
+                location_source: globalPrimaryGPS ? 'camera_gps' : 'none',
                 supporting_images: supportingImages.map((file) => ({
                     name: file.name || 'supporting.jpg',
                     dataUrl: ''
@@ -1499,7 +1502,11 @@
                     const store = transaction.objectStore('drafts');
                     store.add(draft);
                     transaction.oncomplete = () => {
-                        alert('Draft saved successfully!');
+                        if (isOfflineSubmit) {
+                            alert('Scan saved as an Offline Draft! When you have an internet connection, open the Drafts page to run AI pest detection and submit your report.');
+                        } else {
+                            alert('Draft saved successfully!');
+                        }
                         resetWorkflowStateToHome();
                     };
                 };

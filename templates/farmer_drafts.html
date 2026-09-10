@@ -368,6 +368,31 @@
             font-weight: 600;
         }
 
+        .draft-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            width: fit-content;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .draft-badge-pending {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fef3c7;
+        }
+
+        .draft-badge-ready {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #d1fae5;
+        }
+
         /* --- IMMACULATE BUTTON CONSOLE PANEL (FIXED REDESIGN) --- */
         .draft-actions {
             display: flex;
@@ -648,36 +673,39 @@
             showEmptyState(false);
             drafts.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
             drafts.forEach((draft) => {
+                const isOfflineDraft = draft.status === 'offline_draft' || draft.status === 'offline-draft' || draft.pest === 'Offline Scan (Pending AI)' || !draft.pest || draft.pest === 'Unknown Pest';
                 const card = document.createElement('article');
                 card.className = 'draft-card';
                 card.innerHTML = `
                     <div class="draft-card-header">
                         <div class="draft-thumb"><img src="${draft.primary_image_data || ''}" alt="Draft thumbnail"></div>
                         <div class="draft-meta">
-                            <h3>${draft.pest || 'Unknown Pest'}</h3>
+                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                <h3>${draft.pest || 'Offline Scan'}</h3>
+                                ${isOfflineDraft 
+                                    ? `<span class="draft-badge draft-badge-pending"><i class="fa-solid fa-cloud-arrow-up"></i> Pending AI</span>` 
+                                    : `<span class="draft-badge draft-badge-ready"><i class="fa-solid fa-circle-check"></i> Scanned</span>`}
+                            </div>
                             <p>Captured: ${formatDateLocal(draft.photo_taken_at)}</p>
                             <p>Saved: ${formatDateLocal(draft.saved_at)}</p>
                         </div>
                     </div>
                     <div class="draft-card-body">
                         <div class="draft-stat"><strong>GPS</strong><span>${draft.gps?.latitude?.toFixed(5) || 'n/a'}, ${draft.gps?.longitude?.toFixed(5) || 'n/a'}</span></div>
-                        <div class="draft-stat"><strong>Source</strong><span>${draft.location_source || 'camera_gps'}</span></div>
+                        <div class="draft-stat"><strong>Notes</strong><span>${draft.farmer_notes || draft.field_notes || 'No notes added'}</span></div>
                     </div>
                     <div class="draft-actions">
                         <div class="main-actions-row">
-                            <div class="draft-actions">
-                                <div class="main-actions-row">
-                                    <button class="btn-control btn-edit" onclick='continueDraft(${draft.id})'>
-                                        <i class="fa-solid fa-pen-to-square"></i> Continue/Edit
-                                    </button>
-                                    <button class="btn-control btn-submit" onclick='submitDraft(${draft.id})'>
-                                        <i class="fa-solid fa-paper-plane"></i> Submit
-                                    </button>
-                                </div>
-                                <button class="btn-control btn-delete" onclick='deleteDraft(${draft.id})'>
-                                    Delete Draft
-                                </button>
-                            </div>
+                            <button class="btn-control btn-edit" onclick='continueDraft(${draft.id})'>
+                                <i class="fa-solid fa-pen-to-square"></i> Continue/Edit
+                            </button>
+                            <button class="btn-control btn-submit" id="btn-submit-${draft.id}" onclick='submitDraft(${draft.id})'>
+                                ${isOfflineDraft ? '<i class="fa-solid fa-wand-magic-sparkles"></i> Run AI & Submit' : '<i class="fa-solid fa-paper-plane"></i> Submit'}
+                            </button>
+                        </div>
+                        <button class="btn-control btn-delete" onclick='deleteDraft(${draft.id})'>
+                            Delete Draft
+                        </button>
                     </div>
                 `;
                 list.appendChild(card);
@@ -742,38 +770,104 @@
             return fetch(dataUrl).then((res) => res.blob()).then((blob) => new File([blob], filename, { type: blob.type || 'image/jpeg' }));
         }
 
-        function submitDraft(id) {
-            getDraftById(id).then(async (draft) => {
-                if (!draft) { alert('Draft not found.'); return; }
-                if (!navigator.onLine) {
-                    alert('Cannot submit draft while offline. Please reconnect and try again.');
+        async function submitDraft(id) {
+            const draft = await getDraftById(id).catch(() => null);
+            if (!draft) { alert('Draft not found.'); return; }
+            if (!navigator.onLine) {
+                alert('Internet connection required to run AI classification and submit report. Please reconnect and try again.');
+                return;
+            }
+
+            const notes = (draft.farmer_notes || draft.field_notes || '').trim();
+            if (!notes) {
+                const addNote = prompt('Please enter your field notes for this scan before submitting:', '');
+                if (!addNote || !addNote.trim()) {
+                    alert('Farmer notes are required to submit this report.');
                     return;
                 }
+                draft.farmer_notes = addNote.trim();
+            }
 
-                const notes = (draft.farmer_notes || draft.field_notes || '').trim();
-                if (!notes) {
-                    alert('Farmer notes are required to submit this report. Please edit the draft to add notes.');
-                    return;
+            const submitBtn = document.getElementById(`btn-submit-${id}`);
+            const originalBtnText = submitBtn ? submitBtn.innerHTML : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            }
+
+            try {
+                let pestType = draft.pest;
+                let confidence = draft.confidence_value !== undefined ? draft.confidence_value : (parseFloat((draft.confidence || '').replace('%', '')) || 0);
+                let recommendations = draft.recommendations || [];
+
+                const isOfflineDraft = draft.status === 'offline_draft' || draft.status === 'offline-draft' || draft.pest === 'Offline Scan (Pending AI)' || !draft.pest || draft.pest === 'Unknown Pest' || confidence === 0;
+
+                // Step 1: Run AI Inference if draft was saved offline or needs classification
+                if (isOfflineDraft) {
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running AI Scanner...';
+                    }
+
+                    if (!draft.primary_image_data) {
+                        alert('No image data found in this draft.');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalBtnText;
+                        }
+                        return;
+                    }
+
+                    const predictFormData = new FormData();
+                    const primaryFile = await fetchDataURLFile(draft.primary_image_data, draft.primary_image_name || 'offline_capture.jpg');
+                    predictFormData.append('image_file', primaryFile);
+
+                    const predictResponse = await fetch('/farmer/predict', {
+                        method: 'POST',
+                        body: predictFormData
+                    });
+
+                    const predictData = await predictResponse.json().catch(() => null);
+
+                    if (!predictResponse.ok || !predictData || !predictData.success) {
+                        const errorMsg = predictData?.error || predictData?.message || `Leaf Validation Error (${predictResponse.status})`;
+                        alert(`Image Validation Notice: ${errorMsg}\n\nPlease click 'Continue/Edit' if you would like to retake or choose another photo.`);
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalBtnText;
+                        }
+                        return;
+                    }
+
+                    pestType = predictData.pest;
+                    confidence = predictData.pest_confidence || 0;
+                    recommendations = predictData.recommendations || [];
                 }
 
-                const formData = new FormData();
-                formData.append('pest_type', draft.pest || 'Unknown Pest');
-                formData.append('location_notes', notes);
-                formData.append('confidence', draft.confidence_value !== undefined ? draft.confidence_value : parseFloat((draft.confidence || '').replace('%', '')) || 0);
+                // Step 2: Build Report Payload and Submit
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting Report...';
+                }
+
+                const reportFormData = new FormData();
+                reportFormData.append('pest_type', pestType || 'Unknown Pest');
+                reportFormData.append('farmer_notes', draft.farmer_notes || notes);
+                reportFormData.append('location_notes', draft.farmer_notes || notes);
+                reportFormData.append('confidence', confidence);
+                
                 const lat = draft.gps?.latitude ? parseFloat(draft.gps.latitude) : '';
                 const lng = draft.gps?.longitude ? parseFloat(draft.gps.longitude) : '';
-                formData.append('gps_latitude', lat);
-                formData.append('gps_longitude', lng);
-                formData.append('gps_accuracy', draft.gps?.accuracy || '');
-                formData.append('location_source', draft.location_source || 'camera_gps');
-                formData.append('photo_taken_at', draft.photo_taken_at || new Date().toISOString());
-                formData.append('recommendations', JSON.stringify(draft.recommendations || []));
+                reportFormData.append('gps_latitude', lat);
+                reportFormData.append('gps_longitude', lng);
+                reportFormData.append('gps_accuracy', draft.gps?.accuracy || '');
+                reportFormData.append('location_source', draft.location_source || 'camera_gps');
+                reportFormData.append('photo_taken_at', draft.photo_taken_at || new Date().toISOString());
+                reportFormData.append('recommendations', JSON.stringify(recommendations));
 
                 if (draft.primary_image_data && draft.primary_image_data.startsWith('data:')) {
                     const file = await fetchDataURLFile(draft.primary_image_data, draft.primary_image_name || 'primary_capture.jpg');
-                    formData.append('image_file', file);
+                    reportFormData.append('image_file', file);
                 } else if (draft.primary_image_data) {
-                    formData.append('image_url', draft.primary_image_data);
+                    reportFormData.append('image_url', draft.primary_image_data);
                 }
 
                 const supporting = draft.supporting_images || [];
@@ -781,22 +875,38 @@
                     const item = supporting[index];
                     if (item?.dataUrl) {
                         const file = await fetchDataURLFile(item.dataUrl, item.name || `supporting_${index}.jpg`);
-                        formData.append('supporting_images', file, file.name);
+                        reportFormData.append('supporting_images', file, file.name);
                     }
                 }
 
-                const response = await fetch('/farmer/submit-report', { method: 'POST', body: formData });
-                const data = await response.json();
-                if (response.ok && data.success) {
+                const reportResponse = await fetch('/farmer/submit-report', {
+                    method: 'POST',
+                    body: reportFormData
+                });
+
+                const reportData = await reportResponse.json().catch(() => null);
+
+                if (reportResponse.ok && reportData && reportData.success) {
                     await deleteDraftById(id);
-                    alert('Draft submitted successfully. It has been removed from local drafts.');
+                    alert(`SUCCESS: Pest identified as "${pestType}" (${confidence}% confidence).\nReport submitted successfully and removed from local drafts.`);
                     loadDrafts();
                 } else {
-                    const errorMsg = data.message || data.error || 'Server error';
+                    const errorMsg = reportData?.message || reportData?.error || 'Server submission error';
                     const friendlyMsg = normalizeDraftErrorMessage(errorMsg);
                     alert(`Submission Error: ${friendlyMsg}`);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalBtnText;
+                    }
                 }
-            }).catch((error) => alert(`Network Error: Please check your connection and try again. ${error.message}`));
+            } catch (err) {
+                console.error('Submit draft error:', err);
+                alert(`Error submitting report: ${err.message || 'Please check your connection and try again.'}`);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                }
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {

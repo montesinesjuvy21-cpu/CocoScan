@@ -39,7 +39,7 @@
         {% endif %}
     {% endwith %}
 
-    <form action="{{ url_for('login') }}" method="POST">
+    <form id="login-form" action="{{ url_for('login') }}" method="POST">
         <div class="form-group has-icon-left">
             <label for="email">Email Address</label>
             <div class="input-wrapper">
@@ -59,7 +59,7 @@
 
         <a href="{{ url_for('forgot_password') }}" class="forgot-password">Forgot Password?</a>
 
-        <button type="submit" class="btn-primary">Login</button>
+        <button type="submit" class="btn-primary" id="login-submit-btn">Login</button>
     </form>
 
     <div class="auth-footer">
@@ -80,5 +80,32 @@
             icon.classList.replace('fa-eye-slash', 'fa-eye');
         }
     }
+
+    // Offline Login Handler for Farmers
+    document.getElementById('login-form')?.addEventListener('submit', function(e) {
+        if (!navigator.onLine) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                alert('Please enter both email and password.');
+                return;
+            }
+
+            // Save offline session for farmer
+            localStorage.setItem('cocoscan_user_role', 'farmer');
+            localStorage.setItem('cocoscan_offline_active', 'true');
+            localStorage.setItem('cocoscan_user_email', email);
+            
+            // Extract a display name from email (e.g. "farmer" from "farmer@example.com")
+            const derivedName = email.split('@')[0].replace(/[._-]/g, ' ');
+            const formattedName = derivedName.charAt(0).toUpperCase() + derivedName.slice(1);
+            localStorage.setItem('cocoscan_user_name', formattedName || 'Farmer');
+
+            alert('Offline Mode Active: Logging in locally as Farmer. Your scans will be stored in Drafts.');
+            window.location.href = '/farmer/scan';
+        }
+    });
 </script>
 {% endblock %}
