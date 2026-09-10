@@ -1,12 +1,10 @@
-const CACHE_NAME = 'cocoscan-app-shell-v5';
-const RUNTIME_CACHE = 'cocoscan-pages-runtime-v5';
-const IMAGE_CACHE = 'cocoscan-report-images-v5';
+const CACHE_NAME = 'cocoscan-app-shell-v6';
+const RUNTIME_CACHE = 'cocoscan-pages-runtime-v6';
+const IMAGE_CACHE = 'cocoscan-report-images-v6';
 
+// Only precache truly public, unauthenticated assets to prevent login redirect caching corruption
 const PRECACHE_ASSETS = [
-    '/',
     '/login',
-    '/farmer/scan',
-    '/farmer/drafts',
     '/manifest.json',
     '/offline',
     '/static/css/weather_widget.css',
@@ -18,19 +16,19 @@ const PRECACHE_ASSETS = [
     'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'
 ];
 
-// Install event: Precache core app shell
+// Install event: Precache core public app shell
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            console.log('[SW] Precaching App Shell');
+            console.log('[SW v6] Precaching Public App Shell');
             return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-                console.warn('[SW] Some precache assets failed to load:', err);
+                console.warn('[SW v6] Precache assets load warning:', err);
             });
         }).then(() => self.skipWaiting())
     );
 });
 
-// Activate event: Clean up legacy caches
+// Activate event: Clean up legacy caches (v1-v5)
 self.addEventListener('activate', (event) => {
     const currentCaches = [CACHE_NAME, RUNTIME_CACHE, IMAGE_CACHE];
     event.waitUntil(
@@ -38,7 +36,7 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
                     if (!currentCaches.includes(cacheName)) {
-                        console.log('[SW] Deleting legacy cache:', cacheName);
+                        console.log('[SW v6] Deleting legacy cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
@@ -56,7 +54,7 @@ function notifyClients(message) {
     });
 }
 
-// Fetch event: Implement advanced caching strategies
+// Fetch event: Implement advanced caching and auth-safe routing
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
@@ -66,7 +64,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 1. Report Photos & Images: Cache First, Network Fallback
+    // 1. Report Photos & Media: Cache First, Network Fallback
     if (url.hostname.includes('supabase.co') || url.pathname.startsWith('/static/uploads/') || 
         request.destination === 'image' || /\.(png|jpg|jpeg|webp|gif|svg|ico)$/i.test(url.pathname)) {
         
@@ -74,18 +72,15 @@ self.addEventListener('fetch', (event) => {
             caches.open(IMAGE_CACHE).then(async (cache) => {
                 const cachedResponse = await cache.match(request);
                 if (cachedResponse) {
-                    // Return cached image immediately for instant loading
                     return cachedResponse;
                 }
                 try {
                     const networkResponse = await fetch(request);
-                    if (networkResponse && networkResponse.status === 200) {
+                    if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
                         cache.put(request, networkResponse.clone());
                     }
                     return networkResponse;
                 } catch (error) {
-                    console.warn('[SW] Image fetch offline fallback failed:', url.pathname);
-                    // Return empty 204 or transparent gif if image offline and un-cached
                     return new Response('', { status: 204, statusText: 'No Content' });
                 }
             })
@@ -93,62 +88,61 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 2. HTML Navigation & Dashboards: Stale-While-Revalidate (SWR) with App Shell Fallback
-    if (request.mode === 'navigate' || (!url.pathname.startsWith('/api/') && (
-        url.pathname.includes('/reports') || url.pathname.includes('/dashboard') || 
-        url.pathname.includes('/scan') || url.pathname.includes('/drafts') || url.pathname.includes('/schedules') ||
-        url.pathname.includes('/analytics') || url.pathname.includes('/map') || url.pathname === '/' || url.pathname === '/login'))) {
+    // 2. HTML Navigation & Dashboards
+    if (request.mode === 'navigate') {
+        const isFarmerRoute = url.pathname.startsWith('/farmer/scan') || url.pathname.startsWith('/farmer/drafts') || url.pathname.startsWith('/farmer/dashboard');
+        const isNonFarmerAdminRoute = url.pathname.startsWith('/admin') || url.pathname.startsWith('/agriculturist') || 
+                                     url.pathname.startsWith('/lgu') || url.pathname.startsWith('/overview') || 
+                                     url.pathname.startsWith('/map') || url.pathname.startsWith('/analytics');
 
         event.respondWith(
             (async () => {
                 const runtimeCache = await caches.open(RUNTIME_CACHE);
                 const appShellCache = await caches.open(CACHE_NAME);
-                
-                // Check if exact URL or pathname is in either cache
-                const cachedResponse = await runtimeCache.match(request) || await appShellCache.match(request) || await caches.match(url.pathname);
 
-                // Background network revalidation
-                const networkFetchPromise = fetch(request).then((networkResponse) => {
-                    if (networkResponse && networkResponse.status === 200) {
-                        runtimeCache.put(request, networkResponse.clone());
-                        if (cachedResponse) {
-                            notifyClients({ type: 'CACHE_UPDATED', url: request.url });
+                try {
+                    // Always try network first for live navigation
+                    const networkResponse = await fetch(request);
+
+                    // CRITICAL FIX FOR AUTH REDIRECT BUG:
+                    // Only cache in runtime if it was NOT redirected (e.g. not a 302 redirect to /login)
+                    if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
+                        // Only cache farmer routes and login in runtime cache for offline resilience
+                        if (isFarmerRoute || url.pathname === '/login' || url.pathname === '/') {
+                            runtimeCache.put(request, networkResponse.clone());
                         }
                     }
                     return networkResponse;
-                }).catch((error) => {
-                    console.warn('[SW] Network offline for navigation:', url.pathname);
-                    return null;
-                });
+                } catch (networkErr) {
+                    console.warn('[SW v6] Navigation offline for:', url.pathname);
 
-                // If in cache, return instantly (0ms latency!)
-                if (cachedResponse) {
-                    networkFetchPromise;
-                    return cachedResponse;
-                }
-
-                // If not in cache, wait for network
-                const networkResponse = await networkFetchPromise;
-                if (networkResponse) {
-                    return networkResponse;
-                }
-
-                // If both network and exact cache failed during navigation, try cached app shell fallbacks:
-                if (request.mode === 'navigate') {
-                    // Try farmer scan or drafts or login or splash before resorting to /offline
-                    const fallbackCandidate = 
-                        await caches.match('/farmer/scan') || 
-                        await caches.match('/farmer/drafts') ||
-                        await caches.match('/login') ||
-                        await caches.match('/') ||
-                        await caches.match('/offline');
-                    
-                    if (fallbackCandidate) {
-                        return fallbackCandidate;
+                    // If non-farmer admin route goes offline, ALWAYS return standard /offline screen (no offline actions)
+                    if (isNonFarmerAdminRoute) {
+                        const offlinePage = await appShellCache.match('/offline') || await caches.match('/offline');
+                        if (offlinePage) return offlinePage;
+                        return new Response("Can't load right now, you're offline.", { status: 503, headers: { 'Content-Type': 'text/plain' } });
                     }
-                }
 
-                return new Response('Offline: Resource unavailable', { status: 503, statusText: 'Service Unavailable' });
+                    // If farmer route, attempt to serve cached farmer shell
+                    if (isFarmerRoute) {
+                        const cachedFarmer = await runtimeCache.match(request) || 
+                                             await runtimeCache.match('/farmer/scan') || 
+                                             await runtimeCache.match('/farmer/drafts');
+                        if (cachedFarmer) {
+                            return cachedFarmer;
+                        }
+                    }
+
+                    // For login or general navigation, try /login or /offline
+                    const fallback = await appShellCache.match('/login') || 
+                                     await appShellCache.match('/offline') ||
+                                     await caches.match('/offline');
+                    if (fallback) {
+                        return fallback;
+                    }
+
+                    return new Response("Can't load right now, you're offline.", { status: 503, headers: { 'Content-Type': 'text/plain' } });
+                }
             })()
         );
         return;
@@ -164,7 +158,7 @@ self.addEventListener('fetch', (event) => {
                     return cachedResponse;
                 }
                 return fetch(request).then((networkResponse) => {
-                    if (networkResponse && networkResponse.status === 200) {
+                    if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
                         const responseToCache = networkResponse.clone();
                         caches.open(CACHE_NAME).then((cache) => {
                             cache.put(request, responseToCache);
@@ -179,10 +173,10 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 4. Default / API requests: Network First, Cache Fallback
+    // 4. API & JSON requests: Network First, Cache Fallback
     event.respondWith(
         fetch(request).then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200 && request.method === 'GET') {
+            if (networkResponse && networkResponse.status === 200 && request.method === 'GET' && !networkResponse.redirected) {
                 const responseToCache = networkResponse.clone();
                 caches.open(RUNTIME_CACHE).then((cache) => {
                     cache.put(request, responseToCache);
@@ -199,7 +193,7 @@ self.addEventListener('fetch', (event) => {
                     success: false,
                     offline: true,
                     message: "You are currently offline or the server is temporarily unreachable.",
-                    error: "You are currently offline. Working in local mode."
+                    error: "You are currently offline."
                 }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }

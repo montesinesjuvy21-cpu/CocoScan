@@ -81,11 +81,11 @@
         }
     }
 
-    // Offline Login Handler for Farmers
+    // Role-based Offline Login Handler: Strictly restrict offline access to farmers only
     document.getElementById('login-form')?.addEventListener('submit', function(e) {
         if (!navigator.onLine) {
             e.preventDefault();
-            const email = document.getElementById('email').value.trim();
+            const email = (document.getElementById('email').value || '').trim();
             const password = document.getElementById('password').value;
 
             if (!email || !password) {
@@ -93,17 +93,26 @@
                 return;
             }
 
-            // Save offline session for farmer
+            const storedRole = (localStorage.getItem('cocoscan_user_role') || '').toLowerCase();
+            const lowerEmail = email.toLowerCase();
+            const isNonFarmer = ['admin', 'agriculturist', 'agri_expert', 'lgu'].includes(storedRole) ||
+                                lowerEmail.includes('admin') || lowerEmail.includes('agri') || 
+                                lowerEmail.includes('lgu') || lowerEmail.includes('pca');
+
+            if (isNonFarmer) {
+                alert("Can't load right now, you're offline. Administrative, Agriculturist, and LGU accounts require an active internet connection.");
+                return;
+            }
+
+            // Silently initialize farmer offline session (no disruptive banners/alerts)
             localStorage.setItem('cocoscan_user_role', 'farmer');
             localStorage.setItem('cocoscan_offline_active', 'true');
             localStorage.setItem('cocoscan_user_email', email);
             
-            // Extract a display name from email (e.g. "farmer" from "farmer@example.com")
             const derivedName = email.split('@')[0].replace(/[._-]/g, ' ');
             const formattedName = derivedName.charAt(0).toUpperCase() + derivedName.slice(1);
             localStorage.setItem('cocoscan_user_name', formattedName || 'Farmer');
 
-            alert('Offline Mode Active: Logging in locally as Farmer. Your scans will be stored in Drafts.');
             window.location.href = '/farmer/scan';
         }
     });

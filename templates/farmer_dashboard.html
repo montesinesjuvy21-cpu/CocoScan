@@ -14,6 +14,27 @@
 {% endblock %}
 
 {% block metrics_grid %}
+<!-- Farmer-Exclusive Offline Indicator & Draft Notice -->
+<div id="farmer-offline-banner" style="display: none; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; align-items: center; justify-content: space-between; gap: 14px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.08); flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px;">
+        <i class="fa-solid fa-cloud-arrow-down" style="font-size: 1.4rem; color: #d97706;"></i>
+        <div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: #78350f;">Offline Mode Active</div>
+            <div style="font-size: 0.82rem; font-weight: 500; color: #92400e; margin-top: 2px; line-height: 1.4;">
+                Field scans can still be performed. Scans and photos will be saved securely to local Drafts and uploaded when your connection is restored.
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <a href="{{ url_for('farmer_scan') }}" style="background: #d97706; color: #ffffff; padding: 8px 14px; border-radius: 10px; font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-camera"></i> Scan Pest
+        </a>
+        <a href="{{ url_for('farmer_drafts') }}" style="background: rgba(217, 119, 6, 0.15); color: #92400e; border: 1px solid rgba(217, 119, 6, 0.3); padding: 8px 14px; border-radius: 10px; font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-folder-open"></i> Drafts
+        </a>
+    </div>
+</div>
+
 <div class="metrics-row-wrapper">
     <div class="metric-card-node cases">
         <div class="metric-data">
@@ -57,3 +78,21 @@
 {% endblock %}
 
 {% block js_role_name %}Farmer{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function updateFarmerOfflineUI() {
+        const banner = document.getElementById('farmer-offline-banner');
+        if (!banner) return;
+        if (!navigator.onLine) {
+            banner.style.display = 'flex';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+    window.addEventListener('offline', updateFarmerOfflineUI);
+    window.addEventListener('online', updateFarmerOfflineUI);
+    document.addEventListener('DOMContentLoaded', updateFarmerOfflineUI);
+    updateFarmerOfflineUI();
+</script>
+{% endblock %}

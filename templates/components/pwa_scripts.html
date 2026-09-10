@@ -169,6 +169,8 @@
     let currentUserRole = "";
     {% if current_user is defined and current_user.is_authenticated %}
     currentUserRole = "{{ current_user.role }}";
+    {% elif session is defined and session.get('user_role') %}
+    currentUserRole = "{{ session.get('user_role') }}";
     {% elif session is defined and session.get('role') %}
     currentUserRole = "{{ session.get('role') }}";
     {% endif %}
@@ -203,7 +205,7 @@
         });
     }
 
-    // 3. Discreet Sync Status Management (No persistent popup toasts)
+    // 3. Discreet Sync Status Management (Exclusively for Farmers)
     function formatLastSyncTime(dateStr) {
         if (!dateStr) return 'just now';
         try {
@@ -220,6 +222,15 @@
     }
 
     function updateDashboardSyncStatus() {
+        const syncStatusWrapper = document.getElementById('dashboard-sync-status');
+        const role = (localStorage.getItem('cocoscan_user_role') || currentUserRole || '').toLowerCase();
+        const isFarmer = role === 'farmer';
+
+        if (!isFarmer && syncStatusWrapper) {
+            syncStatusWrapper.style.display = 'none';
+            return;
+        }
+
         const dot = document.getElementById('sync-dot');
         const text = document.getElementById('sync-status-text');
         const time = document.getElementById('sync-status-time');

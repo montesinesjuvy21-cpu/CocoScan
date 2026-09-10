@@ -196,37 +196,74 @@
             <i class="fa-solid fa-cloud-arrow-down"></i>
         </div>
 
-        <div class="pwa-badge">
+        <div id="offline-badge" class="pwa-badge">
             <i class="fa-solid fa-bolt"></i> CocoScan Offline Mode Active
         </div>
 
-        <h1>You're Offline</h1>
-        <p class="description">
+        <h1 id="offline-title">You're Offline</h1>
+        <p id="offline-desc" class="description">
             Your network connection is unavailable right now. Thanks to CocoScan PWA, you can still perform leaf scans in the field and view locally cached reports without an internet connection.
         </p>
 
         <div class="actions-stack">
-            <a href="/farmer/scan" class="btn btn-primary">
+            <a id="btn-farmer-scan" href="/farmer/scan" class="btn btn-primary" style="display:none;">
                 <i class="fa-solid fa-camera"></i> Open Field Scanner
             </a>
-            <a href="/farmer/drafts" class="btn btn-secondary">
+            <a id="btn-farmer-drafts" href="/farmer/drafts" class="btn btn-secondary" style="display:none;">
                 <i class="fa-solid fa-folder-open"></i> View Saved Offline Drafts
             </a>
-            <button onclick="window.location.reload()" class="btn btn-outline">
+            <button onclick="window.location.reload()" class="btn btn-primary" id="btn-retry" style="display:none;">
+                <i class="fa-solid fa-rotate-right"></i> Retry Connection
+            </button>
+            <button onclick="window.location.reload()" class="btn btn-outline" id="btn-farmer-retry" style="display:none;">
                 <i class="fa-solid fa-rotate-right"></i> Retry Connection
             </button>
         </div>
 
         <div class="status-footer">
-            <span class="status-dot"></span> Field scans will be automatically saved to your local storage until signal is restored.
+            <span class="status-dot"></span> <span id="offline-footer-text">Field scans will be automatically saved to your local storage until signal is restored.</span>
         </div>
     </div>
 
     <script>
-        // When online status is restored, automatically reload or alert user
-        window.addEventListener('online', () => {
-            window.location.reload();
-        });
+        (function() {
+            const role = (localStorage.getItem('cocoscan_user_role') || '').toLowerCase();
+            const isFarmer = role === 'farmer';
+
+            const title = document.getElementById('offline-title');
+            const desc = document.getElementById('offline-desc');
+            const badge = document.getElementById('offline-badge');
+            const btnScan = document.getElementById('btn-farmer-scan');
+            const btnDrafts = document.getElementById('btn-farmer-drafts');
+            const btnFarmerRetry = document.getElementById('btn-farmer-retry');
+            const btnRetry = document.getElementById('btn-retry');
+            const footerText = document.getElementById('offline-footer-text');
+
+            if (isFarmer) {
+                if (title) title.textContent = "You're Offline";
+                if (desc) desc.textContent = "Your network connection is unavailable right now. Thanks to CocoScan PWA, you can still perform leaf scans in the field and view locally saved drafts without an internet connection.";
+                if (badge) badge.style.display = "inline-flex";
+                if (btnScan) btnScan.style.display = "flex";
+                if (btnDrafts) btnDrafts.style.display = "flex";
+                if (btnFarmerRetry) btnFarmerRetry.style.display = "flex";
+                if (btnRetry) btnRetry.style.display = "none";
+                if (footerText) footerText.textContent = "Field scans will be automatically saved to your local storage until signal is restored.";
+            } else {
+                if (title) title.textContent = "Can't load right now, you're offline";
+                if (desc) desc.textContent = "This portal and administrative features require an active internet connection. Please check your network and reconnect to continue.";
+                if (badge) badge.style.display = "none";
+                if (btnScan) btnScan.style.display = "none";
+                if (btnDrafts) btnDrafts.style.display = "none";
+                if (btnFarmerRetry) btnFarmerRetry.style.display = "none";
+                if (btnRetry) btnRetry.style.display = "flex";
+                if (footerText) footerText.textContent = "CocoScan will automatically reload and reconnect when your internet connection is restored.";
+            }
+
+            // When online status is restored, automatically reload
+            window.addEventListener('online', () => {
+                window.location.reload();
+            });
+        })();
     </script>
 </body>
 </html>

@@ -848,11 +848,13 @@
                     <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview</p>
                     {% endblock %}
                 </div>
+                {% if session.get('user_role') == 'farmer' %}
                 <div id="dashboard-sync-status" class="sync-status-indicator" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; background: rgba(0,0,0,0.04); color: #64748b; border: 1px solid rgba(0,0,0,0.05);">
                     <span id="sync-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #22c55e; display: inline-block;"></span>
                     <span id="sync-status-text" style="color: #15803d;">Online</span>
                     <span id="sync-status-time" style="font-size: 0.72rem; color: #94a3b8; margin-left: 2px;">• Synced just now</span>
                 </div>
+                {% endif %}
             </header>
 
             {% block main_content %}
