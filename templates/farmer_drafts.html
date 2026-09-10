@@ -579,6 +579,36 @@
                 <h2>No Saved Drafts</h2>
                 <p>You don’t have any draft scans saved yet. Go to Scan Pest page to begin your first report.</p>
             </div>
+
+            <!-- Edit Draft Modal -->
+            <div id="draft-edit-modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(11,37,26,0.6); z-index:2000; align-items:center; justify-content:center; padding:16px;">
+                <div style="background:#ffffff; border-radius:20px; width:100%; max-width:480px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:#0b251a;"><i class="fa-solid fa-pen-to-square"></i> Edit Draft Details</h3>
+                        <button type="button" onclick="closeEditDraftModal()" style="background:none; border:none; color:#64748b; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <div style="display:flex; gap:12px; align-items:center; background:#f8faf9; padding:10px; border-radius:12px;">
+                        <img id="edit-modal-thumb" src="" alt="Draft photo" style="width:64px; height:64px; border-radius:10px; object-fit:cover; border:1px solid #e2e8f0;">
+                        <div>
+                            <div id="edit-modal-pest" style="font-weight:700; color:#0b251a; font-size:0.95rem;"></div>
+                            <div id="edit-modal-date" style="font-size:0.75rem; color:#64748b;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="edit-modal-notes" style="display:block; font-size:0.85rem; font-weight:700; color:#1e293b; margin-bottom:6px;">Farmer Notes / Field Observations</label>
+                        <textarea id="edit-modal-notes" rows="4" style="width:100%; padding:12px; border-radius:12px; border:1px solid #cbd5e1; font-family:'Inter',sans-serif; font-size:0.9rem; resize:vertical; box-sizing:border-box;" placeholder="Add field observations or remarks..."></textarea>
+                    </div>
+
+                    <input type="hidden" id="edit-modal-draft-id">
+
+                    <div style="display:flex; gap:10px; margin-top:6px;">
+                        <button type="button" class="btn-control btn-edit" onclick="closeEditDraftModal()" style="flex:1;">Cancel</button>
+                        <button type="button" class="btn-control btn-submit" onclick="saveDraftChanges()" style="flex:1;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+                    </div>
+                </div>
+            </div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -662,7 +692,7 @@
             }
         }
 
-        /* Redesigned card body and actions injection grid */
+        /* Drafts Grid with Scan action button and Edit modal trigger */
         function renderDrafts(drafts) {
             const list = document.getElementById('drafts-list');
             list.innerHTML = '';
@@ -696,11 +726,11 @@
                     </div>
                     <div class="draft-actions">
                         <div class="main-actions-row">
-                            <button class="btn-control btn-edit" onclick='continueDraft(${draft.id})'>
-                                <i class="fa-solid fa-pen-to-square"></i> Continue/Edit
+                            <button class="btn-control btn-edit" onclick='openEditDraftModal(${draft.id})'>
+                                <i class="fa-solid fa-pen-to-square"></i> Edit
                             </button>
-                            <button class="btn-control btn-submit" id="btn-submit-${draft.id}" onclick='submitDraft(${draft.id})'>
-                                ${isOfflineDraft ? '<i class="fa-solid fa-wand-magic-sparkles"></i> Run AI & Submit' : '<i class="fa-solid fa-paper-plane"></i> Submit'}
+                            <button class="btn-control btn-submit" id="btn-scan-${draft.id}" onclick='scanAndReviewDraft(${draft.id})'>
+                                <i class="fa-solid fa-camera"></i> Scan
                             </button>
                         </div>
                         <button class="btn-control btn-delete" onclick='deleteDraft(${draft.id})'>
@@ -722,12 +752,48 @@
             }));
         }
 
-        function continueDraft(id) {
+        function openEditDraftModal(id) {
             getDraftById(id).then((draft) => {
-                if (!draft) { alert('Draft not found.'); return; }
-                sessionStorage.setItem('cocoscan_resume_draft', JSON.stringify(draft));
-                window.location.href = '/farmer/scan';
-            }).catch(() => alert('Unable to load draft.'));
+                if (!draft) return;
+                document.getElementById('edit-modal-draft-id').value = draft.id;
+                document.getElementById('edit-modal-thumb').src = draft.primary_image_data || '';
+                document.getElementById('edit-modal-pest').textContent = draft.pest || 'Offline Scan';
+                document.getElementById('edit-modal-date').textContent = 'Captured: ' + formatDateLocal(draft.photo_taken_at);
+                document.getElementById('edit-modal-notes').value = draft.farmer_notes || draft.field_notes || '';
+                
+                const backdrop = document.getElementById('draft-edit-modal-backdrop');
+                if (backdrop) backdrop.style.display = 'flex';
+            }).catch(() => alert('Unable to open draft editor.'));
+        }
+
+        function closeEditDraftModal() {
+            const backdrop = document.getElementById('draft-edit-modal-backdrop');
+            if (backdrop) backdrop.style.display = 'none';
+        }
+
+        function saveDraftChanges() {
+            const id = parseInt(document.getElementById('edit-modal-draft-id').value, 10);
+            const notes = document.getElementById('edit-modal-notes').value.trim();
+            if (!id) return;
+
+            getDraftById(id).then((draft) => {
+                if (!draft) return;
+                draft.farmer_notes = notes;
+                draft.field_notes = notes;
+                
+                return openDraftDB().then((db) => new Promise((resolve, reject) => {
+                    const transaction = db.transaction(['drafts'], 'readwrite');
+                    const store = transaction.objectStore('drafts');
+                    const request = store.put(draft);
+                    request.onsuccess = resolve;
+                    request.onerror = reject;
+                }));
+            }).then(() => {
+                closeEditDraftModal();
+                loadDrafts();
+            }).catch((err) => {
+                alert('Failed to save changes: ' + err.message);
+            });
         }
 
         function deleteDraftById(id) {
@@ -745,78 +811,42 @@
             deleteDraftById(id).then(() => { loadDrafts(); }).catch(() => alert('Unable to delete draft.'));
         }
 
-        function normalizeDraftErrorMessage(rawError) {
-            if (!rawError) return 'An unexpected error occurred.';
-            const lowerError = rawError.toLowerCase();
-            if (lowerError.includes('invalid input syntax for type integer') || lowerError.includes('invalid input syntax for type numeric')) {
-                return 'GPS coordinates are invalid. Please ensure location data is properly captured before submitting.';
-            }
-            if (lowerError.includes('not null violation')) {
-                return 'Some required fields are missing. Please fill in all information before submitting.';
-            }
-            if (lowerError.includes('duplicate') || lowerError.includes('unique')) {
-                return 'This report may have already been submitted. Please refresh and try again.';
-            }
-            if (lowerError.includes('cloud instance') || lowerError.includes('synchronization')) {
-                return 'Unable to connect to the server. Please check your internet connection and try again.';
-            }
-            if (lowerError.includes('connection') || lowerError.includes('timeout')) {
-                return 'Unable to connect to the server. Please check your internet connection and try again.';
-            }
-            return 'Failed to submit report. Please try again or contact support if the issue persists.';
-        }
-
         function fetchDataURLFile(dataUrl, filename) {
             return fetch(dataUrl).then((res) => res.blob()).then((blob) => new File([blob], filename, { type: blob.type || 'image/jpeg' }));
         }
 
-        async function submitDraft(id) {
+        /* Scan draft, run AI inference, and redirect directly to farmer_scan to review report */
+        async function scanAndReviewDraft(id) {
             const draft = await getDraftById(id).catch(() => null);
             if (!draft) { alert('Draft not found.'); return; }
-            if (!navigator.onLine) {
-                alert('Internet connection required to run AI classification and submit report. Please reconnect and try again.');
-                return;
-            }
 
-            const notes = (draft.farmer_notes || draft.field_notes || '').trim();
-            if (!notes) {
-                const addNote = prompt('Please enter your field notes for this scan before submitting:', '');
-                if (!addNote || !addNote.trim()) {
-                    alert('Farmer notes are required to submit this report.');
+            const scanBtn = document.getElementById(`btn-scan-${id}`);
+            const originalBtnText = scanBtn ? scanBtn.innerHTML : '<i class="fa-solid fa-camera"></i> Scan';
+
+            const isOfflineDraft = draft.status === 'offline_draft' || draft.status === 'offline-draft' || draft.pest === 'Offline Scan (Pending AI)' || !draft.pest || draft.pest === 'Unknown Pest' || !draft.confidence_value;
+
+            // If draft needs AI inference execution:
+            if (isOfflineDraft) {
+                if (!navigator.onLine) {
+                    alert('Internet connection required to run AI pest detection. Please connect to the internet to scan this draft.');
                     return;
                 }
-                draft.farmer_notes = addNote.trim();
-            }
 
-            const submitBtn = document.getElementById(`btn-submit-${id}`);
-            const originalBtnText = submitBtn ? submitBtn.innerHTML : 'Submit';
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
-            }
+                if (scanBtn) {
+                    scanBtn.disabled = true;
+                    scanBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning...';
+                }
 
-            try {
-                let pestType = draft.pest;
-                let confidence = draft.confidence_value !== undefined ? draft.confidence_value : (parseFloat((draft.confidence || '').replace('%', '')) || 0);
-                let recommendations = draft.recommendations || [];
-
-                const isOfflineDraft = draft.status === 'offline_draft' || draft.status === 'offline-draft' || draft.pest === 'Offline Scan (Pending AI)' || !draft.pest || draft.pest === 'Unknown Pest' || confidence === 0;
-
-                // Step 1: Run AI Inference if draft was saved offline or needs classification
-                if (isOfflineDraft) {
-                    if (submitBtn) {
-                        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running AI Scanner...';
+                if (!draft.primary_image_data) {
+                    alert('No image data found in this draft.');
+                    if (scanBtn) {
+                        scanBtn.disabled = false;
+                        scanBtn.innerHTML = originalBtnText;
                     }
+                    return;
+                }
 
-                    if (!draft.primary_image_data) {
-                        alert('No image data found in this draft.');
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.innerHTML = originalBtnText;
-                        }
-                        return;
-                    }
-
+                try {
                     const predictFormData = new FormData();
                     const primaryFile = await fetchDataURLFile(draft.primary_image_data, draft.primary_image_name || 'offline_capture.jpg');
                     predictFormData.append('image_file', primaryFile);
@@ -830,83 +860,63 @@
 
                     if (!predictResponse.ok || !predictData || !predictData.success) {
                         const errorMsg = predictData?.error || predictData?.message || `Leaf Validation Error (${predictResponse.status})`;
-                        alert(`Image Validation Notice: ${errorMsg}\n\nPlease click 'Continue/Edit' if you would like to retake or choose another photo.`);
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.innerHTML = originalBtnText;
+                        alert(`Image Validation Notice: ${errorMsg}\n\nPlease click 'Edit' to review notes or retake the photo.`);
+                        if (scanBtn) {
+                            scanBtn.disabled = false;
+                            scanBtn.innerHTML = originalBtnText;
                         }
                         return;
                     }
 
-                    pestType = predictData.pest;
-                    confidence = predictData.pest_confidence || 0;
-                    recommendations = predictData.recommendations || [];
-                }
+                    // Update draft with AI inference results
+                    draft.pest = predictData.pest;
+                    draft.pest_confidence = predictData.pest_confidence || 0;
+                    draft.confidence = (predictData.pest_confidence || 0) + '%';
+                    draft.confidence_value = predictData.pest_confidence || 0;
+                    draft.recommendations = predictData.recommendations || [];
+                    draft.status = 'scanned';
 
-                // Step 2: Build Report Payload and Submit
-                if (submitBtn) {
-                    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting Report...';
-                }
-
-                const reportFormData = new FormData();
-                reportFormData.append('pest_type', pestType || 'Unknown Pest');
-                reportFormData.append('farmer_notes', draft.farmer_notes || notes);
-                reportFormData.append('location_notes', draft.farmer_notes || notes);
-                reportFormData.append('confidence', confidence);
-                
-                const lat = draft.gps?.latitude ? parseFloat(draft.gps.latitude) : '';
-                const lng = draft.gps?.longitude ? parseFloat(draft.gps.longitude) : '';
-                reportFormData.append('gps_latitude', lat);
-                reportFormData.append('gps_longitude', lng);
-                reportFormData.append('gps_accuracy', draft.gps?.accuracy || '');
-                reportFormData.append('location_source', draft.location_source || 'camera_gps');
-                reportFormData.append('photo_taken_at', draft.photo_taken_at || new Date().toISOString());
-                reportFormData.append('recommendations', JSON.stringify(recommendations));
-
-                if (draft.primary_image_data && draft.primary_image_data.startsWith('data:')) {
-                    const file = await fetchDataURLFile(draft.primary_image_data, draft.primary_image_name || 'primary_capture.jpg');
-                    reportFormData.append('image_file', file);
-                } else if (draft.primary_image_data) {
-                    reportFormData.append('image_url', draft.primary_image_data);
-                }
-
-                const supporting = draft.supporting_images || [];
-                for (let index = 0; index < supporting.length; index++) {
-                    const item = supporting[index];
-                    if (item?.dataUrl) {
-                        const file = await fetchDataURLFile(item.dataUrl, item.name || `supporting_${index}.jpg`);
-                        reportFormData.append('supporting_images', file, file.name);
+                    // Save updated draft to IndexedDB
+                    const db = await openDraftDB();
+                    await new Promise((resolve, reject) => {
+                        const transaction = db.transaction(['drafts'], 'readwrite');
+                        const store = transaction.objectStore('drafts');
+                        const req = store.put(draft);
+                        req.onsuccess = resolve;
+                        req.onerror = reject;
+                    });
+                } catch (err) {
+                    console.error('Scan inference error:', err);
+                    alert(`Error during AI scanning: ${err.message || 'Please check your connection.'}`);
+                    if (scanBtn) {
+                        scanBtn.disabled = false;
+                        scanBtn.innerHTML = originalBtnText;
                     }
-                }
-
-                const reportResponse = await fetch('/farmer/submit-report', {
-                    method: 'POST',
-                    body: reportFormData
-                });
-
-                const reportData = await reportResponse.json().catch(() => null);
-
-                if (reportResponse.ok && reportData && reportData.success) {
-                    await deleteDraftById(id);
-                    alert(`SUCCESS: Pest identified as "${pestType}" (${confidence}% confidence).\nReport submitted successfully and removed from local drafts.`);
-                    loadDrafts();
-                } else {
-                    const errorMsg = reportData?.message || reportData?.error || 'Server submission error';
-                    const friendlyMsg = normalizeDraftErrorMessage(errorMsg);
-                    alert(`Submission Error: ${friendlyMsg}`);
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalBtnText;
-                    }
-                }
-            } catch (err) {
-                console.error('Submit draft error:', err);
-                alert(`Error submitting report: ${err.message || 'Please check your connection and try again.'}`);
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalBtnText;
+                    return;
                 }
             }
+
+            // Populate full scan payload and redirect directly to farmer_scan
+            const scanPayload = {
+                pest: draft.pest,
+                pest_confidence: draft.confidence_value || parseFloat((draft.confidence || '').replace('%', '')) || 0,
+                confidence: draft.confidence || (draft.confidence_value ? `${draft.confidence_value}%` : '0%'),
+                severity: 'Moderate',
+                recommendations: draft.recommendations || [],
+                notes: draft.farmer_notes || draft.field_notes || '',
+                farmer_notes: draft.farmer_notes || draft.field_notes || '',
+                primary_image: draft.primary_image_data,
+                primary_image_data: draft.primary_image_data,
+                gps: draft.gps || null,
+                location_source: draft.location_source || 'camera_gps',
+                supporting_images: draft.supporting_images || [],
+                photo_taken_at: draft.photo_taken_at || new Date().toISOString(),
+                status: 'Ready to Submit',
+                draft_id: id
+            };
+
+            sessionStorage.setItem('cocoscan_resume_draft', JSON.stringify(scanPayload));
+            window.location.href = '/farmer/scan';
         }
 
         document.addEventListener('DOMContentLoaded', () => {

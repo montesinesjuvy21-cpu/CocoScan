@@ -203,42 +203,60 @@
         });
     }
 
-    // 3. Online / Offline Status Toast
-    function showPwaToast(message, type = '', duration = 4000, onClick = null) {
-        const toast = document.getElementById('pwa-toast');
-        const icon = document.getElementById('pwa-toast-icon');
-        const msg = document.getElementById('pwa-toast-msg');
-        if (!toast || !msg) return;
+    // 3. Discreet Sync Status Management (No persistent popup toasts)
+    function formatLastSyncTime(dateStr) {
+        if (!dateStr) return 'just now';
+        try {
+            const dt = new Date(dateStr);
+            if (isNaN(dt.getTime())) return 'just now';
+            return new Intl.DateTimeFormat('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).format(dt);
+        } catch (e) {
+            return 'just now';
+        }
+    }
 
-        toast.className = 'show ' + type;
-        msg.textContent = message;
-        toast.onclick = onClick ? onClick : null;
+    function updateDashboardSyncStatus() {
+        const dot = document.getElementById('sync-dot');
+        const text = document.getElementById('sync-status-text');
+        const time = document.getElementById('sync-status-time');
+        if (!dot && !text) return;
 
-        if (type === 'offline') icon.className = 'fa-solid fa-wifi-slash';
-        else if (type === 'online') icon.className = 'fa-solid fa-wifi';
-        else if (type === 'update') icon.className = 'fa-solid fa-bolt-lightning';
-        else icon.className = 'fa-solid fa-bell';
-
-        setTimeout(() => {
-            if (toast.classList.contains('show')) {
-                toast.className = '';
+        if (navigator.onLine) {
+            const nowIso = new Date().toISOString();
+            localStorage.setItem('cocoscan_last_sync', nowIso);
+            if (dot) dot.style.backgroundColor = '#22c55e';
+            if (text) {
+                text.textContent = 'Online';
+                text.style.color = '#15803d';
             }
-        }, duration);
+            if (time) time.textContent = '• Synced ' + formatLastSyncTime(nowIso);
+        } else {
+            const lastSync = localStorage.getItem('cocoscan_last_sync');
+            if (dot) dot.style.backgroundColor = '#f59e0b';
+            if (text) {
+                text.textContent = 'Offline';
+                text.style.color = '#b45309';
+            }
+            if (time) time.textContent = lastSync ? ('• Last sync: ' + formatLastSyncTime(lastSync)) : '• Local mode';
+        }
     }
 
     window.addEventListener('offline', () => {
-        showPwaToast('You are offline. Scans will be saved to local Drafts.', 'offline', 6000);
+        updateDashboardSyncStatus();
     });
 
     window.addEventListener('online', () => {
-        showPwaToast('Back online! Ready to sync offline reports.', 'online', 4000);
+        updateDashboardSyncStatus();
     });
 
-    // Check initial status
-    if (!navigator.onLine) {
-        setTimeout(() => {
-            showPwaToast('Working in offline mode.', 'offline', 5000);
-        }, 1000);
-    }
+    // Initialize sync status on load without annoying floating popups
+    document.addEventListener('DOMContentLoaded', () => {
+        updateDashboardSyncStatus();
+    });
+    updateDashboardSyncStatus();
 })();
 </script>

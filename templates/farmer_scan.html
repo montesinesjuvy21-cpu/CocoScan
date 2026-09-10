@@ -1416,6 +1416,17 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        if (window.currentPrediction?.draft_id) {
+                            try {
+                                const draftId = window.currentPrediction.draft_id;
+                                const req = window.indexedDB.open('cocoscan_farmer_drafts', 1);
+                                req.onsuccess = (e) => {
+                                    const db = e.target.result;
+                                    const tx = db.transaction(['drafts'], 'readwrite');
+                                    tx.objectStore('drafts').delete(draftId);
+                                };
+                            } catch(e) { console.debug('Draft cleanup error', e); }
+                        }
                         alert(`SUCCESS: Report for ${compiledPest} has been submitted successfully.`);
                         window.location.reload();
                         return;
@@ -1660,7 +1671,6 @@
                 sessionStorage.removeItem('cocoscan_resume_draft');
                 if (draft) {
                     restoreDraftToScan(draft);
-                    alert('Draft restored. You can continue editing and submit from the scan form.');
                 }
             } catch (err) {
                 console.warn('Failed to restore draft from session storage:', err);

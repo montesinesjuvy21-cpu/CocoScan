@@ -840,13 +840,18 @@
         <main class="main-content-layout">
 
             <header class="dashboard-header-container"
-                style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-bottom: 12px; position: relative;">
-                <div style="flex: 1; width: 100%;">
+                style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 12px; position: relative; gap: 12px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
                     {% block page_header %}
                     <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">
                         Dashboard</h1>
                     <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Overview</p>
                     {% endblock %}
+                </div>
+                <div id="dashboard-sync-status" class="sync-status-indicator" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; background: rgba(0,0,0,0.04); color: #64748b; border: 1px solid rgba(0,0,0,0.05);">
+                    <span id="sync-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #22c55e; display: inline-block;"></span>
+                    <span id="sync-status-text" style="color: #15803d;">Online</span>
+                    <span id="sync-status-time" style="font-size: 0.72rem; color: #94a3b8; margin-left: 2px;">• Synced just now</span>
                 </div>
             </header>
 
