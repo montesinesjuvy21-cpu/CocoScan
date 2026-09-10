@@ -1398,7 +1398,13 @@
         const openMode = reportLookupParams.get("mode") || "";
 
         document.addEventListener("DOMContentLoaded", () => {
-
+            if (!navigator.onLine) {
+                const role = (localStorage.getItem('cocoscan_user_role') || '').toLowerCase();
+                if (role && role !== 'farmer') {
+                    window.location.href = '/offline';
+                    return;
+                }
+            }
 
             initSearchAndFilters();
             renderReportsGrid();

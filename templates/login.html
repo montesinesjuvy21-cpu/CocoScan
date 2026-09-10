@@ -81,7 +81,7 @@
         }
     }
 
-    // Role-based Offline Login Handler: Strictly restrict offline access to farmers only
+    // Role-based Offline Login Handler: Redirect non-farmers to offline page and farmers to dashboard with post-login notice
     document.getElementById('login-form')?.addEventListener('submit', function(e) {
         if (!navigator.onLine) {
             e.preventDefault();
@@ -89,7 +89,6 @@
             const password = document.getElementById('password').value;
 
             if (!email || !password) {
-                alert('Please enter both email and password.');
                 return;
             }
 
@@ -100,11 +99,16 @@
                                 lowerEmail.includes('lgu') || lowerEmail.includes('pca');
 
             if (isNonFarmer) {
-                alert("Can't load right now, you're offline. Administrative, Agriculturist, and LGU accounts require an active internet connection.");
+                const nonFarmerRole = (storedRole && storedRole !== 'farmer') ? storedRole :
+                                      (lowerEmail.includes('admin') ? 'admin' :
+                                      (lowerEmail.includes('agri') ? 'agriculturist' : 'lgu'));
+                localStorage.setItem('cocoscan_user_role', nonFarmerRole);
+                localStorage.setItem('cocoscan_user_email', email);
+                window.location.href = '/offline';
                 return;
             }
 
-            // Silently initialize farmer offline session (no disruptive banners/alerts)
+            // Silently initialize farmer offline session
             localStorage.setItem('cocoscan_user_role', 'farmer');
             localStorage.setItem('cocoscan_offline_active', 'true');
             localStorage.setItem('cocoscan_user_email', email);
@@ -113,7 +117,10 @@
             const formattedName = derivedName.charAt(0).toUpperCase() + derivedName.slice(1);
             localStorage.setItem('cocoscan_user_name', formattedName || 'Farmer');
 
-            window.location.href = '/farmer/scan';
+            // Flag for displaying the post-login offline guidance popup on the dashboard
+            sessionStorage.setItem('cocoscan_show_offline_post_login_modal', 'true');
+
+            window.location.href = '/farmer/dashboard';
         }
     });
 </script>

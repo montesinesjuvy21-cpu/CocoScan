@@ -1,6 +1,6 @@
-const CACHE_NAME = 'cocoscan-app-shell-v6';
-const RUNTIME_CACHE = 'cocoscan-pages-runtime-v6';
-const IMAGE_CACHE = 'cocoscan-report-images-v6';
+const CACHE_NAME = 'cocoscan-app-shell-v7';
+const RUNTIME_CACHE = 'cocoscan-pages-runtime-v7';
+const IMAGE_CACHE = 'cocoscan-report-images-v7';
 
 // Only precache truly public, unauthenticated assets to prevent login redirect caching corruption
 const PRECACHE_ASSETS = [
@@ -20,15 +20,15 @@ const PRECACHE_ASSETS = [
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            console.log('[SW v6] Precaching Public App Shell');
+            console.log('[SW v7] Precaching Public App Shell');
             return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-                console.warn('[SW v6] Precache assets load warning:', err);
+                console.warn('[SW v7] Precache assets load warning:', err);
             });
         }).then(() => self.skipWaiting())
     );
 });
 
-// Activate event: Clean up legacy caches (v1-v5)
+// Activate event: Clean up legacy caches (v1-v6)
 self.addEventListener('activate', (event) => {
     const currentCaches = [CACHE_NAME, RUNTIME_CACHE, IMAGE_CACHE];
     event.waitUntil(
@@ -36,7 +36,7 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
                     if (!currentCaches.includes(cacheName)) {
-                        console.log('[SW v6] Deleting legacy cache:', cacheName);
+                        console.log('[SW v7] Deleting legacy cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
@@ -90,7 +90,7 @@ self.addEventListener('fetch', (event) => {
 
     // 2. HTML Navigation & Dashboards
     if (request.mode === 'navigate') {
-        const isFarmerRoute = url.pathname.startsWith('/farmer/scan') || url.pathname.startsWith('/farmer/drafts') || url.pathname.startsWith('/farmer/dashboard');
+        const isFarmerRoute = url.pathname.startsWith('/farmer');
         const isNonFarmerAdminRoute = url.pathname.startsWith('/admin') || url.pathname.startsWith('/agriculturist') || 
                                      url.pathname.startsWith('/lgu') || url.pathname.startsWith('/overview') || 
                                      url.pathname.startsWith('/map') || url.pathname.startsWith('/analytics');
@@ -114,7 +114,7 @@ self.addEventListener('fetch', (event) => {
                     }
                     return networkResponse;
                 } catch (networkErr) {
-                    console.warn('[SW v6] Navigation offline for:', url.pathname);
+                    console.warn('[SW v7] Navigation offline for:', url.pathname);
 
                     // If non-farmer admin route goes offline, ALWAYS return standard /offline screen (no offline actions)
                     if (isNonFarmerAdminRoute) {
@@ -123,9 +123,11 @@ self.addEventListener('fetch', (event) => {
                         return new Response("Can't load right now, you're offline.", { status: 503, headers: { 'Content-Type': 'text/plain' } });
                     }
 
-                    // If farmer route, attempt to serve cached farmer shell
+                    // If farmer route, attempt to serve cached farmer shell or fallbacks
                     if (isFarmerRoute) {
                         const cachedFarmer = await runtimeCache.match(request) || 
+                                             await runtimeCache.match('/farmer/reports') ||
+                                             await runtimeCache.match('/farmer/dashboard') || 
                                              await runtimeCache.match('/farmer/scan') || 
                                              await runtimeCache.match('/farmer/drafts');
                         if (cachedFarmer) {

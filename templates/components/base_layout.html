@@ -1066,7 +1066,9 @@
             function resetInactivityTimer() {
                 clearTimeout(timeoutTimer);
                 timeoutTimer = setTimeout(function() {
-                    window.location.href = '/logout';
+                    if (navigator.onLine) {
+                        window.location.href = '/logout';
+                    }
                 }, TIMEOUT_DURATION);
             }
 

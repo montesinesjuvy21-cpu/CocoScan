@@ -157,7 +157,7 @@
         
         setTimeout(() => {
             if (!navigator.onLine && localStorage.getItem('cocoscan_user_role') === 'farmer') {
-                window.location.href = "/farmer/scan";
+                window.location.href = "/farmer/dashboard";
             } else {
                 window.location.href = "{{ url_for('login') }}";
             }
