@@ -1597,6 +1597,13 @@
             document.getElementById('step-loading-view').classList.remove('active-view');
             document.getElementById('step-upload-view').classList.add('active-view');
 
+            const scanSubmitBtn = document.getElementById('report-scan-submit-btn');
+            if (scanSubmitBtn) {
+                scanSubmitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Report';
+                scanSubmitBtn.dataset.defaultHtml = '<i class="fa-solid fa-paper-plane"></i> Submit Report';
+                scanSubmitBtn.onclick = () => submitReportPayload();
+            }
+
             document.getElementById('hidden-camera-input').value = "";
             document.getElementById('field-notes-capture').value = "";
             document.getElementById('supporting-photos-input').value = "";
@@ -1607,6 +1614,7 @@
             globalActiveImageFile = null;
             globalPrimaryGPS = null;
             supportingImages = [];
+            window.currentPrediction = null;
             loadAndRenderRecentHistoryLogs();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -1623,6 +1631,76 @@
             return new File([u8arr], filename, { type: mime });
         }
 
+        async function saveDraftChangesFromScan(draftId) {
+            const additionalNotes = document.getElementById('field-notes-capture').value.trim();
+            const submitBtn = document.getElementById('report-scan-submit-btn');
+            const origHtml = submitBtn ? submitBtn.innerHTML : '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+            
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving Changes...';
+            }
+
+            try {
+                const supportingDataPromises = supportingImages.map(async (file, index) => {
+                    const dataUrl = await fileToDataURL(file);
+                    return {
+                        id: `supporting-${Date.now()}-${index}`,
+                        name: file.name,
+                        dataUrl: dataUrl
+                    };
+                });
+                const resolvedSupporting = await Promise.all(supportingDataPromises);
+
+                const db = await new Promise((resolve, reject) => {
+                    const request = window.indexedDB.open('cocoscan_farmer_drafts', 1);
+                    request.onsuccess = (e) => resolve(e.target.result);
+                    request.onerror = () => reject(new Error('IndexedDB could not be opened'));
+                });
+
+                const draft = await new Promise((resolve, reject) => {
+                    const tx = db.transaction(['drafts'], 'readonly');
+                    const store = tx.objectStore('drafts');
+                    const req = store.get(Number(draftId));
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(new Error('Draft not found'));
+                });
+
+                if (draft) {
+                    draft.farmer_notes = additionalNotes;
+                    draft.field_notes = additionalNotes;
+                    if (resolvedSupporting.length > 0) {
+                        draft.supporting_images = resolvedSupporting;
+                    }
+                    draft.updated_at = new Date().toISOString();
+
+                    await new Promise((resolve, reject) => {
+                        const tx = db.transaction(['drafts'], 'readwrite');
+                        const store = tx.objectStore('drafts');
+                        const req = store.put(draft);
+                        req.onsuccess = resolve;
+                        req.onerror = reject;
+                    });
+
+                    alert('Changes saved to draft successfully.');
+                    window.location.href = '/farmer/drafts';
+                } else {
+                    alert('Draft record could not be found.');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = origHtml;
+                    }
+                }
+            } catch (err) {
+                console.error('Error saving draft changes:', err);
+                alert('Failed to save draft changes: ' + err.message);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = origHtml;
+                }
+            }
+        }
+
         function restoreDraftToScan(draft) {
             globalActiveImagePayload = draft.primary_image_data || '';
             globalActiveImageFile = null;
@@ -1634,8 +1712,11 @@
                 return null;
             }).filter(Boolean);
 
+            const isEditDraftMode = draft.mode === 'edit_draft';
+            const draftId = draft.draft_id || draft.id;
+
             window.currentPrediction = {
-                pest: draft.pest,
+                pest: draft.pest || 'Offline Scan',
                 pest_confidence: draft.confidence_value || parseFloat((draft.confidence || '').replace('%', '')) || 0,
                 severity: 'Moderate',
                 recommendations: draft.recommendations || [],
@@ -1645,18 +1726,34 @@
                 primary_image: draft.primary_image_data || defaultImages[draft.pest] || defaultImages['Rhinoceros Beetle'],
                 gps: draft.gps || null,
                 additional_images: (draft.supporting_images || []).map((item) => item.dataUrl).filter(Boolean),
-                status: draft.status || 'Draft'
+                status: draft.status || 'Draft',
+                draft_id: draftId,
+                mode: draft.mode || 'scan'
             };
 
             document.getElementById('field-notes-capture').value = draft.farmer_notes || draft.field_notes || '';
-            if (typeof window.openReportModal === 'function') {
-                window.openReportModal(window.currentPrediction, 'scan');
-            } else {
-                setTimeout(() => {
-                    if (typeof window.openReportModal === 'function') window.openReportModal(window.currentPrediction, 'scan');
-                    else console.warn('openReportModal not available when restoring draft');
-                }, 150);
-            }
+            
+            const setupModalAndButton = () => {
+                if (typeof window.openReportModal === 'function') {
+                    window.openReportModal(window.currentPrediction, 'scan');
+                }
+                const scanSubmitBtn = document.getElementById('report-scan-submit-btn');
+                if (scanSubmitBtn) {
+                    if (isEditDraftMode) {
+                        scanSubmitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+                        scanSubmitBtn.dataset.defaultHtml = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+                        scanSubmitBtn.onclick = () => saveDraftChangesFromScan(draftId);
+                    } else {
+                        scanSubmitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Report';
+                        scanSubmitBtn.dataset.defaultHtml = '<i class="fa-solid fa-paper-plane"></i> Submit Report';
+                        scanSubmitBtn.onclick = () => submitReportPayload();
+                    }
+                }
+            };
+
+            setupModalAndButton();
+            setTimeout(setupModalAndButton, 150);
+
             renderSupportingPreviews();
             document.getElementById('step-upload-view').classList.remove('active-view');
             document.getElementById('step-results-view').classList.add('active-view');
