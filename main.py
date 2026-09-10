@@ -42,6 +42,12 @@ from app.report_storage import (
 from app.dashboard_data import build_dashboard_chart_payload
 from app.model_paths import resolve_model_path
 from app.map_utils import filter_map_reports, limit_recent_records
+from app.session_utils import (
+    RoleBasedSessionInterface,
+    INACTIVITY_TIMEOUT_SECONDS,
+    REMEMBER_COOKIE_NAME,
+    get_remember_me_lifetime_seconds
+)
 
 # Configure logging
 logging.basicConfig(
@@ -74,6 +80,7 @@ def _normalize_availability_slots(value):
 load_dotenv()
 
 app = Flask(__name__)
+app.session_interface = RoleBasedSessionInterface()
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 def _get_real_ip():
@@ -126,20 +133,90 @@ def normalize_role(value) -> str:
     return raw
 
 
+def get_role_dashboard_url(role: str) -> str:
+    """Return direct dashboard endpoint URL for a given normalized role."""
+    normalized = normalize_role(role)
+    if normalized == 'farmer':
+        return url_for('farmer_dashboard')
+    elif normalized == 'agri_expert':
+        return url_for('agri_dashboard')
+    elif normalized == 'lgu':
+        return url_for('lgu_dashboard')
+    elif normalized == 'admin':
+        return url_for('admin_dashboard')
+    return url_for('login')
+
+
+
 @app.before_request
 def check_session_timeout():
-    if 'user_id' in session and request.endpoint:
-        if not request.endpoint.startswith('static') and not request.endpoint.startswith('api_') and request.endpoint not in ['login', 'signup', 'forgot_password', 'verify_forgot_otp', 'reset_password', 'verify_2fa', 'resend_2fa', 'logout']:
-            now = time.time()
-            last_active = session.get('last_active', now)
-            if now - last_active > 900:  # 15 minutes = 900 seconds
-                user_email = session.get('user_email', '')
-                user_role = session.get('user_role', '')
-                session.clear()
-                security_service.log_audit(user_email, user_role, "SESSION_TIMEOUT", "Session expired due to 15 minutes of inactivity", _get_real_ip())
-                flash("Your session has expired due to 15 minutes of inactivity. Please log in again.", "warning")
-                return redirect(url_for('login'))
-            session['last_active'] = now
+    if not request.endpoint:
+        return
+    if request.endpoint.startswith('static') or request.endpoint.startswith('api_') or request.endpoint in ['login', 'signup', 'forgot_password', 'verify_forgot_otp', 'reset_password', 'verify_2fa', 'resend_2fa', 'logout', 'offline', 'manifest', 'service_worker']:
+        return
+
+    now = time.time()
+    user_id = session.get('user_id')
+    
+    # 1) If user is not in session, check if a persistent Remember Me cookie exists to restore session
+    if not user_id:
+        remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
+        if remember_token:
+            user_data = security_service.validate_remember_token(remember_token)
+            if user_data:
+                session['user_id'] = user_data['user_id']
+                session['user_email'] = user_data['email']
+                session['user_role'] = normalize_role(user_data['role'])
+                session['user_name'] = user_data['user_name']
+                session['remember_me'] = True
+                session['last_active'] = now
+                session['session_expires_at'] = user_data['expires_at']
+                session.permanent = True
+                session.modified = True
+                security_service.log_audit(user_data['email'], user_data['role'], "SESSION_RESTORED", "Session automatically restored via Remember Me token", _get_real_ip())
+                return None
+
+    # 2) If user is in session:
+    if 'user_id' in session:
+        user_email = session.get('user_email', '')
+        user_role = session.get('user_role', '')
+        remember_me = session.get('remember_me', False)
+        
+        # Check hard role expiration date if set
+        session_expires_at = session.get('session_expires_at')
+        if session_expires_at and now > session_expires_at:
+            remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
+            if remember_token:
+                security_service.revoke_remember_token(remember_token)
+            session.clear()
+            security_service.log_audit(user_email, user_role, "SESSION_EXPIRED", "Remembered session expired after maximum duration", _get_real_ip())
+            flash("Your session has expired. Please log in again.", "warning")
+            resp = redirect(url_for('login'))
+            resp.delete_cookie(REMEMBER_COOKIE_NAME)
+            return resp
+            
+        # Check inactivity timeout (15 minutes)
+        last_active = session.get('last_active', now)
+        if now - last_active > INACTIVITY_TIMEOUT_SECONDS:
+            remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
+            if remember_me and remember_token:
+                token_data = security_service.validate_remember_token(remember_token)
+                if token_data:
+                    # Token still valid in DB, refresh activity window seamlessly
+                    session['last_active'] = now
+                    session['session_expires_at'] = token_data['expires_at']
+                    return None
+            
+            # Non-remembered or expired token: expire session
+            session.clear()
+            security_service.log_audit(user_email, user_role, "SESSION_TIMEOUT", "Session expired due to 15 minutes of inactivity", _get_real_ip())
+            flash("Your session has expired due to 15 minutes of inactivity. Please log in again.", "warning")
+            resp = redirect(url_for('login'))
+            if not remember_me:
+                resp.delete_cookie(REMEMBER_COOKIE_NAME)
+            return resp
+            
+        session['last_active'] = now
 
 
 def _resolve_app_user_id(session_data=None, *, lookup_user_id=None, lookup_email=None):
@@ -774,6 +851,7 @@ def login():
             security_service.reset_login_failures(email)
             user_role = normalize_role(user_data.get('role'))
             user_name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
+            remember_me = request.form.get('remember_me') in ['true', 'on', '1', 'yes', True]
 
             # 7-day 2FA check for lgu, admin, agri_expert
             if user_role in ['lgu', 'admin', 'agri_expert']:
@@ -783,7 +861,8 @@ def login():
                         "user_id": user_data['id'],
                         "email": email,
                         "role": user_role,
-                        "name": user_name
+                        "name": user_name,
+                        "remember_me": remember_me
                     }
                     otp_result = security_service.generate_and_send_otp(email, purpose="2FA Verification")
                     if otp_result.get("sent"):
@@ -806,13 +885,34 @@ def login():
             session['user_name'] = user_name
             session['last_active'] = time.time()
             
+            resp = redirect(get_role_dashboard_url(session['user_role']))
+            
+            if remember_me:
+                session['remember_me'] = True
+                session.permanent = True
+                raw_token, expires_at = security_service.create_remember_token(user_data['id'], email, user_role, user_name)
+                session['session_expires_at'] = expires_at
+                max_age = max(1, int(expires_at - time.time()))
+                resp.set_cookie(
+                    REMEMBER_COOKIE_NAME,
+                    raw_token,
+                    max_age=max_age,
+                    httponly=True,
+                    samesite='Lax',
+                    secure=request.is_secure
+                )
+            else:
+                session['remember_me'] = False
+                session.permanent = False
+                session['session_expires_at'] = None
+                resp.delete_cookie(REMEMBER_COOKIE_NAME)
+                
+            session.modified = True
+            
             security_service.log_audit(email, user_role, "LOGIN", "User successfully logged in", _get_real_ip())
             logger.info(f"User {email} successfully logged in with role: {session['user_role']}")
             
-            if session['user_role'] == 'admin':
-                return redirect(url_for('admin_dashboard'))
-            else:
-                return redirect(url_for('dashboard'))
+            return resp
 
         except Exception as db_err:
             logger.error(f"Authentication system pipeline breakdown: {str(db_err)}")
@@ -3436,6 +3536,7 @@ def reset_password():
             supabase.table("users").update({"password_hash": new_hash}).eq("email", email).execute()
             
             security_service.reset_forgot_password_attempts(email)
+            security_service.revoke_all_user_remember_tokens(email)
             security_service.log_audit(email, "User", "PASSWORD_RESET", "Password successfully reset via OTP", _get_real_ip())
             
             session.pop('reset_email_pending', None)
@@ -3468,6 +3569,7 @@ def verify_2fa():
         success, msg = security_service.verify_otp(email, code, purpose="2FA Verification")
         if success:
             security_service.record_2fa_verification(email)
+            remember_me = pending.get('remember_me', False)
             
             session.pop('pending_2fa', None)
             session['user_id'] = user_id
@@ -3476,14 +3578,35 @@ def verify_2fa():
             session['user_name'] = name
             session['last_active'] = time.time()
             
+            resp = redirect(get_role_dashboard_url(role))
+            
+            if remember_me:
+                session['remember_me'] = True
+                session.permanent = True
+                raw_token, expires_at = security_service.create_remember_token(user_id, email, role, name)
+                session['session_expires_at'] = expires_at
+                max_age = max(1, int(expires_at - time.time()))
+                resp.set_cookie(
+                    REMEMBER_COOKIE_NAME,
+                    raw_token,
+                    max_age=max_age,
+                    httponly=True,
+                    samesite='Lax',
+                    secure=request.is_secure
+                )
+            else:
+                session['remember_me'] = False
+                session.permanent = False
+                session['session_expires_at'] = None
+                resp.delete_cookie(REMEMBER_COOKIE_NAME)
+
+            session.modified = True
+            
             security_service.log_audit(email, role, "2FA_VERIFIED", "User verified 2FA code successfully", _get_real_ip())
             security_service.log_audit(email, role, "LOGIN", "User successfully logged in", _get_real_ip())
             
             flash("Two-factor authentication verified!", "success")
-            if role == 'admin':
-                return redirect(url_for('admin_dashboard'))
-            else:
-                return redirect(url_for('dashboard'))
+            return resp
         else:
             flash(msg, "error")
             
@@ -3562,8 +3685,13 @@ def admin_audit_log():
 
 @app.route('/logout')
 def logout():
+    remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
+    if remember_token:
+        security_service.revoke_remember_token(remember_token)
     session.clear()
-    return redirect(url_for('login'))
+    resp = redirect(url_for('login'))
+    resp.delete_cookie(REMEMBER_COOKIE_NAME)
+    return resp
 
 @app.errorhandler(404)
 def page_not_found(e):

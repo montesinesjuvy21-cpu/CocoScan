@@ -5,6 +5,8 @@ import os
 import traceback
 import logging
 import requests
+import secrets
+import hashlib
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -74,6 +76,19 @@ def init_security_db():
                 action TEXT,
                 details TEXT,
                 ip_address TEXT
+            )
+        """)
+
+        # Table for Remember Me persistent tokens
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS remember_tokens (
+                token_hash TEXT PRIMARY KEY,
+                user_id TEXT,
+                email TEXT,
+                role TEXT,
+                user_name TEXT,
+                created_at REAL,
+                expires_at REAL
             )
         """)
         
@@ -617,3 +632,99 @@ def get_audit_logs(page: int = 1, per_page: int = 10, search: str = "", action_f
         "per_page": per_page,
         "total_pages": total_pages
     }
+
+
+# --- REMEMBER ME TOKEN MANAGEMENT METHODS ---
+
+def create_remember_token(user_id: str, email: str, role: str, user_name: str = "") -> tuple[str, float]:
+    """
+    Creates a secure Remember Me persistent token with role-based expiration:
+    - Farmers: 90 days
+    - LGU & Agriculturists: 14 days
+    - Admins: 7 days
+    Returns: (raw_token: str, expires_at: float)
+    """
+    from app.session_utils import get_remember_me_lifetime_seconds
+    
+    email = (email or "").strip().lower()
+    lifetime_seconds = get_remember_me_lifetime_seconds(role)
+    now = time.time()
+    expires_at = now + lifetime_seconds
+    
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+    
+    with _get_db() as conn:
+        conn.execute("""
+            INSERT OR REPLACE INTO remember_tokens (token_hash, user_id, email, role, user_name, created_at, expires_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (token_hash, str(user_id), email, str(role), str(user_name or ""), now, expires_at))
+        conn.commit()
+        
+    return raw_token, expires_at
+
+
+def validate_remember_token(raw_token: str) -> dict | None:
+    """
+    Validates a Remember Me token from cookie.
+    If valid and not expired, returns user payload dictionary.
+    If invalid or expired, deletes from DB and returns None.
+    """
+    if not raw_token or not isinstance(raw_token, str):
+        return None
+        
+    token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+    now = time.time()
+    
+    with _get_db() as conn:
+        row = conn.execute("SELECT * FROM remember_tokens WHERE token_hash = ?", (token_hash,)).fetchone()
+        if not row:
+            return None
+            
+        if row["expires_at"] <= now:
+            # Token has expired
+            conn.execute("DELETE FROM remember_tokens WHERE token_hash = ?", (token_hash,))
+            conn.commit()
+            return None
+            
+        return {
+            "user_id": row["user_id"],
+            "email": row["email"],
+            "role": row["role"],
+            "user_name": row["user_name"],
+            "created_at": row["created_at"],
+            "expires_at": row["expires_at"]
+        }
+
+
+def revoke_remember_token(raw_token: str) -> bool:
+    """Revokes a specific Remember Me token (e.g. on logout)."""
+    if not raw_token or not isinstance(raw_token, str):
+        return False
+        
+    token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+    with _get_db() as conn:
+        cursor = conn.execute("DELETE FROM remember_tokens WHERE token_hash = ?", (token_hash,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def revoke_all_user_remember_tokens(email: str) -> int:
+    """Revokes all Remember Me tokens for a specific user email."""
+    email = (email or "").strip().lower()
+    if not email:
+        return 0
+    with _get_db() as conn:
+        cursor = conn.execute("DELETE FROM remember_tokens WHERE email = ?", (email,))
+        conn.commit()
+        return cursor.rowcount
+
+
+def cleanup_expired_remember_tokens() -> int:
+    """Deletes all expired Remember Me tokens from the database."""
+    now = time.time()
+    with _get_db() as conn:
+        cursor = conn.execute("DELETE FROM remember_tokens WHERE expires_at <= ?", (now,))
+        conn.commit()
+        return cursor.rowcount
+

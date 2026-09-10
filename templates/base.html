@@ -245,6 +245,48 @@
             text-decoration: underline;
         }
 
+        .login-options-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: -0.25rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.85rem;
+        }
+
+        .remember-me-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            user-select: none;
+            margin-bottom: 0;
+            transition: color 0.15s ease;
+        }
+
+        .remember-me-label:hover {
+            color: var(--primary-green);
+        }
+
+        .remember-me-label input[type="checkbox"] {
+            width: 17px;
+            height: 17px;
+            accent-color: var(--primary-green);
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 0;
+            vertical-align: middle;
+        }
+
+        .login-options-row .forgot-password {
+            margin-top: 0;
+            margin-bottom: 0;
+            font-size: 0.85rem;
+        }
+
         .forgot-password {
             display: block;
             text-align: right;

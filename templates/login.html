@@ -57,7 +57,13 @@
             </div>
         </div>
 
-        <a href="{{ url_for('forgot_password') }}" class="forgot-password">Forgot Password?</a>
+        <div class="login-options-row">
+            <label class="remember-me-label" for="remember_me">
+                <input type="checkbox" id="remember_me" name="remember_me" value="true">
+                <span>Remember Me</span>
+            </label>
+            <a href="{{ url_for('forgot_password') }}" class="forgot-password">Forgot Password?</a>
+        </div>
 
         <button type="submit" class="btn-primary" id="login-submit-btn">Login</button>
     </form>
