@@ -200,6 +200,15 @@
     <span id="pwa-toast-msg">Notification</span>
 </div>
 
+<script id="pwa-user-session-meta" type="application/json">
+{
+    "role": {{ (session.get('user_role') or session.get('role') or (current_user.role if current_user is defined and current_user.is_authenticated else '')) | tojson }},
+    "name": {{ (session.get('user_name') or session.get('name') or (current_user.name if current_user is defined and current_user.is_authenticated else '')) | tojson }},
+    "email": {{ (session.get('user_email') or session.get('email') or (current_user.email if current_user is defined and current_user.is_authenticated else '')) | tojson }},
+    "id": {{ (session.get('user_id') or session.get('id') or (current_user.id if current_user is defined and current_user.is_authenticated else '')) | tojson }}
+}
+</script>
+
 <script>
 (function() {
     // 1. Service Worker Registration
@@ -220,22 +229,19 @@
     let currentUserName = "";
     let currentUserEmail = "";
     let currentUserId = "";
-    {% if current_user is defined and current_user.is_authenticated %}
-    currentUserRole = "{{ current_user.role }}";
-    currentUserName = "{{ current_user.name }}";
-    currentUserEmail = "{{ current_user.email }}";
-    currentUserId = "{{ current_user.id }}";
-    {% elif session is defined and session.get('user_role') %}
-    currentUserRole = "{{ session.get('user_role') }}";
-    currentUserName = "{{ session.get('user_name') }}";
-    currentUserEmail = "{{ session.get('user_email') }}";
-    currentUserId = "{{ session.get('user_id') }}";
-    {% elif session is defined and session.get('role') %}
-    currentUserRole = "{{ session.get('role') }}";
-    currentUserName = "{{ session.get('name') }}";
-    currentUserEmail = "{{ session.get('email') }}";
-    currentUserId = "{{ session.get('id') }}";
-    {% endif %}
+
+    try {
+        const sessionMetaEl = document.getElementById('pwa-user-session-meta');
+        if (sessionMetaEl && sessionMetaEl.textContent) {
+            const parsedSession = JSON.parse(sessionMetaEl.textContent);
+            currentUserRole = parsedSession.role || "";
+            currentUserName = parsedSession.name || "";
+            currentUserEmail = parsedSession.email || "";
+            currentUserId = parsedSession.id || "";
+        }
+    } catch (e) {
+        console.debug('[PWA] Error reading session meta:', e);
+    }
     if (currentUserRole && currentUserRole !== 'offline_farmer') {
         localStorage.setItem('cocoscan_user_role', currentUserRole);
     }
