@@ -16,9 +16,6 @@
         </div>
         <h2>Desktop Access Required</h2>
         <p>This area is restricted on mobile devices. Please use a desktop or larger screen to access reports overview, analytics, and other management tools.</p>
-        <button type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/login'; }" class="btn-restriction-back">
-            <i class="fa-solid fa-arrow-left"></i> Go Back
-        </button>
     </div>
 </div>
 {% endblock %}
@@ -656,6 +653,24 @@
 
         // Initial render
         renderReportsTable();
+        openReportFromQueryParams();
+
+        function openReportFromQueryParams() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const reportIdToOpen = params.get('report_id');
+                if (!reportIdToOpen || !Array.isArray(allReportsData) || allReportsData.length === 0) {
+                    return;
+                }
+                const targetRecord = allReportsData.find(item => String(item.id) === String(reportIdToOpen));
+                if (targetRecord && typeof window.openReportModal === "function") {
+                    const modalReport = typeof window.normalizeReportData === "function" ? window.normalizeReportData(targetRecord) : targetRecord;
+                    window.openReportModal(modalReport, userRole);
+                }
+            } catch (err) {
+                console.error("Error opening report from query params:", err);
+            }
+        }
     });
 
     function spinAndRefresh(btn) {

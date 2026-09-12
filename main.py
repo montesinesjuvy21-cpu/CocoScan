@@ -224,6 +224,19 @@ def check_session_timeout():
             
         session['last_active'] = now
 
+@app.after_request
+def add_security_cache_headers(response):
+    """
+    Ensure sensitive authenticated pages and API routes are never cached by browser bfcache
+    to guarantee that back navigation properly validates authentication state.
+    """
+    sensitive_prefixes = ('/admin', '/lgu', '/agriculturist', '/farmer', '/reports', '/api', '/dashboard')
+    if request.path.startswith(sensitive_prefixes):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
 
 def _resolve_app_user_id(session_data=None, *, lookup_user_id=None, lookup_email=None):
     """Return the public users.id that should be persisted into foreign-keyed columns."""
@@ -1083,6 +1096,48 @@ def api_farmer_remember_me():
         security_service.log_audit(user_email, 'farmer', "REMEMBER_ME_OPT_OUT", "Farmer declined persistent session", _get_real_ip())
 
     return resp
+
+@app.route('/api/auth/session-check', methods=['GET'])
+def api_session_check():
+    """
+    Lightweight endpoint to re-validate session state during in-app navigation
+    and bfcache (back-forward cache) restorations.
+    """
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    user_email = session.get('user_email')
+    
+    if not user_id or user_id == 'offline_farmer' or not user_role:
+        # Check if a valid remember me token can restore farmer session
+        remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
+        if remember_token:
+            user_data = security_service.validate_remember_token(remember_token)
+            if user_data and is_farmer_role(user_data.get('role')):
+                session['user_id'] = user_data['user_id']
+                session['user_email'] = user_data['email']
+                session['user_role'] = 'farmer'
+                session['user_name'] = user_data['user_name']
+                session['remember_me'] = True
+                session['last_active'] = time.time()
+                session['session_expires_at'] = user_data['expires_at']
+                session.permanent = True
+                session.modified = True
+                return jsonify({
+                    'authenticated': True,
+                    'role': 'farmer',
+                    'user_id': user_data['user_id'],
+                    'dashboard_url': url_for('farmer_dashboard')
+                }), 200
+
+        return jsonify({'authenticated': False, 'role': None, 'redirect_url': url_for('login')}), 401
+        
+    return jsonify({
+        'authenticated': True,
+        'role': user_role,
+        'user_id': user_id,
+        'email': user_email,
+        'dashboard_url': get_role_dashboard_url(user_role)
+    }), 200
             
     return render_template('login.html')
 
@@ -2555,6 +2610,10 @@ def agri_schedules():
             except Exception:
                 formatted_time = f"{s.get('start_time')} - {s.get('end_time')}"
                 
+            raw_status = rep_info.get('status') or s.get('status') or 'visit_scheduled'
+            normalized_status = normalize_report_status(raw_status, default="Visit Scheduled")
+            badge_style = _get_status_badge_style(raw_status)
+                
             enriched_schedules.append({
                 "id": s.get('id'),
                 "report_id": rep_id,
@@ -2566,7 +2625,9 @@ def agri_schedules():
                 "barangay": rep_info.get('barangay') or '',
                 "municipality": rep_info.get('municipality') or '',
                 "location": _format_report_location(rep_info) if rep_info else "Unknown Location",
-                "status": rep_info.get('status', 'pending'),
+                "status": raw_status,
+                "normalized_status": normalized_status,
+                "badge_style": badge_style,
                 "farmer_name": farmer_name
             })
             
@@ -3253,13 +3314,18 @@ def farmer_submit_report():
         now_value = datetime.now(UTC)
         now_iso = now_value.isoformat()
 
+        manual_barangay = request.form.get('barangay', '').strip()
+        manual_municipality = request.form.get('municipality', '').strip()
+        manual_province = request.form.get('province', '').strip()
+        location_notes = request.form.get('location_notes', '').strip()
+
         reverse_geo = {}
         if latitude and longitude:
             reverse_geo = reverse_geocode_latlng(latitude, longitude)
 
-        barangay = reverse_geo.get('barangay', '')
-        municipality = reverse_geo.get('municipality', '')
-        province = reverse_geo.get('province', '')
+        barangay = manual_barangay or reverse_geo.get('barangay', '')
+        municipality = manual_municipality or reverse_geo.get('municipality', '')
+        province = manual_province or reverse_geo.get('province', '')
 
         farmer_name = 'Farmer'
         try:

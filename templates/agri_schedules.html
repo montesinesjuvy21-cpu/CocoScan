@@ -6,568 +6,1077 @@
 
 {% block extra_css %}
 <style>
-/* ==========================================================================
-           1. DESIGN TOKENS & BASE COHESION
-           ========================================================================== */
-        :root {
-            --bg-base: #f4f7f5;
-            --bg-card: #ffffff;
-            --brand-dark: #0b251a;
-            --brand-accent: #4ac68f;
-            --primary-green: #528265;
-            --badge-green-bg: #8ba888;
-            --text-dark: #1e293b;
-            --text-muted: #64748b;
-            --border-light: rgba(0, 0, 0, 0.05);
-        }
+    /* ==========================================================================
+       VISIT SCHEDULES STYLES (MATCHING OVERVIEW/REPORTS TABLE SYSTEM)
+       ========================================================================== */
+    .btn-icon-refresh {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background-color: #ffffff;
+        border: 1px solid var(--border-light, #e2e8f0);
+        color: var(--primary-green, #164630);
+        font-size: 1.05rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
+    .btn-icon-refresh:hover {
+        background-color: var(--primary-green, #164630);
+        color: #ffffff;
+        transform: rotate(45deg);
+        box-shadow: 0 6px 14px rgba(82, 130, 101, 0.15);
+    }
 
-        html, body, .mobile-viewport-container {
-            max-width: 100%;
-            overflow-x: hidden;
-        }
+    .btn-icon-refresh:active {
+        transform: rotate(90deg) scale(0.95);
+    }
 
-        body {
-            background-color: var(--brand-dark);
-            color: var(--text-dark);
-            min-height: 100vh;
-        }
+    /* --- CONTROLS & NAVIGATION BAR --- */
+    .controls-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        background: var(--bg-card, #ffffff);
+        padding: 12px 18px;
+        border-radius: 16px;
+        border: 1px solid var(--border-light, #e2e8f0);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        margin-bottom: 20px;
+    }
 
-        /* --- GLOBAL LAYOUT CONTAINER --- */
-        .mobile-viewport-container {
-            width: 100%;
-            min-height: 100vh;
-            background-color: var(--bg-base);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
+    .month-nav-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
 
-        /* --- STICKY APP HEADER --- */
-        .mobile-header {
-            width: 100%;
-            height: 64px;
-            background-color: var(--brand-dark);
-            color: #ffffff;
-            position: fixed;
-            top: 0; left: 0;
-            z-index: 1000;
-            padding: 0 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
+    .month-year-btn {
+        background-color: #ffffff;
+        color: var(--text-dark, #0f172a);
+        border: 1px solid var(--border-light, #e2e8f0);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
 
-        .header-content-wrapper {
-            display: flex;
-            width: 100%;
-            align-items: center;
-            justify-content: space-between;
-        }
+    .month-year-btn:hover {
+        border-color: #1a4d32;
+        color: #1a4d32;
+        background-color: #f8fafc;
+    }
 
-        .logo-group { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #ffffff; }
-        .logo-img-fallback {
-            width: 32px; height: 32px; background: var(--bg-card); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .mobile-header h2 { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.2px; }
-        .mobile-header p { font-size: 0.65rem; color: rgba(255, 255, 255, 0.5); font-weight: 500; }
-        .hamburger-btn { background: none; border: none; color: #ffffff; font-size: 1.35rem; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: flex-end; }
+    .month-year-btn.active {
+        border-color: #1a4d32;
+        color: #1a4d32;
+        background-color: #ecfdf5;
+    }
 
-        /* --- SIDEBAR MENU SYSTEM --- */
-        .sidebar-wrapper {
-            width: min(290px, 100%); max-width: 100%; background-color: var(--brand-dark); color: #ffffff;
-            display: flex; flex-direction: column; justify-content: space-between;
-            position: fixed; top: 64px; bottom: 0; right: 0; z-index: 999;
-            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .sidebar-wrapper.show-mobile { transform: translateX(0); }
-        .menu-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.4); padding: 24px 20px 12px 20px; font-weight: 700; }
-        .sidebar-menu-list { list-style: none; padding: 0 10px; }
-        .menu-item-link { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 0.95rem; font-weight: 500; border-radius: 10px; margin-bottom: 6px; transition: all 0.2s ease; }
-        .menu-item-link:hover, .menu-item-link.active { color: #ffffff; background-color: rgba(255, 255, 255, 0.06); }
-        .menu-item-link.active { font-weight: 600; }
-        .sidebar-user-footer { padding: 20px; background-color: rgba(0, 0, 0, 0.2); display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-        .user-meta-box { display: flex; align-items: center; gap: 12px; }
-        .user-avatar-circle { width: 42px; height: 42px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; }
-        .user-identity-text h4 { font-size: 0.9rem; color: #ffffff; }
-        .user-identity-text p { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
-        .btn-logout-trigger { color: rgba(255, 255, 255, 0.4); font-size: 1.2rem; transition: color 0.2s ease; padding: 4px; text-decoration: none; display: flex; align-items: center; }
-        .btn-logout-trigger:hover { color: #ef4444 !important; }
-        .sidebar-backdrop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 37, 26, 0.4); backdrop-filter: blur(4px); z-index: 950; }
-        .sidebar-backdrop.active { display: block; }
+    .dropdown-arrow {
+        font-size: 0.72rem;
+        color: #64748b;
+        transition: transform 0.2s ease;
+    }
 
-        /* --- MAIN VIEWPORTS LAYOUT --- */
-        .main-content-layout {
-            flex: 1; 
-            width: 100%; 
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 88px 24px 24px 24px;
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px;
-        }
+    .btn-nav-month {
+        background: #ffffff;
+        border: 1px solid var(--border-light, #e2e8f0);
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--text-dark, #0f172a);
+        transition: all 0.15s ease;
+    }
 
-        .section-title-wrap { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-        .section-title-wrap h1 { font-size: 1.45rem; font-weight: 800; color: var(--brand-dark); }
-        .section-title-wrap p { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+    .btn-nav-month:hover:not(:disabled) {
+        background: #eef5f2;
+        border-color: #1a4d32;
+        color: #1a4d32;
+    }
 
-        .btn-icon-refresh {
-            width: 42px; height: 42px; border-radius: 50%; background-color: #ffffff;
-            border: 1px solid rgba(0,0,0,0.08); color: var(--primary-green); font-size: 1.05rem;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .btn-icon-refresh:hover { background-color: var(--primary-green); color: #ffffff; transform: rotate(45deg); box-shadow: 0 6px 14px rgba(82, 130, 101, 0.15); }
-        .btn-icon-refresh:active { transform: rotate(90deg) scale(0.95); }
+    .btn-nav-month:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
 
-        /* --- CONTROLS BAR --- */
-        .controls-bar {
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-            background: var(--bg-card); padding: 14px 20px; border-radius: 16px; border: 1px solid var(--border-light); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
-        }
-        .view-toggle-group { display: flex; background: #f1f5f9; padding: 4px; border-radius: 10px; gap: 4px; }
-        .view-toggle-btn {
-            border: none; background: transparent; padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
-            color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;
-        }
-        .view-toggle-btn.active { background: white; color: var(--brand-dark); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .view-toggle-btn:hover:not(.active) { color: var(--brand-dark); }
+    .btn-today {
+        background: #ffffff;
+        border: 1px solid var(--border-light, #e2e8f0);
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--text-dark, #0f172a);
+        transition: all 0.15s ease;
+    }
 
-        .month-nav-group { display: flex; align-items: center; gap: 12px; }
-        .month-title { font-size: 1.15rem; font-weight: 700; color: var(--brand-dark); min-width: 170px; text-align: center; }
-        .btn-nav-month {
-            background: white; border: 1px solid rgba(0,0,0,0.1); width: 36px; height: 36px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-dark); transition: all 0.15s ease;
-        }
-        .btn-nav-month:hover { background: #f8fafc; border-color: var(--primary-green); color: var(--primary-green); }
-        .btn-today {
-            background: white; border: 1px solid rgba(0,0,0,0.1); padding: 7px 14px; border-radius: 8px;
-            font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--text-dark); transition: all 0.15s ease;
-        }
-        .btn-today:hover { background: #f8fafc; border-color: var(--primary-green); color: var(--primary-green); }
+    .btn-today:hover {
+        background: #eef5f2;
+        border-color: #1a4d32;
+        color: #1a4d32;
+    }
 
-        /* --- CALENDAR GRID --- */
-        .calendar-container {
-            background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        }
-        .calendar-header-row {
-            display: grid; grid-template-columns: repeat(7, 1fr); background: #f8fafc; border-bottom: 1px solid rgba(0,0,0,0.06);
-        }
-        .calendar-day-header {
-            padding: 14px 8px; text-align: center; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
-        }
-        .calendar-grid {
-            display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(115px, auto); background: rgba(0,0,0,0.06); gap: 1px;
-        }
-        .calendar-day-cell {
-            background: white; padding: 10px; min-height: 115px; display: flex; flex-direction: column; gap: 5px; position: relative; transition: background 0.15s ease;
-        }
-        .calendar-day-cell.other-month { background: #fafbfc; opacity: 0.55; }
-        .calendar-day-cell.today { background: #f0fdf4; }
-        .calendar-day-cell:hover { background: #f8fafc; }
-        .day-number { font-size: 0.88rem; font-weight: 600; color: var(--text-dark); align-self: flex-end; margin-bottom: 2px; }
-        .calendar-day-cell.today .day-number {
-            background: var(--primary-green); color: white; width: 24px; height: 24px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700;
-        }
+    /* --- CUSTOM DROPDOWN PANELS (MATCHING STATUS/BARANGAY STYLE) --- */
+    .filter-dropdown-panel {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        border-radius: 10px;
+        padding: 6px;
+        overflow-y: auto;
+        pointer-events: auto;
+    }
 
-        .schedule-chip {
-            background: #edf6f1;  padding: 6px 8px; border-radius: 6px; border-left: 3px solid #164630;
-            font-size: 0.74rem; color: var(--brand-dark); cursor: pointer; transition: all 0.15s ease; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .schedule-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(11, 37, 26, 0.12); background: #dcece3; }
-        .schedule-chip strong { font-weight: 700; color: var(--primary-green); margin-right: 4px;  }
+    .filter-dropdown-panel .dropdown-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 8px 14px;
+        text-align: left;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 0.88rem;
+        color: #334155;
+        border-radius: 6px;
+        transition: background-color 0.15s, color 0.15s;
+        font-weight: 500;
+        box-sizing: border-box;
+    }
 
-        /* --- LIST VIEW --- */
-        .list-container { display: none; background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
-        .schedules-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.92rem; }
-        .schedules-table th { background: #f8fafc; padding: 16px 18px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
-        .schedules-table td { padding: 16px 18px; border-bottom: 1px solid rgba(0,0,0,0.05); vertical-align: middle; }
-        .schedules-table tr:hover { background-color: #f8fafc; cursor: pointer; }
-        .schedules-table tr:last-child td { border-bottom: none; }
-        .badge-status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: capitalize; }
-        .badge-confirmed { background: #dcfce7; color: #166534; }
-        .badge-resolved { background: #e0e7ff; color: #3730a3; }
-        .badge-pending { background: #fef9c3; color: #854d0e; }
+    .filter-dropdown-panel .dropdown-item:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
 
-        /* --- DETAILS MODAL --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 37, 26, 0.5);
-            backdrop-filter: blur(4px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 1rem;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-box {
-            background: white; border-radius: 20px; width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            overflow: hidden; animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes modalPop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        .modal-header { padding: 1.25rem 1.5rem; background: #f8fafc; border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h3 { font-size: 1.15rem; font-weight: 800; color: var(--brand-dark); }
-        .btn-close-modal { background: none; border: none; font-size: 1.25rem; color: var(--text-muted); cursor: pointer; padding: 4px; transition: color 0.15s ease; }
-        .btn-close-modal:hover { color: var(--brand-dark); }
-        .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; font-size: 0.95rem; }
-        .detail-row { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(0,0,0,0.08); padding-bottom: 0.75rem; }
-        .detail-row:last-child { border-bottom: none; padding-bottom: 0; }
-        .detail-label { color: var(--text-muted); font-weight: 500; }
-        .detail-value { font-weight: 600; color: var(--brand-dark); text-align: right; }
-        .modal-footer { padding: 1.25rem 1.5rem; background: #f8fafc; border-top: 1px solid rgba(0,0,0,0.06); display: flex; justify-content: flex-end; gap: 12px; }
-        .btn-primary { background-color: #164630; color: #ffffff; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.92rem; transition: all 0.25s ease; box-shadow: 0 4px 12px rgba(22, 70, 48, 0.18); }
-        .btn-primary:hover { background-color: #1e5c3f; color: #ffffff; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(30, 92, 63, 0.25); }
-        .btn-secondary { background: white; color: var(--text-dark); border: 1px solid rgba(0,0,0,0.12); padding: 14px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.92rem; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; }
-        .btn-secondary:hover { background: #f8fafc; }
+    .filter-dropdown-panel .dropdown-item.selected {
+        background-color: #ecfdf5;
+        color: #065f46;
+        font-weight: 700;
+    }
 
-        /* --- DESKTOP ADAPTATION --- */
-        @media (min-width: 1024px) {
-            .main-content-layout {
-                max-width: 1400px;
-                padding: 108px 32px 32px 32px;
-                gap: 24px;
-            }
+    /* --- VIEW TOGGLE --- */
+    .view-toggle-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
 
-            .mobile-header {
-                height: 72px;
-                padding: 0 max(32px, calc((100% - 1400px) / 2 + 32px));
-            }
+    .chip-filter-btn {
+        background-color: var(--bg-card, #ffffff);
+        color: var(--text-muted, #64748b);
+        border: 1px solid var(--border-light, #e2e8f0);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
 
-            .sidebar-wrapper {
-                top: 72px;
-            }
-        }
+    .chip-filter-btn:hover {
+        border-color: #1a4d32;
+        color: #1a4d32;
+    }
 
-        @media (max-width: 768px) {
-            .calendar-grid { grid-auto-rows: minmax(80px, auto); }
-            .calendar-day-cell { padding: 6px; min-height: 80px; }
-            .schedule-chip { font-size: 0.68rem; padding: 4px 6px; }
-            .month-title { min-width: 140px; font-size: 1rem; }
-            .controls-bar { padding: 12px 14px; }
-        }
+    .chip-filter-btn.active-chip {
+        background-color: #1a4d32;
+        color: #ffffff;
+        border-color: #1a4d32;
+        box-shadow: 0 2px 6px rgba(26, 77, 50, 0.2);
+    }
+
+    /* --- TABLE CONTAINER & STYLES (MATCHING OVERVIEW/REPORTS) --- */
+    .schedule-table-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid var(--border-light, #e2e8f0);
+        overflow-x: auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    }
+
+    .schedules-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 600px;
+    }
+
+    .schedules-data-table thead tr {
+        border-bottom: 2px solid var(--bg-base, #f1f5f9);
+        text-align: left;
+    }
+
+    .schedules-data-table th {
+        padding: 12px;
+        color: var(--text-muted, #64748b);
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: transparent;
+    }
+
+    .schedules-data-table tbody tr {
+        border-bottom: 1px solid var(--bg-base, #f1f5f9);
+        transition: background-color 0.2s;
+    }
+
+    .schedules-data-table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .schedules-data-table td {
+        padding: 16px 12px;
+        font-size: 0.9rem;
+        vertical-align: middle;
+        color: var(--text-dark, #0f172a);
+    }
+
+    .report-status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .view-schedule-btn {
+        cursor: pointer;
+        border: none;
+        display: inline-block;
+        text-decoration: none;
+        padding: 6px 14px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        border-radius: 6px;
+        background-color: var(--brand-accent, #10b981);
+        color: white;
+        transition: opacity 0.2s;
+    }
+
+    .view-schedule-btn:hover {
+        opacity: 0.9;
+    }
+
+    /* --- CALENDAR GRID (MATCHING OVERVIEW/REPORTS THEME) --- */
+    .calendar-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid var(--border-light, #e2e8f0);
+        overflow-x: auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    }
+
+    .calendar-header-row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        border-bottom: 2px solid var(--bg-base, #f1f5f9);
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+    }
+
+    .calendar-day-header {
+        padding: 10px 8px;
+        text-align: center;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted, #64748b);
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-auto-rows: minmax(115px, auto);
+        gap: 8px;
+    }
+
+    .calendar-day-cell {
+        background: #ffffff;
+        border: 1px solid var(--border-light, #f1f5f9);
+        border-radius: 10px;
+        padding: 10px;
+        min-height: 115px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        position: relative;
+        transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .calendar-day-cell:hover {
+        background-color: #f8fafc;
+        border-color: #e2e8f0;
+    }
+
+    .calendar-day-cell.other-month {
+        background-color: #fafbfc;
+        opacity: 0.55;
+    }
+
+    .calendar-day-cell.today {
+        background-color: #ecfdf5;
+        border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .day-number {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text-dark, #0f172a);
+        align-self: flex-end;
+        margin-bottom: 2px;
+    }
+
+    .calendar-day-cell.today .day-number {
+        background-color: #1a4d32;
+        color: #ffffff;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .schedule-chip {
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        border-left: 3px solid #10b981;
+        background-color: #ecfdf5;
+        color: #065f46;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+    }
+
+    .schedule-chip:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .schedule-chip strong {
+        font-weight: 700;
+        margin-right: 4px;
+    }
+
+    /* --- DETAILS MODAL --- */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(11, 37, 26, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-box {
+        background: white;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 480px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+        animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalPop {
+        0% { transform: scale(0.95); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+        padding: 1.25rem 1.5rem;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #0b1315;
+    }
+
+    .btn-close-modal {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        color: var(--text-muted, #64748b);
+        cursor: pointer;
+        padding: 4px;
+        transition: color 0.15s ease;
+    }
+
+    .btn-close-modal:hover {
+        color: #0b1315;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+        padding-bottom: 0.75rem;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .detail-label {
+        color: var(--text-muted, #64748b);
+        font-weight: 500;
+    }
+
+    .detail-value {
+        font-weight: 600;
+        color: #0b1315;
+        text-align: right;
+    }
+
+    .modal-footer {
+        padding: 1.25rem 1.5rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .btn-primary {
+        background-color: #1a4d32;
+        color: #ffffff;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 0.92rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(26, 77, 50, 0.18);
+    }
+
+    .btn-primary:hover {
+        background-color: #164630;
+        color: #ffffff;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: #ffffff;
+        color: var(--text-dark, #0f172a);
+        border: 1px solid #cbd5e1;
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.92rem;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-secondary:hover {
+        background: #f8fafc;
+    }
+
+    @media (max-width: 768px) {
+        .calendar-grid { grid-auto-rows: minmax(80px, auto); gap: 4px; }
+        .calendar-day-cell { padding: 6px; min-height: 80px; }
+        .schedule-chip { font-size: 0.68rem; padding: 4px 6px; }
+        .controls-bar { padding: 12px 14px; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<header class="section-title-wrap">
-                <div>
-                    <h1>Visit Schedules</h1>
-                    <p>Calendar overview of all your confirmed field inspections and farmer visits.</p>
-                </div>
-                <div>
-                    <button class="btn-icon-refresh" onclick="spinAndRefresh(this)" title="Refresh Layout" type="button">
-                        <i class="fa-solid fa-arrows-rotate"></i>
-                    </button>
-                </div>
-            </header>
+<div class="dashboard-header-container" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 16px; margin-bottom: 24px;">
+    <div>
+        <h1 style="font-size: 1.6rem; font-weight: 800; color: #0b1315; margin: 0; line-height: 1.1;">Visit Schedules</h1>
+        <p style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Calendar and list overview of all your confirmed field inspections and farmer visits.</p>
+    </div>
+    <div>
+        <button class="btn-icon-refresh" onclick="spinAndRefresh(this)" title="Refresh Layout" type="button">
+            <i class="fa-solid fa-arrows-rotate"></i>
+        </button>
+    </div>
+</div>
 
-            <!-- CONTROLS BAR -->
-            <div class="controls-bar">
-                <div class="month-nav-group" id="monthNavGroup">
-                    <button class="btn-nav-month" onclick="changeMonth(-1)" title="Previous Month" type="button"><i class="fa-solid fa-chevron-left"></i></button>
-                    <div class="month-title" id="currentMonthDisplay">July 2026</div>
-                    <button class="btn-nav-month" onclick="changeMonth(1)" title="Next Month" type="button"><i class="fa-solid fa-chevron-right"></i></button>
-                    <button class="btn-today" onclick="goToToday()" type="button">Today</button>
-                </div>
-                <div class="view-toggle-group">
-                    <button class="view-toggle-btn active" id="btnCalendarView" onclick="switchView('calendar')" type="button">
-                        <i class="fa-solid fa-calendar-days"></i> Calendar
-                    </button>
-                    <button class="view-toggle-btn" id="btnListView" onclick="switchView('list')" type="button">
-                        <i class="fa-solid fa-list"></i> List View
-                    </button>
-                </div>
-            </div>
+<!-- CONTROLS & NAVIGATION BAR -->
+<div class="controls-bar">
+    <div class="month-nav-group" id="monthNavGroup">
+        <button class="btn-nav-month" id="btnPrevMonth" onclick="changeMonth(-1)" title="Previous Month" type="button">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        
+        <!-- Custom Month Dropdown -->
+        <button type="button" id="btnMonthDropdown" class="month-year-btn">
+            <span id="currentMonthLabel">September</span> <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+        </button>
 
-            <!-- CALENDAR VIEW -->
-            <div class="calendar-container" id="calendarViewWrap">
-                <div class="calendar-header-row">
-                    <div class="calendar-day-header">Sun</div>
-                    <div class="calendar-day-header">Mon</div>
-                    <div class="calendar-day-header">Tue</div>
-                    <div class="calendar-day-header">Wed</div>
-                    <div class="calendar-day-header">Thu</div>
-                    <div class="calendar-day-header">Fri</div>
-                    <div class="calendar-day-header">Sat</div>
-                </div>
-                <div class="calendar-grid" id="calendarGrid">
-                    <!-- Cells generated via JavaScript -->
-                </div>
-            </div>
+        <!-- Custom Year Dropdown -->
+        <button type="button" id="btnYearDropdown" class="month-year-btn">
+            <span id="currentYearLabel">2026</span> <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+        </button>
 
-            <!-- LIST VIEW -->
-            <div class="list-container" id="listViewWrap">
-                <table class="schedules-table">
-                    <thead>
-                        <tr>
-                            <th>Date & Time</th>
-                            <th>Report ID & Pest</th>
-                            <th>Farmer</th>
-                            <th>Location</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="schedulesTableBody">
-                        <!-- Rows generated via JavaScript -->
-                    </tbody>
-                </table>
+        <button class="btn-nav-month" id="btnNextMonth" onclick="changeMonth(1)" title="Next Month" type="button">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <button class="btn-today" onclick="goToToday()" type="button">Today</button>
+    </div>
+    
+    <div class="view-toggle-group">
+        <button class="chip-filter-btn active-chip" id="btnCalendarView" onclick="switchView('calendar')" type="button">
+            <i class="fa-solid fa-calendar-days"></i> Calendar
+        </button>
+        <button class="chip-filter-btn" id="btnListView" onclick="switchView('list')" type="button">
+            <i class="fa-solid fa-list"></i> List View
+        </button>
+    </div>
+</div>
+
+<!-- FLOATING DROPDOWN PANELS (STATUS/BARANGAY DROPDOWN PATTERN) -->
+<div class="filter-dropdown-panel" id="monthDropdownPanel" style="min-width: 140px; max-height: 280px;"></div>
+<div class="filter-dropdown-panel" id="yearDropdownPanel" style="min-width: 105px; max-height: 280px;"></div>
+
+<!-- CALENDAR VIEW -->
+<div class="calendar-card" id="calendarViewWrap">
+    <div class="calendar-header-row">
+        <div class="calendar-day-header">Sun</div>
+        <div class="calendar-day-header">Mon</div>
+        <div class="calendar-day-header">Tue</div>
+        <div class="calendar-day-header">Wed</div>
+        <div class="calendar-day-header">Thu</div>
+        <div class="calendar-day-header">Fri</div>
+        <div class="calendar-day-header">Sat</div>
+    </div>
+    <div class="calendar-grid" id="calendarGrid">
+        <!-- Cells generated via JavaScript -->
+    </div>
+</div>
+
+<!-- LIST VIEW (MATCHING OVERVIEW/REPORTS TABLE) -->
+<div class="schedule-table-card" id="listViewWrap" style="display: none;">
+    <table class="schedules-data-table">
+        <thead>
+            <tr>
+                <th>Date &amp; Time</th>
+                <th>Location</th>
+                <th>Pest Type</th>
+                <th>Farmer</th>
+                <th>Status</th>
+                <th style="text-align: center;">Action</th>
+            </tr>
+        </thead>
+        <tbody id="schedulesTableBody">
+            <!-- Rows generated via JavaScript -->
+        </tbody>
+    </table>
+</div>
+
+<!-- DETAILS MODAL -->
+<div class="modal-overlay" id="scheduleDetailModal" onclick="closeModalOnBackdrop(event)">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="modalTitle">Visit Schedule Details</h3>
+            <button class="btn-close-modal" onclick="closeScheduleModal()" type="button"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="detail-row">
+                <span class="detail-label"><i class="fa-regular fa-calendar" style="margin-right:6px;"></i> Date &amp; Time:</span>
+                <span class="detail-value" id="modalDateTime">--</span>
             </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fa-solid fa-bug" style="margin-right:6px;"></i> Report / Pest:</span>
+                <span class="detail-value" id="modalReportPest">--</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fa-solid fa-user-tag" style="margin-right:6px;"></i> Farmer:</span>
+                <span class="detail-value" id="modalFarmer">--</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fa-solid fa-location-dot" style="margin-right:6px;"></i> Location:</span>
+                <span class="detail-value" id="modalLocation">--</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fa-solid fa-info-circle" style="margin-right:6px;"></i> Status:</span>
+                <span class="detail-value" id="modalStatus">--</span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeScheduleModal()" type="button">Close</button>
+            <a href="/agriculturist/pending" class="btn-primary" id="modalOpenCaseBtn">
+                <span>Open Reports Queue</span> <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-</div>
+<!-- INJECTED SCHEDULES DATA -->
+<script id="schedules-data" type="application/json">
+    {{ schedules | tojson | safe }}
+</script>
 
-    <!-- DETAILS MODAL -->
-    <div class="modal-overlay" id="scheduleDetailModal" onclick="closeModalOnBackdrop(event)">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3 id="modalTitle">Visit Schedule Details</h3>
-            </div>
-            <div class="modal-body">
-                <div class="detail-row">
-                    <span class="detail-label"><i class="fa-regular fa-calendar" style="margin-right:6px;"></i> Date & Time:</span>
-                    <span class="detail-value" id="modalDateTime">--</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label"><i class="fa-solid fa-bug" style="margin-right:6px;"></i> Report / Pest:</span>
-                    <span class="detail-value" id="modalReportPest">--</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label"><i class="fa-solid fa-user-tag" style="margin-right:6px;"></i> Farmer:</span>
-                    <span class="detail-value" id="modalFarmer">--</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label"><i class="fa-solid fa-location-dot" style="margin-right:6px;"></i> Location:</span>
-                    <span class="detail-value" id="modalLocation">--</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label"><i class="fa-solid fa-info-circle" style="margin-right:6px;"></i> Status:</span>
-                    <span class="detail-value" id="modalStatus">--</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeScheduleModal()" type="button">Close</button>
-                <a href="/agriculturist/pending" class="btn-primary" id="modalOpenCaseBtn">
-                    <span>Open Reports Queue</span> <i class="fa-solid fa-arrow-right"></i>
-                </a>
-            </div>
-        </div>
-    </div>
+<script>
+    let allSchedules = [];
+    let currentDate = new Date();
+    let activeView = 'calendar'; // 'calendar' or 'list'
+    const MIN_CALENDAR_YEAR = 2020;
+    const MAX_CALENDAR_YEAR = new Date().getFullYear() + 5;
+    const MONTH_NAMES = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
 
-    <!-- INJECTED SCHEDULES DATA -->
-    <script id="schedules-data" type="application/json">
-        {{ schedules | tojson | safe }}
-    </script>
+    function getStatusBadgeStyle(status) {
+        const normalized = String(status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+        const palette = {
+            "under_review": { backgroundColor: "#fef3c7", color: "#92400e", label: "Under Review" },
+            "pending": { backgroundColor: "#fef3c7", color: "#92400e", label: "Under Review" },
+            "assessment_issued": { backgroundColor: "#ecfdf5", color: "#065f46", label: "Assessment Issued" },
+            "awaiting_confirmed_schedule": { backgroundColor: "#eff6ff", color: "#1d4ed8", label: "Awaiting Confirmed Schedule" },
+            "waiting_for_agriculturist_confirmation": { backgroundColor: "#eff6ff", color: "#1d4ed8", label: "Waiting Agriculturist Confirmation" },
+            "waiting_agriculturist_confirmation": { backgroundColor: "#eff6ff", color: "#1d4ed8", label: "Waiting Agriculturist Confirmation" },
+            "visit_requested": { backgroundColor: "#fdf2f8", color: "#be185d", label: "Visit Requested" },
+            "visit_scheduled": { backgroundColor: "#fefce8", color: "#a16207", label: "Visit Scheduled" },
+            "confirmed": { backgroundColor: "#ecfdf5", color: "#065f46", label: "Visit Scheduled" },
+            "visit_completed": { backgroundColor: "#ecfeff", color: "#0f766e", label: "Visit Completed" },
+            "final_remarks_issued": { backgroundColor: "#ede9fe", color: "#5b21b6", label: "Resolved" },
+            "recommendation_issued": { backgroundColor: "#ecfdf5", color: "#065f46", label: "Recommendation Issued" },
+            "resolved": { backgroundColor: "#dcfce7", color: "#166534", label: "Resolved" },
+            "closed": { backgroundColor: "#dcfce7", color: "#166534", label: "Resolved" }
+        };
+        return palette[normalized] || { backgroundColor: "#f1f5f9", color: "#475569", label: status || "Visit Scheduled" };
+    }
 
-    <script>
-        let allSchedules = [];
-        let currentDate = new Date();
-        let activeView = 'calendar'; // 'calendar' or 'list'
+    function getChipBadgeStyle(status) {
+        const normalized = String(status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+        if (normalized.includes("resolved") || normalized.includes("closed") || normalized.includes("completed")) {
+            return { bg: "#dcfce7", color: "#166534", border: "#166534" };
+        }
+        if (normalized.includes("pending") || normalized.includes("review")) {
+            return { bg: "#fef3c7", color: "#92400e", border: "#f59e0b" };
+        }
+        if (normalized.includes("visit_requested")) {
+            return { bg: "#fdf2f8", color: "#be185d", border: "#ec4899" };
+        }
+        return { bg: "#ecfdf5", color: "#065f46", border: "#10b981" };
+    }
 
-        document.addEventListener("DOMContentLoaded", function () {
-            const dataEl = document.getElementById("schedules-data");
-            try {
-                allSchedules = JSON.parse(dataEl.textContent || "[]");
-            } catch (err) {
-                console.error("Failed to parse schedules data:", err);
-                allSchedules = [];
+    document.addEventListener("DOMContentLoaded", function () {
+        const dataEl = document.getElementById("schedules-data");
+        try {
+            allSchedules = JSON.parse(dataEl.textContent || "[]");
+        } catch (err) {
+            console.error("Failed to parse schedules data:", err);
+            allSchedules = [];
+        }
+
+        initMonthYearDropdowns();
+        renderView();
+    });
+
+    function initMonthYearDropdowns() {
+        const monthBtn = document.getElementById("btnMonthDropdown");
+        const monthPanel = document.getElementById("monthDropdownPanel");
+        const yearBtn = document.getElementById("btnYearDropdown");
+        const yearPanel = document.getElementById("yearDropdownPanel");
+
+        // Build Month Items
+        let monthHtml = "";
+        MONTH_NAMES.forEach((m, idx) => {
+            monthHtml += `<button type="button" class="dropdown-item ${currentDate.getMonth() === idx ? 'selected' : ''}" data-month="${idx}">${m}</button>`;
+        });
+        if (monthPanel) monthPanel.innerHTML = monthHtml;
+
+        // Build Year Items starting from 2020
+        let yearHtml = "";
+        for (let y = MIN_CALENDAR_YEAR; y <= MAX_CALENDAR_YEAR; y++) {
+            yearHtml += `<button type="button" class="dropdown-item ${currentDate.getFullYear() === y ? 'selected' : ''}" data-year="${y}">${y}</button>`;
+        }
+        if (yearPanel) yearPanel.innerHTML = yearHtml;
+
+        // Month trigger click
+        if (monthBtn && monthPanel) {
+            monthBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                if (yearPanel) yearPanel.style.display = "none";
+                if (yearBtn) yearBtn.classList.remove("active");
+
+                const isVisible = monthPanel.style.display === "block";
+                if (isVisible) {
+                    monthPanel.style.display = "none";
+                    monthBtn.classList.remove("active");
+                } else {
+                    const rect = monthBtn.getBoundingClientRect();
+                    monthPanel.style.top = `${rect.bottom + 6}px`;
+                    monthPanel.style.left = `${rect.left}px`;
+                    monthPanel.style.display = "block";
+                    monthBtn.classList.add("active");
+                }
+            });
+
+            monthPanel.addEventListener("click", function (e) {
+                const item = e.target.closest(".dropdown-item");
+                if (!item) return;
+                const chosenMonth = parseInt(item.getAttribute("data-month"), 10);
+                currentDate.setMonth(chosenMonth);
+                monthPanel.style.display = "none";
+                monthBtn.classList.remove("active");
+                renderView();
+            });
+        }
+
+        // Year trigger click
+        if (yearBtn && yearPanel) {
+            yearBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                if (monthPanel) monthPanel.style.display = "none";
+                if (monthBtn) monthBtn.classList.remove("active");
+
+                const isVisible = yearPanel.style.display === "block";
+                if (isVisible) {
+                    yearPanel.style.display = "none";
+                    yearBtn.classList.remove("active");
+                } else {
+                    const rect = yearBtn.getBoundingClientRect();
+                    yearPanel.style.top = `${rect.bottom + 6}px`;
+                    yearPanel.style.left = `${rect.left}px`;
+                    yearPanel.style.display = "block";
+                    yearBtn.classList.add("active");
+                }
+            });
+
+            yearPanel.addEventListener("click", function (e) {
+                const item = e.target.closest(".dropdown-item");
+                if (!item) return;
+                const chosenYear = parseInt(item.getAttribute("data-year"), 10);
+                currentDate.setFullYear(chosenYear);
+                yearPanel.style.display = "none";
+                yearBtn.classList.remove("active");
+                renderView();
+            });
+        }
+
+        // Close dropdowns on outside click
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".month-year-btn") && !e.target.closest(".filter-dropdown-panel")) {
+                if (monthPanel) monthPanel.style.display = "none";
+                if (yearPanel) yearPanel.style.display = "none";
+                if (monthBtn) monthBtn.classList.remove("active");
+                if (yearBtn) yearBtn.classList.remove("active");
             }
-            renderView();
+        });
+    }
+
+    function switchView(view) {
+        activeView = view;
+        const calBtn = document.getElementById('btnCalendarView');
+        const listBtn = document.getElementById('btnListView');
+        if (calBtn && listBtn) {
+            calBtn.classList.toggle('active-chip', view === 'calendar');
+            listBtn.classList.toggle('active-chip', view === 'list');
+        }
+        document.getElementById('calendarViewWrap').style.display = view === 'calendar' ? 'block' : 'none';
+        document.getElementById('listViewWrap').style.display = view === 'list' ? 'block' : 'none';
+        renderView();
+    }
+
+    function changeMonth(delta) {
+        let newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1);
+        if (newDate.getFullYear() < MIN_CALENDAR_YEAR) {
+            newDate = new Date(MIN_CALENDAR_YEAR, 0, 1);
+        }
+        currentDate = newDate;
+        renderView();
+    }
+
+    function goToToday() {
+        currentDate = new Date();
+        renderView();
+    }
+
+    function renderView() {
+        if (activeView === 'calendar') {
+            renderCalendar();
+        } else {
+            renderList();
+        }
+    }
+
+    function renderCalendar() {
+        let year = currentDate.getFullYear();
+        if (year < MIN_CALENDAR_YEAR) {
+            year = MIN_CALENDAR_YEAR;
+            currentDate.setFullYear(MIN_CALENDAR_YEAR);
+        }
+        const month = currentDate.getMonth();
+
+        // Update Button Labels
+        const monthLabel = document.getElementById("currentMonthLabel");
+        const yearLabel = document.getElementById("currentYearLabel");
+        if (monthLabel) monthLabel.textContent = MONTH_NAMES[month];
+        if (yearLabel) yearLabel.textContent = year;
+
+        // Update selected items in custom dropdown panels
+        const monthPanel = document.getElementById("monthDropdownPanel");
+        if (monthPanel) {
+            monthPanel.querySelectorAll(".dropdown-item").forEach(item => {
+                const itemMonth = parseInt(item.getAttribute("data-month"), 10);
+                item.classList.toggle("selected", itemMonth === month);
+            });
+        }
+        const yearPanel = document.getElementById("yearDropdownPanel");
+        if (yearPanel) {
+            yearPanel.querySelectorAll(".dropdown-item").forEach(item => {
+                const itemYear = parseInt(item.getAttribute("data-year"), 10);
+                item.classList.toggle("selected", itemYear === year);
+            });
+        }
+
+        const btnPrevMonth = document.getElementById("btnPrevMonth");
+        if (btnPrevMonth) {
+            btnPrevMonth.disabled = (year === MIN_CALENDAR_YEAR && month === 0);
+        }
+
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        const grid = document.getElementById("calendarGrid");
+        grid.innerHTML = "";
+
+        const today = new Date();
+        const isCurrentYearMonth = today.getFullYear() === year && today.getMonth() === month;
+
+        const schedMap = {};
+        allSchedules.forEach(s => {
+            const d = s.confirmed_date;
+            if (!schedMap[d]) schedMap[d] = [];
+            schedMap[d].push(s);
         });
 
-        function switchView(view) {
-            activeView = view;
-            document.getElementById('btnCalendarView').classList.toggle('active', view === 'calendar');
-            document.getElementById('btnListView').classList.toggle('active', view === 'list');
-            document.getElementById('calendarViewWrap').style.display = view === 'calendar' ? 'block' : 'none';
-            document.getElementById('monthNavGroup').style.display = view === 'calendar' ? 'flex' : 'none';
-            document.getElementById('listViewWrap').style.display = view === 'list' ? 'block' : 'none';
-            renderView();
+        let cellCount = 0;
+
+        for (let x = firstDayIndex; x > 0; x--) {
+            const dayNum = daysInPrevMonth - x + 1;
+            const cell = createDayCell(dayNum, true, false, null);
+            grid.appendChild(cell);
+            cellCount++;
         }
 
-        function changeMonth(delta) {
-            currentDate.setMonth(currentDate.getMonth() + delta);
-            renderView();
+        for (let d = 1; d <= daysInMonth; d++) {
+            const isToday = isCurrentYearMonth && today.getDate() === d;
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const daySchedules = schedMap[dateStr] || [];
+            const cell = createDayCell(d, false, isToday, daySchedules);
+            grid.appendChild(cell);
+            cellCount++;
         }
 
-        function goToToday() {
-            currentDate = new Date();
-            renderView();
+        const remaining = (cellCount % 7 === 0) ? 0 : (7 - (cellCount % 7));
+        for (let n = 1; n <= remaining; n++) {
+            const cell = createDayCell(n, true, false, null);
+            grid.appendChild(cell);
         }
+    }
 
-        function renderView() {
-            if (activeView === 'calendar') {
-                renderCalendar();
-            } else {
-                renderList();
-            }
-        }
+    function createDayCell(dayNum, isOtherMonth, isToday, schedules) {
+        const cell = document.createElement("div");
+        cell.className = `calendar-day-cell ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`;
+        
+        const numSpan = document.createElement("span");
+        numSpan.className = "day-number";
+        numSpan.textContent = dayNum;
+        cell.appendChild(numSpan);
 
-        function renderCalendar() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
+        if (schedules && schedules.length > 0) {
+            schedules.forEach(s => {
+                const chip = document.createElement("div");
+                chip.className = "schedule-chip";
+                const chipStyle = getChipBadgeStyle(s.status);
+                chip.style.backgroundColor = chipStyle.bg;
+                chip.style.color = chipStyle.color;
+                chip.style.borderLeftColor = chipStyle.border;
 
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            document.getElementById("currentMonthDisplay").textContent = `${monthNames[month]} ${year}`;
-
-            const firstDayIndex = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const daysInPrevMonth = new Date(year, month, 0).getDate();
-
-            const grid = document.getElementById("calendarGrid");
-            grid.innerHTML = "";
-
-            const today = new Date();
-            const isCurrentYearMonth = today.getFullYear() === year && today.getMonth() === month;
-
-            const schedMap = {};
-            allSchedules.forEach(s => {
-                const d = s.confirmed_date;
-                if (!schedMap[d]) schedMap[d] = [];
-                schedMap[d].push(s);
-            });
-
-            let cellCount = 0;
-
-            for (let x = firstDayIndex; x > 0; x--) {
-                const dayNum = daysInPrevMonth - x + 1;
-                const cell = createDayCell(dayNum, true, false, null);
-                grid.appendChild(cell);
-                cellCount++;
-            }
-
-            for (let d = 1; d <= daysInMonth; d++) {
-                const isToday = isCurrentYearMonth && today.getDate() === d;
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                const daySchedules = schedMap[dateStr] || [];
-                const cell = createDayCell(d, false, isToday, daySchedules);
-                grid.appendChild(cell);
-                cellCount++;
-            }
-
-            const remaining = (cellCount % 7 === 0) ? 0 : (7 - (cellCount % 7));
-            for (let n = 1; n <= remaining; n++) {
-                const cell = createDayCell(n, true, false, null);
-                grid.appendChild(cell);
-            }
-        }
-
-        function createDayCell(dayNum, isOtherMonth, isToday, schedules) {
-            const cell = document.createElement("div");
-            cell.className = `calendar-day-cell ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`;
-            
-            const numSpan = document.createElement("span");
-            numSpan.className = "day-number";
-            numSpan.textContent = dayNum;
-            cell.appendChild(numSpan);
-
-            if (schedules && schedules.length > 0) {
-                schedules.forEach(s => {
-                    const chip = document.createElement("div");
-                    chip.className = "schedule-chip";
-                    chip.title = `Report #${s.report_id}: ${s.pest_type} (${s.formatted_time})`;
-                    chip.innerHTML = `<strong>${s.formatted_time.split(' - ')[0]}</strong> #${s.report_id} ${s.pest_type}`;
-                    chip.onclick = (e) => {
-                        e.stopPropagation();
-                        openScheduleModal(s);
-                    };
-                    cell.appendChild(chip);
-                });
-            }
-
-            return cell;
-        }
-
-        function renderList() {
-            const tbody = document.getElementById("schedulesTableBody");
-            tbody.innerHTML = "";
-
-            if (allSchedules.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2.5rem; color: var(--text-muted);">No confirmed visit schedules found.</td></tr>`;
-                return;
-            }
-
-            allSchedules.forEach(s => {
-                const tr = document.createElement("tr");
-                tr.onclick = () => openScheduleModal(s);
-
-                let badgeClass = "badge-pending";
-                if (s.status === 'confirmed') badgeClass = "badge-confirmed";
-                if (s.status === 'resolved' || s.status === 'completed') badgeClass = "badge-resolved";
-
-                tr.innerHTML = `
-                    <td><strong>${s.confirmed_date}</strong><br><span style="font-size:0.8rem; color:var(--text-muted);">${s.formatted_time}</span></td>
-                    <td><strong>Report #${s.report_id}</strong><br><span style="font-size:0.85rem;">${s.pest_type}</span></td>
-                    <td>${s.farmer_name}</td>
-                    <td>${s.location}</td>
-                    <td><span class="badge-status ${badgeClass}">${s.status}</span></td>
-                `;
-                tbody.appendChild(tr);
+                chip.title = `Report #${s.report_id}: ${s.pest_type} (${s.formatted_time})`;
+                chip.innerHTML = `<strong>${(s.formatted_time || '').split(' - ')[0]}</strong> #${s.report_id} ${s.pest_type || 'Scan'}`;
+                chip.onclick = (e) => {
+                    e.stopPropagation();
+                    openScheduleModal(s);
+                };
+                cell.appendChild(chip);
             });
         }
 
-        function openScheduleModal(s) {
-            document.getElementById("modalTitle").textContent = `Visit Schedule - Report #${s.report_id}`;
-            document.getElementById("modalDateTime").textContent = `${s.confirmed_date} (${s.formatted_time})`;
-            document.getElementById("modalReportPest").textContent = `Report #${s.report_id} - ${s.pest_type}`;
-            document.getElementById("modalFarmer").textContent = s.farmer_name || "Farmer";
-            document.getElementById("modalLocation").textContent = s.location || "Unknown Location";
+        return cell;
+    }
+
+    function renderList() {
+        const tbody = document.getElementById("schedulesTableBody");
+        tbody.innerHTML = "";
+
+        if (allSchedules.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="padding: 0; border: none; background: white;">
+                <div style="text-align:center; padding: 60px 20px; background: white; border-radius: 16px; margin: 10px 0;">
+                    <div style="width: 68px; height: 68px; background: #eef5f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                        <i class="fa-solid fa-calendar-xmark" style="font-size: 28px; color: #1a4d32;"></i>
+                    </div>
+                    <h3 style="color: #0f172a; margin: 0 0 8px; font-size: 1.25rem; font-weight: 700;">No Visit Schedules Found</h3>
+                    <p style="color: #64748b; margin: 0; font-size: 0.92rem; max-width: 400px; display: inline-block; line-height: 1.5;">There are no confirmed visit schedules recorded for this period.</p>
+                </div>
+            </td></tr>`;
+            return;
+        }
+
+        allSchedules.forEach(s => {
+            const tr = document.createElement("tr");
+            tr.style.cssText = "border-bottom: 1px solid var(--bg-base, #f1f5f9); transition: background-color 0.2s;";
             
-            const statusSpan = document.getElementById("modalStatus");
-            statusSpan.textContent = s.status ? s.status.toUpperCase() : "CONFIRMED";
-            
-            const btn = document.getElementById("modalOpenCaseBtn");
-            if (s.status === 'resolved' || s.status === 'completed') {
-                btn.href = "/agriculturist/reviewed";
-                btn.querySelector("span").textContent = "View Resolved Archive";
-            } else {
-                btn.href = "/agriculturist/pending";
-                btn.querySelector("span").textContent = "Open Active Reports";
-            }
+            const badge = s.badge_style || getStatusBadgeStyle(s.status);
+            const statusLabel = s.normalized_status || badge.label || s.status || "Visit Scheduled";
 
-            document.getElementById("scheduleDetailModal").classList.add("active");
+            tr.innerHTML = `
+                <td style="padding: 16px 12px; font-size: 0.9rem;">
+                    <div style="font-weight: 600; color: var(--text-dark, #0f172a);">${s.confirmed_date || ""}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted, #64748b); margin-top: 2px;">${s.formatted_time || ""}</div>
+                </td>
+                <td style="padding: 16px 12px; font-size: 0.9rem; font-weight: 500;">
+                    <i class="fa-solid fa-location-dot" style="color: var(--primary-green, #164630); margin-right: 4px;"></i>${s.location || ""}
+                </td>
+                <td style="padding: 16px 12px; font-size: 0.9rem;">
+                    <div style="font-weight: 600; color: var(--text-dark, #0f172a);">${s.pest_type || ""}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted, #64748b); margin-top: 2px;">Report #${s.report_id || ""}</div>
+                </td>
+                <td style="padding: 16px 12px; font-size: 0.9rem; font-weight: 500;">${s.farmer_name || "Farmer"}</td>
+                <td style="padding: 16px 12px; font-size: 0.9rem;">
+                    <span class="report-status-badge" style="background-color: ${badge.backgroundColor}; color: ${badge.color};">
+                        ${statusLabel}
+                    </span>
+                </td>
+                <td style="padding: 16px 12px; text-align: center;">
+                    <button type="button" class="view-schedule-btn" data-schedule-id="${s.id || ''}">View</button>
+                </td>
+            `;
+
+            tr.querySelector('.view-schedule-btn').onclick = (e) => {
+                e.stopPropagation();
+                openScheduleModal(s);
+            };
+            tr.onclick = () => openScheduleModal(s);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openScheduleModal(s) {
+        document.getElementById("modalTitle").textContent = `Visit Schedule - Report #${s.report_id || ''}`;
+        document.getElementById("modalDateTime").textContent = `${s.confirmed_date || ''} (${s.formatted_time || ''})`;
+        document.getElementById("modalReportPest").textContent = `Report #${s.report_id || ''} - ${s.pest_type || ''}`;
+        document.getElementById("modalFarmer").textContent = s.farmer_name || "Farmer";
+        document.getElementById("modalLocation").textContent = s.location || "Unknown Location";
+        
+        const badge = s.badge_style || getStatusBadgeStyle(s.status);
+        const statusSpan = document.getElementById("modalStatus");
+        statusSpan.innerHTML = `<span class="report-status-badge" style="background-color: ${badge.backgroundColor}; color: ${badge.color};">${s.normalized_status || badge.label || s.status || 'VISIT SCHEDULED'}</span>`;
+        
+        const btn = document.getElementById("modalOpenCaseBtn");
+        const norm = String(s.status || "").toLowerCase().replace(/[\s-]+/g, "_");
+        const repId = s.report_id || s.id || '';
+        if (norm === 'resolved' || norm === 'completed' || norm === 'closed' || norm === 'final_remarks_issued') {
+            btn.href = repId ? `/agriculturist/reviewed?report_id=${encodeURIComponent(repId)}` : "/agriculturist/reviewed";
+            btn.querySelector("span").textContent = "Open Resolved Report";
+        } else {
+            btn.href = repId ? `/agriculturist/pending?report_id=${encodeURIComponent(repId)}` : "/agriculturist/pending";
+            btn.querySelector("span").textContent = "Open Active Report";
         }
 
-        function closeScheduleModal() {
-            document.getElementById("scheduleDetailModal").classList.remove("active");
-        }
+        document.getElementById("scheduleDetailModal").classList.add("active");
+    }
 
-        function closeModalOnBackdrop(e) {
-            if (e.target.id === "scheduleDetailModal") {
-                closeScheduleModal();
-            }
-        }
+    function closeScheduleModal() {
+        document.getElementById("scheduleDetailModal").classList.remove("active");
+    }
 
-        function toggleSidebarMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('backdrop');
-            const icon = document.getElementById('toggleIcon');
-            sidebar.classList.toggle('show-mobile');
-            backdrop.classList.toggle('active');
-
-            if (icon) {
-                icon.className = sidebar.classList.contains('show-mobile') ? "fa-solid fa-xmark" : "fa-solid fa-bars";
-            }
+    function closeModalOnBackdrop(e) {
+        if (e.target.id === "scheduleDetailModal") {
+            closeScheduleModal();
         }
+    }
 
-        function spinAndRefresh(btn) {
-            if (btn) btn.disabled = true;
-            const icon = btn ? btn.querySelector('i') : null;
-            if (icon) icon.classList.add('fa-spin');
-            
-            const mainContent = document.querySelector('main') || document.body;
-            if (mainContent) {
-                mainContent.style.transition = 'opacity 0.15s ease';
-                mainContent.style.opacity = '0.6';
-            }
-            const url = new URL(window.location.href);
-            url.searchParams.set('_r', Date.now());
-            window.location.replace(url.toString());
+    function spinAndRefresh(btn) {
+        if (btn) btn.disabled = true;
+        const icon = btn ? btn.querySelector('i') : null;
+        if (icon) icon.classList.add('fa-spin');
+        
+        const mainContent = document.querySelector('main') || document.body;
+        if (mainContent) {
+            mainContent.style.transition = 'opacity 0.15s ease';
+            mainContent.style.opacity = '0.6';
         }
-    </script>
+        const url = new URL(window.location.href);
+        url.searchParams.set('_r', Date.now());
+        window.location.replace(url.toString());
+    }
+</script>
 {% endblock %}

@@ -22,6 +22,10 @@
 </div>
 {% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+{% endblock %}
+
 {% block extra_css %}
 <style>
 :root {
@@ -518,6 +522,217 @@
         .btn-action-trigger.camera:focus-visible {
             background-color: #1f382f;
             color: #e8f8ef;
+        }
+
+        .btn-action-trigger.upload {
+            background-color: #f0fdf4;
+            color: #166534;
+            border: 1.5px solid #bbf7d0;
+        }
+
+        .btn-action-trigger.upload:hover,
+        .btn-action-trigger.upload:active,
+        .btn-action-trigger.upload:focus-visible {
+            background-color: #dcfce7;
+            border-color: #86efac;
+            color: #14532d;
+            transform: translateY(-1px);
+        }
+
+        .upload-drop-zone.drag-active {
+            border-color: #4ac68f !important;
+            background-color: rgba(74, 198, 143, 0.08) !important;
+            transform: scale(1.01);
+        }
+
+        /* --- LOCATION PICKER MODAL STYLING --- */
+        .location-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(11, 37, 26, 0.82);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .location-modal-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .location-modal-header {
+            padding: 20px 24px 14px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .location-modal-header h3 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #0b251a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .location-modal-body {
+            padding: 18px 24px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .location-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .location-input-group label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .location-text-field {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            background: #f8fafc;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .location-text-field:focus {
+            border-color: #2A7B4C;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(42, 123, 76, 0.15);
+        }
+
+        .btn-current-gps-inline {
+            background: #f1f5f9;
+            color: #0f766e;
+            border: 1px solid #ccfbf1;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-current-gps-inline:hover {
+            background: #ccfbf1;
+            color: #115e59;
+        }
+
+        .upload-map-wrapper {
+            width: 100%;
+            height: 220px;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1.5px solid #e2e8f0;
+            position: relative;
+        }
+
+        #upload-location-map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .location-detected-badge {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1.35;
+        }
+
+        .location-modal-footer {
+            padding: 16px 24px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-confirm-location {
+            background: #2A7B4C;
+            color: #ffffff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(42, 123, 76, 0.25);
+        }
+
+        .btn-confirm-location:hover {
+            background: #1e633c;
+            transform: translateY(-1px);
+        }
+
+        .btn-cancel-location {
+            background: #ffffff;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel-location:hover {
+            background: #f1f5f9;
+            color: #1e293b;
         }
 
         .gps-status-banner {
@@ -1058,18 +1273,23 @@
                 <div class="upload-drop-zone">
                     <div class="upload-cloud-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
                     <p>Drop your coconut leaf image here<br><span
-                            style="font-size: 0.72rem; color: var(--text-muted);">or click the buttons below to
-                            upload</span></p>
+                            style="font-size: 0.72rem; color: var(--text-muted);">or choose how you want to capture or upload</span></p>
                     <div class="upload-action-row">
-                        <button class="btn-action-trigger camera" onclick="triggerNativeCamera()">
-                            <i class="fa-solid fa-camera"></i> Scan Coconut Leaf
+                        <button type="button" class="btn-action-trigger camera" onclick="triggerNativeCamera()">
+                            <i class="fa-solid fa-camera"></i> Use Camera
+                        </button>
+                        <button type="button" class="btn-action-trigger upload" onclick="triggerPhotoUpload()">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo
                         </button>
                     </div>
                     <div id="gps-status-banner" class="gps-status-banner" role="status" aria-live="polite"></div>
-                    <p style="font-size:0.75rem; color: var(--text-muted); margin-top: 6px;"> Allow location permissions
-                        to enable scanning.</p>
+                    <p style="font-size:0.75rem; color: var(--text-muted); margin-top: 6px;">
+                        Camera captures live GPS. Uploaded photos allow manual or map pin location input.
+                    </p>
                     <input type="file" id="hidden-camera-input" accept="image/*" capture="environment"
-                        onchange="handleImagePipeline(event)">
+                        onchange="handleImagePipeline(event, 'camera')">
+                    <input type="file" id="hidden-upload-input" accept="image/*"
+                        onchange="handleImagePipeline(event, 'upload')">
                 </div>
 
                 <div class="guidance-tips-card">
@@ -1089,6 +1309,79 @@
                 </div>
             </div>
 
+            <!-- Interactive Location Input Modal for Uploaded Photos -->
+            <div id="upload-location-modal" class="location-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="location-modal-title">
+                <div class="location-modal-card">
+                    <div class="location-modal-header">
+                        <h3 id="location-modal-title">
+                            <i class="fa-solid fa-map-location-dot" style="color: #2A7B4C;"></i> Set Tree Location
+                        </h3>
+                        <button type="button" onclick="cancelUploadLocationModal()" style="background: none; border: none; font-size: 1.2rem; color: #94a3b8; cursor: pointer;" aria-label="Close">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="location-modal-body">
+                        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.45;">
+                            To ensure reporting accuracy for uploaded photos, please enter the farm location or tap the map to place a pin where this coconut tree is located.
+                        </p>
+
+                        <div class="location-input-group">
+                            <label for="manual-location-text">
+                                <span>Farm / Barangay Location <span style="color: #dc2626;">*</span></span>
+                                <button type="button" class="btn-current-gps-inline" onclick="fetchDeviceLocationForMap()">
+                                    <i class="fa-solid fa-crosshairs"></i> Use Current GPS
+                                </button>
+                            </label>
+                            <input type="text" id="manual-location-text" class="location-text-field" placeholder="e.g., Brgy. Malabanban Sur, Candelaria, Quezon" oninput="handleManualLocationTextInput(this.value)">
+                        </div>
+
+                        <div class="location-input-group">
+                            <label>
+                                <span>Tap or Drag Pin on Map</span>
+                                <span id="pin-coords-text" style="font-size: 0.72rem; color: #94a3b8; font-weight: 500;"></span>
+                            </label>
+                            <div class="upload-map-wrapper">
+                                <div id="upload-location-map"></div>
+                            </div>
+                        </div>
+
+                        <div id="location-reverse-badge" class="location-detected-badge" style="display: none;">
+                            <i class="fa-solid fa-location-dot" style="color: #16a34a; font-size: 1rem;"></i>
+                            <span id="location-reverse-text">Detected location</span>
+                        </div>
+                    </div>
+                    <div class="location-modal-footer">
+                        <button type="button" class="btn-cancel-location" onclick="cancelUploadLocationModal()">Cancel</button>
+                        <button type="button" class="btn-confirm-location" id="btn-confirm-upload-location" onclick="confirmUploadLocationAndScan()">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Confirm & Scan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Offline Auto-Saved Prompt Modal -->
+            <div id="offline-saved-modal" class="location-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="offline-saved-title">
+                <div class="location-modal-card" style="max-width: 420px; text-align: center;">
+                    <div style="padding: 28px 24px 16px 24px;">
+                        <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(42, 123, 76, 0.12); color: #2A7B4C; font-size: 1.75rem; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                            <i class="fa-solid fa-cloud-arrow-down"></i>
+                        </div>
+                        <h3 id="offline-saved-title" style="font-size: 1.15rem; font-weight: 800; color: #0b251a; margin-bottom: 6px;">Saved to Local Drafts</h3>
+                        <p style="font-size: 0.85rem; color: #475569; line-height: 1.5; margin: 0 0 16px 0;">
+                            You are currently offline. Your photo has been securely saved to your local device drafts. When you regain internet connection, open the <strong>Drafts</strong> page to run AI pest detection and submit your report.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <a href="/farmer/drafts" class="btn-confirm-location" style="justify-content: center; text-decoration: none;">
+                                <i class="fa-solid fa-folder-open"></i> View Saved Drafts
+                            </a>
+                            <button type="button" class="btn-cancel-location" onclick="dismissOfflineSavedModal()">
+                                Upload / Scan Another
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="step-loading-view" class="workflow-step-view">
                 <div class="spinner-element"></div>
                 <h4 style="color: var(--brand-dark); font-weight: 700; font-size: 1rem;">Analyzing Image Spectrum...
@@ -1104,6 +1397,7 @@
 {% block extra_scripts %}
 </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script id="recent-reports-data" type="application/json">{{ recent_reports | tojson | safe }}</script>
     <script>
         let globalActiveImagePayload = "";
@@ -1111,6 +1405,10 @@
         let globalPrimaryGPS = null;
         let supportingImages = [];
         let activeReportSubmissionController = null;
+        let uploadMapInstance = null;
+        let uploadMapMarker = null;
+        let selectedUploadLocation = null;
+
         let recentReports = (function () {
             try {
                 const node = document.getElementById('recent-reports-data');
@@ -1132,7 +1430,6 @@
                 }
             }
         })();
-
 
         const defaultImages = {
             "Rhinoceros Beetle": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -1198,6 +1495,7 @@
         }
 
         function triggerNativeCamera() { document.getElementById('hidden-camera-input').click(); }
+        function triggerPhotoUpload() { document.getElementById('hidden-upload-input').click(); }
         function triggerSupportingPhotoUpload() { document.getElementById('supporting-photos-input').click(); }
 
         function showGpsNotice(message) {
@@ -1216,32 +1514,288 @@
             }
         }
 
-        function handleImagePipeline(event) {
+        /* ================== HYBRID UPLOAD & SCAN PIPELINE ================== */
+        function handleImagePipeline(event, source = 'camera') {
             const input = event.target;
             if (input.files && input.files[0]) {
-                globalActiveImageFile = input.files[0];
+                processImageFile(input.files[0], source);
+                input.value = '';
+            }
+        }
 
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    globalActiveImagePayload = e.target.result;
+        function processImageFile(file, source = 'camera') {
+            globalActiveImageFile = file;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                globalActiveImagePayload = e.target.result;
+
+                // 1. Offline Mode: automatically save to local drafts
+                if (!navigator.onLine) {
+                    autoSaveOfflineDraft(file, globalActiveImagePayload, source);
+                    return;
+                }
+
+                // 2. Online Mode:
+                if (source === 'camera') {
+                    // Camera capture: gather live GPS
                     gatherCameraLocation((position, error, status) => {
                         if (error || !position) {
                             console.warn('GPS unavailable or timed out:', error || status);
-                            const userMessage = status === 'timeout'
-                                ? 'GPS is unavailable on this device. Location will only be captured when using a mobile device.'
-                                : 'GPS is unavailable on this device. Location will only be captured when using a mobile device.';
-                            showGpsNotice(userMessage);
+                            showGpsNotice('GPS unavailable on this device. Location marked as unavailable.');
                             globalPrimaryGPS = null;
-                            executePseudoInferenceEngine();
-                            return;
+                        } else {
+                            globalPrimaryGPS = {
+                                ...position,
+                                source: 'camera_gps'
+                            };
+                            clearGpsNotice();
                         }
-                        globalPrimaryGPS = position;
-                        clearGpsNotice();
                         executePseudoInferenceEngine();
                     });
+                } else {
+                    // Uploaded photo: Prompt user for accurate location (manual or map pin)
+                    openUploadLocationModal();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function autoSaveOfflineDraft(file, payload, source) {
+            const draft = {
+                saved_at: new Date().toISOString(),
+                status: 'offline_draft',
+                pest: 'Offline Scan (Pending AI)',
+                confidence: '0%',
+                confidence_value: 0,
+                farmer_notes: document.getElementById('field-notes-capture')?.value.trim() || '',
+                recommendations: [],
+                primary_image_name: file?.name || (source === 'camera' ? 'offline_camera.jpg' : 'offline_upload.jpg'),
+                primary_image_data: payload,
+                gps: globalPrimaryGPS || null,
+                location_source: source === 'camera' ? 'camera_gps' : 'offline_upload',
+                supporting_images: [],
+                submitted_at: null,
+                photo_taken_at: new Date().toISOString()
+            };
+
+            const request = window.indexedDB.open('cocoscan_farmer_drafts', 1);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('drafts')) {
+                    db.createObjectStore('drafts', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                const transaction = db.transaction(['drafts'], 'readwrite');
+                const store = transaction.objectStore('drafts');
+                store.add(draft);
+                transaction.oncomplete = () => {
+                    const offlineModal = document.getElementById('offline-saved-modal');
+                    if (offlineModal) offlineModal.style.display = 'flex';
                 };
-                reader.readAsDataURL(globalActiveImageFile);
+            };
+        }
+
+        function dismissOfflineSavedModal() {
+            const modal = document.getElementById('offline-saved-modal');
+            if (modal) modal.style.display = 'none';
+            resetWorkflowStateToHome();
+        }
+
+        /* ================== LOCATION PICKER MODAL (UPLOAD WORKFLOW) ================== */
+        function openUploadLocationModal() {
+            const modal = document.getElementById('upload-location-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                setTimeout(() => {
+                    initUploadLocationMap();
+                }, 100);
             }
+        }
+
+        function cancelUploadLocationModal() {
+            const modal = document.getElementById('upload-location-modal');
+            if (modal) modal.style.display = 'none';
+            globalActiveImagePayload = "";
+            globalActiveImageFile = null;
+            selectedUploadLocation = null;
+        }
+
+        function initUploadLocationMap() {
+            const mapContainer = document.getElementById('upload-location-map');
+            if (!mapContainer) return;
+
+            const defaultLat = 13.9314;
+            const defaultLng = 121.6172; // Quezon Province coconut belt
+
+            if (!uploadMapInstance) {
+                if (typeof L === 'undefined') {
+                    console.warn('Leaflet not loaded yet, retrying in 200ms...');
+                    setTimeout(initUploadLocationMap, 200);
+                    return;
+                }
+                uploadMapInstance = L.map('upload-location-map', {
+                    zoomControl: true,
+                    attributionControl: false
+                }).setView([defaultLat, defaultLng], 12);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19
+                }).addTo(uploadMapInstance);
+
+                const customIcon = L.divIcon({
+                    className: 'custom-map-pin',
+                    html: '<div style="background:#2A7B4C; color:#ffffff; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(0,0,0,0.35); border:2px solid #ffffff; font-size:16px;"><i class="fa-solid fa-location-dot"></i></div>',
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 34]
+                });
+
+                uploadMapMarker = L.marker([defaultLat, defaultLng], {
+                    draggable: true,
+                    icon: customIcon
+                }).addTo(uploadMapInstance);
+
+                uploadMapMarker.on('dragend', function (e) {
+                    const pos = e.target.getLatLng();
+                    onLocationSelected(pos.lat, pos.lng);
+                });
+
+                uploadMapInstance.on('click', function (e) {
+                    uploadMapMarker.setLatLng(e.latlng);
+                    onLocationSelected(e.latlng.lat, e.latlng.lng);
+                });
+
+                // Attempt to center on device location if immediately available
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            const userLat = pos.coords.latitude;
+                            const userLng = pos.coords.longitude;
+                            uploadMapInstance.setView([userLat, userLng], 14);
+                            uploadMapMarker.setLatLng([userLat, userLng]);
+                            onLocationSelected(userLat, userLng);
+                        },
+                        () => {
+                            onLocationSelected(defaultLat, defaultLng);
+                        },
+                        { timeout: 5000 }
+                    );
+                } else {
+                    onLocationSelected(defaultLat, defaultLng);
+                }
+            } else {
+                uploadMapInstance.invalidateSize();
+            }
+        }
+
+        async function onLocationSelected(lat, lng) {
+            const pinCoords = document.getElementById('pin-coords-text');
+            if (pinCoords) {
+                pinCoords.textContent = `Lat: ${lat.toFixed(5)}, Lon: ${lng.toFixed(5)}`;
+            }
+
+            selectedUploadLocation = {
+                latitude: lat,
+                longitude: lng,
+                accuracy: 10,
+                source: 'map_pin',
+                timestamp: new Date().toISOString(),
+                displayName: '',
+                barangay: '',
+                municipality: '',
+                province: ''
+            };
+
+            const badge = document.getElementById('location-reverse-badge');
+            const badgeText = document.getElementById('location-reverse-text');
+            const manualInput = document.getElementById('manual-location-text');
+
+            try {
+                const resp = await fetch(`/api/geocode?lat=${lat}&lon=${lng}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.success && data.display_name) {
+                        selectedUploadLocation.displayName = data.display_name;
+                        selectedUploadLocation.barangay = data.address?.barangay || '';
+                        selectedUploadLocation.municipality = data.address?.municipality || '';
+                        selectedUploadLocation.province = data.address?.province || '';
+
+                        if (badge && badgeText) {
+                            badgeText.textContent = data.display_name;
+                            badge.style.display = 'flex';
+                        }
+                        if (manualInput && !manualInput.value.trim()) {
+                            manualInput.value = data.display_name;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.debug('Reverse geocode note:', e);
+            }
+        }
+
+        function fetchDeviceLocationForMap() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const userLat = pos.coords.latitude;
+                    const userLng = pos.coords.longitude;
+                    if (uploadMapInstance && uploadMapMarker) {
+                        uploadMapInstance.setView([userLat, userLng], 15);
+                        uploadMapMarker.setLatLng([userLat, userLng]);
+                        onLocationSelected(userLat, userLng);
+                    }
+                },
+                (err) => {
+                    alert('Could not retrieve device GPS location: ' + (err.message || 'Permission denied'));
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        function handleManualLocationTextInput(text) {
+            if (!selectedUploadLocation) {
+                selectedUploadLocation = {
+                    latitude: 13.9314,
+                    longitude: 121.6172,
+                    accuracy: 50,
+                    source: 'manual_input',
+                    timestamp: new Date().toISOString()
+                };
+            }
+            selectedUploadLocation.displayName = text.trim();
+            selectedUploadLocation.source = 'manual_input';
+        }
+
+        function confirmUploadLocationAndScan() {
+            const manualText = document.getElementById('manual-location-text')?.value.trim();
+            if (!selectedUploadLocation && !manualText) {
+                alert('Please enter a location or pin the location on the map.');
+                return;
+            }
+
+            if (!selectedUploadLocation) {
+                selectedUploadLocation = {
+                    latitude: 13.9314,
+                    longitude: 121.6172,
+                    accuracy: 50,
+                    source: 'manual_input',
+                    timestamp: new Date().toISOString(),
+                    displayName: manualText,
+                    barangay: manualText
+                };
+            } else if (manualText) {
+                selectedUploadLocation.displayName = manualText;
+            }
+
+            globalPrimaryGPS = selectedUploadLocation;
+            document.getElementById('upload-location-modal').style.display = 'none';
+            executePseudoInferenceEngine();
         }
 
         function gatherCameraLocation(callback) {
@@ -1289,7 +1843,7 @@
             document.getElementById('step-loading-view').classList.add('active-view');
 
             if (!globalActiveImageFile && !globalActiveImagePayload) {
-                alert('Please capture a coconut leaf photo before scanning.');
+                alert('Please capture or select a coconut leaf photo before scanning.');
                 document.getElementById('step-loading-view').classList.remove('active-view');
                 document.getElementById('step-upload-view').classList.add('active-view');
                 return;
@@ -1339,14 +1893,15 @@
                 const captureTimestamp = globalPrimaryGPS?.timestamp ? new Date(globalPrimaryGPS.timestamp) : activeDate;
                 const formattedTimestamp = formatTimestampInManila(isNaN(captureTimestamp.getTime()) ? activeDate : captureTimestamp);
 
-                let locationStr = globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable';
-                if (globalPrimaryGPS) {
+                let locationStr = globalPrimaryGPS?.displayName || (globalPrimaryGPS ? `${globalPrimaryGPS.latitude.toFixed(4)}, ${globalPrimaryGPS.longitude.toFixed(4)}` : 'Location unavailable');
+                if (globalPrimaryGPS && !globalPrimaryGPS.displayName && globalPrimaryGPS.latitude && globalPrimaryGPS.longitude) {
                     try {
                         const geoResp = await fetch(`/api/geocode?lat=${globalPrimaryGPS.latitude}&lon=${globalPrimaryGPS.longitude}`);
                         if (geoResp.ok) {
                             const geoData = await geoResp.json();
                             if (geoData.success && geoData.display_name) {
                                 locationStr = geoData.display_name;
+                                globalPrimaryGPS.displayName = geoData.display_name;
                             }
                         }
                     } catch (e) {
@@ -1364,7 +1919,11 @@
                         latitude: globalPrimaryGPS.latitude,
                         longitude: globalPrimaryGPS.longitude,
                         accuracy: globalPrimaryGPS.accuracy,
-                        source: 'camera_gps'
+                        source: globalPrimaryGPS.source || 'camera_gps',
+                        displayName: locationStr,
+                        barangay: globalPrimaryGPS.barangay || '',
+                        municipality: globalPrimaryGPS.municipality || '',
+                        province: globalPrimaryGPS.province || ''
                     } : {},
                     notes: document.getElementById('field-notes-capture').value.trim(),
                     farmer: '{{ user_name|default("Farmer") }}',
@@ -1440,12 +1999,15 @@
             const formData = new FormData();
             formData.append('pest_type', compiledPest);
             formData.append('farmer_notes', additionalNotes);
-            formData.append('location_notes', additionalNotes);
+            formData.append('location_notes', globalPrimaryGPS?.displayName || additionalNotes);
             formData.append('confidence', predictionData.pest_confidence || 0);
             formData.append('gps_latitude', globalPrimaryGPS?.latitude || '');
             formData.append('gps_longitude', globalPrimaryGPS?.longitude || '');
             formData.append('gps_accuracy', globalPrimaryGPS?.accuracy || '');
-            formData.append('location_source', 'camera_gps');
+            formData.append('location_source', globalPrimaryGPS?.source || 'camera_gps');
+            formData.append('barangay', globalPrimaryGPS?.barangay || '');
+            formData.append('municipality', globalPrimaryGPS?.municipality || '');
+            formData.append('province', globalPrimaryGPS?.province || '');
             formData.append('photo_taken_at', globalPrimaryGPS?.timestamp || new Date().toISOString());
 
             if (globalActiveImageFile) {
@@ -1541,7 +2103,7 @@
                 primary_image_name: globalActiveImageFile?.name || 'offline_capture.jpg',
                 primary_image_data: globalActiveImagePayload,
                 gps: globalPrimaryGPS,
-                location_source: globalPrimaryGPS ? 'camera_gps' : 'none',
+                location_source: globalPrimaryGPS?.source || (isOfflineSubmit ? 'offline_draft' : 'none'),
                 supporting_images: supportingImages.map((file) => ({
                     name: file.name || 'supporting.jpg',
                     dataUrl: ''

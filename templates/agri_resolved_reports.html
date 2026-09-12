@@ -626,7 +626,24 @@
         document.addEventListener("DOMContentLoaded", () => {
             initSearchAndFilters();
             renderReportsGrid();
+            openReportFromQueryParams();
         });
+
+        function openReportFromQueryParams() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const reportIdToOpen = urlParams.get('report_id');
+                if (!reportIdToOpen || !Array.isArray(reports) || reports.length === 0) {
+                    return;
+                }
+                const targetRecord = reports.find(item => String(item.id) === String(reportIdToOpen));
+                if (targetRecord) {
+                    openReviewModal(targetRecord);
+                }
+            } catch (err) {
+                console.error("Error opening report from query params:", err);
+            }
+        }
 
         function initSearchAndFilters() {
             const searchInput = document.getElementById('report-search');

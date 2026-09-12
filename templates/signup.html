@@ -134,6 +134,9 @@
 
 {% block content %}
 <div class="auth-card wide-card">
+    <a href="{{ url_for('login') }}" class="btn-auth-back" title="Back to Login" aria-label="Back to Login">
+        <i class="fa-solid fa-chevron-left"></i>
+    </a>
     <div class="logo-container">
         <div class="logo-icon-wrap" style="position: relative; display: inline-block;">
             <i class="fa-solid fa-shield-halved"></i>

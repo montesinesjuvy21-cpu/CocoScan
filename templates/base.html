@@ -52,11 +52,42 @@
             border-radius: var(--radius-main);
             box-shadow: var(--shadow-md);
             animation: fadeIn 0.4s ease-out;
+            position: relative;
         }
 
         .auth-card.wide-card {
             max-width: 520px;
             padding: 3rem 2.5rem;
+        }
+
+        .btn-auth-back {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+
+        .btn-auth-back:hover {
+            background: #e2e8f0;
+            color: var(--primary-green);
+            transform: translateX(-2px);
+        }
+
+        .btn-auth-back:active {
+            transform: translateX(-3px) scale(0.95);
         }
 
         /* SVG Vector Logo Styling */

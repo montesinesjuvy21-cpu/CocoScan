@@ -107,6 +107,34 @@
             justify-content: flex-end;
         }
 
+        .btn-inapp-back {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+            margin-right: 2px;
+        }
+
+        .btn-inapp-back:hover {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.32);
+            color: #ffffff;
+            transform: translateX(-2px);
+        }
+
+        .btn-inapp-back:active {
+            transform: translateX(-3px) scale(0.95);
+        }
+
         /* ==========================================================================
            3. SIDEBAR DRAWER MENU
            ========================================================================== */
@@ -818,8 +846,8 @@
         }
     </style>
 
-    {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else ''))|lower %}
-    {% if 'lgu' in role_str or 'admin' in role_str or 'agri' in role_str %}
+    {% set role_str = ((session.get('user_role', '') if session is defined and session else '') ~ ' ' ~ (user_role if user_role is defined and user_role else '') ~ ' ' ~ (sidebar_role if sidebar_role is defined and sidebar_role else ''))|lower %}
+    {% if 'lgu' in role_str or 'admin' in role_str %}
     <style>
         @media (max-width: 900px) {
             .desktop-restriction-overlay {
@@ -843,16 +871,21 @@
 
     <div class="mobile-viewport-container">
         <header class="mobile-header">
-            <div class="logo-group">
-                <div class="logo-img-fallback">
-                    <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
-                </div>
-                <div>
-                    <h2>CocoScan</h2>
-                    <p>Coconut Pest Detection</p>
+            <div class="header-brand-group" style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" class="btn-inapp-back" onclick="handleInAppBackNavigation()" title="Go Back" aria-label="Go Back">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div class="logo-group">
+                    <div class="logo-img-fallback">
+                        <i class="fa-solid fa-tree-city" style="color: var(--primary-green); font-size: 0.95rem;"></i>
+                    </div>
+                    <div>
+                        <h2>CocoScan</h2>
+                        <p>Coconut Pest Detection</p>
+                    </div>
                 </div>
             </div>
-            <button class="hamburger-btn" onclick="toggleSidebarMenu()">
+            <button class="hamburger-btn" onclick="toggleSidebarMenu()" aria-label="Toggle Navigation Menu">
                 <i class="fa-solid fa-bars" id="toggleIcon"></i>
             </button>
         </header>
