@@ -13,7 +13,7 @@
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div style="margin-bottom: 1.5rem;">
+            <div id="server-flashed-messages" style="margin-bottom: 1.5rem;">
                 {% for category, message in messages %}
                     {% if category == 'error' %}
                         <div style="padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; font-weight: 500; background-color: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626;" role="alert">
@@ -38,6 +38,8 @@
             </div>
         {% endif %}
     {% endwith %}
+
+    <div id="dynamic-login-feedback" style="display: none; margin-bottom: 1.5rem;"></div>
 
     <form id="login-form" action="{{ url_for('login') }}" method="POST">
         <div class="form-group has-icon-left">
@@ -72,6 +74,162 @@
         New to CocoScan? <a href="{{ url_for('signup') }}">Sign Up here</a>
     </div>
 </div>
+
+<!-- Offline Login Notice Modal Popup -->
+<div id="offline-login-modal" class="offline-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="offline-modal-title">
+    <div class="offline-modal-card">
+        <div class="offline-modal-icon-wrap">
+            <i class="fa-solid fa-cloud-arrow-down" id="offline-modal-icon"></i>
+        </div>
+        <div class="offline-modal-badge" id="offline-modal-badge">
+            <i class="fa-solid fa-triangle-exclamation"></i> Offline Notice
+        </div>
+        <h3 class="offline-modal-title" id="offline-modal-title">Offline Notice</h3>
+        <p class="offline-modal-message" id="offline-modal-message">
+            No offline credentials found for this account. Please connect to the internet to log in at least once.
+        </p>
+        <button type="button" class="btn-primary offline-modal-ok-btn" id="offline-modal-ok-btn" onclick="closeOfflineNoticePopupAndClearLogin()">
+            Okay
+        </button>
+    </div>
+</div>
+
+<style>
+    /* Prevent unwanted yellow/light-colored browser autofill backgrounds */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 1000px #f9fafb inset !important;
+        box-shadow: 0 0 0 1000px #f9fafb inset !important;
+        -webkit-text-fill-color: #1F2937 !important;
+        color: #1F2937 !important;
+        caret-color: #1F2937 !important;
+        border-color: #E5E7EB !important;
+        transition: background-color 50000s ease-in-out 0s, color 50000s ease-in-out 0s !important;
+    }
+
+    input:-webkit-autofill:focus {
+        -webkit-box-shadow: 0 0 0 1000px #ffffff inset, 0 0 0 3px rgba(45, 106, 79, 0.15) !important;
+        box-shadow: 0 0 0 1000px #ffffff inset, 0 0 0 3px rgba(45, 106, 79, 0.15) !important;
+        border-color: #2A7B4C !important;
+    }
+
+    .offline-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(8, 28, 16, 0.72);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 100000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: offlineModalFadeIn 0.25s ease-out;
+    }
+
+    .offline-modal-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 420px;
+        border-radius: 24px;
+        padding: 2.25rem 2rem;
+        text-align: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        animation: offlineModalScaleIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes offlineModalFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes offlineModalScaleIn {
+        from { opacity: 0; transform: scale(0.9) translateY(12px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .offline-modal-icon-wrap {
+        width: 76px;
+        height: 76px;
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin: 0 auto 1.25rem;
+        border: 2px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .offline-modal-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 5px 14px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        margin-bottom: 0.85rem;
+    }
+
+    .offline-modal-title {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 0.6rem;
+        letter-spacing: -0.02em;
+    }
+
+    .offline-modal-message {
+        font-size: 0.93rem;
+        color: #475569;
+        line-height: 1.6;
+        margin-bottom: 1.75rem;
+    }
+
+    .offline-modal-ok-btn {
+        width: 100%;
+        padding: 13px 20px;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        background: #2A7B4C;
+        color: #ffffff;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(42, 123, 76, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        outline: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+
+    .offline-modal-ok-btn:hover {
+        background: #1e5c38;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(42, 123, 76, 0.4);
+        outline: none !important;
+    }
+
+    .offline-modal-ok-btn:focus,
+    .offline-modal-ok-btn:focus-visible,
+    .offline-modal-ok-btn:active {
+        outline: none !important;
+        box-shadow: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -87,46 +245,381 @@
         }
     }
 
-    // Role-based Offline Login Handler: Redirect non-farmers to offline page and farmers to dashboard with post-login notice
-    document.getElementById('login-form')?.addEventListener('submit', function(e) {
-        if (!navigator.onLine) {
-            e.preventDefault();
-            const email = (document.getElementById('email').value || '').trim();
-            const password = document.getElementById('password').value;
+    function showFeedbackToast(message, type = 'error') {
+        const serverFlashes = document.getElementById('server-flashed-messages');
+        if (serverFlashes) serverFlashes.style.display = 'none';
 
-            if (!email || !password) {
-                return;
+        const container = document.getElementById('dynamic-login-feedback');
+        if (!container) return;
+
+        let bg = '#fee2e2', text = '#991b1b', border = '#dc2626', icon = 'fa-circle-exclamation';
+        if (type === 'warning') {
+            bg = '#fef3c7'; text = '#92400e'; border = '#f59e0b'; icon = 'fa-triangle-exclamation';
+        } else if (type === 'info') {
+            bg = '#e0f2fe'; text = '#075985'; border = '#0284c7'; icon = 'fa-circle-info';
+        } else if (type === 'success') {
+            bg = '#d1fae5'; text = '#065f46'; border = '#10b981'; icon = 'fa-circle-check';
+        }
+
+        container.innerHTML = `
+            <div style="padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; font-weight: 500; background-color: ${bg}; color: ${text}; border-left: 4px solid ${border};" role="alert">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fa-solid ${icon}"></i>
+                    <span>${message}</span>
+                </div>
+            </div>
+        `;
+        container.style.display = 'block';
+    }
+
+    /**
+     * Clear and reset all login form fields, loading states, and alerts
+     */
+    function resetLoginForm() {
+        const form = document.getElementById('login-form');
+        const submitBtn = document.getElementById('login-submit-btn');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+
+        if (form) {
+            form.dataset.submitting = 'false';
+        }
+
+        if (emailInput) {
+            emailInput.value = '';
+            emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+            emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        if (passwordInput) {
+            passwordInput.value = '';
+            passwordInput.type = 'password';
+            passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+            passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
+            const toggleIcon = document.querySelector('.toggle-password');
+            if (toggleIcon) {
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
             }
+        }
 
-            const storedRole = (localStorage.getItem('cocoscan_user_role') || '').toLowerCase();
-            const lowerEmail = email.toLowerCase();
-            const isNonFarmer = ['admin', 'agriculturist', 'agri_expert', 'lgu'].includes(storedRole) ||
-                                lowerEmail.includes('admin') || lowerEmail.includes('agri') || 
-                                lowerEmail.includes('lgu') || lowerEmail.includes('pca');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('btn-loading');
+            submitBtn.removeAttribute('aria-busy');
+            submitBtn.style.minWidth = '';
+            submitBtn.style.minHeight = '';
+            submitBtn.innerHTML = submitBtn.dataset.defaultHtml || 'Login';
+            delete submitBtn.dataset.defaultHtml;
+        }
 
-            if (isNonFarmer) {
-                const nonFarmerRole = (storedRole && storedRole !== 'farmer') ? storedRole :
-                                      (lowerEmail.includes('admin') ? 'admin' :
-                                      (lowerEmail.includes('agri') ? 'agriculturist' : 'lgu'));
-                localStorage.setItem('cocoscan_user_role', nonFarmerRole);
-                localStorage.setItem('cocoscan_user_email', email);
-                window.location.href = '/offline';
-                return;
+        const feedbackContainer = document.getElementById('dynamic-login-feedback');
+        if (feedbackContainer) feedbackContainer.style.display = 'none';
+
+        const serverFlashes = document.getElementById('server-flashed-messages');
+        if (serverFlashes) serverFlashes.style.display = 'none';
+
+        if (emailInput) {
+            emailInput.focus();
+        }
+    }
+
+    /**
+     * Show the Offline Notice Modal popup
+     */
+    function showOfflineNoticePopup(message, title = 'Offline Notice', badgeText = 'Offline Notice', badgeIcon = 'fa-triangle-exclamation') {
+        const modal = document.getElementById('offline-login-modal');
+        const titleEl = document.getElementById('offline-modal-title');
+        const msgEl = document.getElementById('offline-modal-message');
+        const badgeEl = document.getElementById('offline-modal-badge');
+        const form = document.getElementById('login-form');
+        const submitBtn = document.getElementById('login-submit-btn');
+
+        if (titleEl) titleEl.textContent = title;
+        if (msgEl) msgEl.textContent = message;
+        if (badgeEl) {
+            badgeEl.innerHTML = `<i class="fa-solid ${badgeIcon}"></i> ${badgeText}`;
+        }
+
+        // Reset submit button state so it does not stay stuck in loading
+        if (form) form.dataset.submitting = 'false';
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('btn-loading');
+            submitBtn.removeAttribute('aria-busy');
+            submitBtn.style.minWidth = '';
+            submitBtn.style.minHeight = '';
+            if (submitBtn.dataset.defaultHtml) {
+                submitBtn.innerHTML = submitBtn.dataset.defaultHtml;
+            } else {
+                submitBtn.innerHTML = 'Login';
             }
+        }
 
-            // Silently initialize farmer offline session
-            localStorage.setItem('cocoscan_user_role', 'farmer');
-            localStorage.setItem('cocoscan_offline_active', 'true');
-            localStorage.setItem('cocoscan_user_email', email);
-            
-            const derivedName = email.split('@')[0].replace(/[._-]/g, ' ');
-            const formattedName = derivedName.charAt(0).toUpperCase() + derivedName.slice(1);
-            localStorage.setItem('cocoscan_user_name', formattedName || 'Farmer');
+        // Hide inline dynamic feedback
+        const feedbackContainer = document.getElementById('dynamic-login-feedback');
+        if (feedbackContainer) feedbackContainer.style.display = 'none';
 
-            // Flag for displaying the post-login offline guidance popup on the dashboard
+        if (modal) {
+            modal.style.display = 'flex';
+            const okBtn = document.getElementById('offline-modal-ok-btn');
+            if (okBtn) okBtn.focus();
+        } else {
+            showFeedbackToast(message, 'warning');
+            resetLoginForm();
+        }
+    }
+
+    /**
+     * Close the Offline Notice Modal popup and clear login credentials
+     */
+    function closeOfflineNoticePopupAndClearLogin() {
+        const modal = document.getElementById('offline-login-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        resetLoginForm();
+    }
+
+    // Keyboard and overlay click handlers for modal
+    document.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('offline-login-modal');
+        if (modal && modal.style.display === 'flex') {
+            if (e.key === 'Escape' || e.key === 'Enter') {
+                e.preventDefault();
+                closeOfflineNoticePopupAndClearLogin();
+            }
+        }
+    });
+
+    document.getElementById('offline-login-modal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeOfflineNoticePopupAndClearLogin();
+        }
+    });
+
+    /**
+     * Handle Offline Login with local IndexedDB credential validation and role-based routing
+     */
+    async function handleOfflineLogin(email, password, isFallback = false) {
+        const submitBtn = document.getElementById('login-submit-btn');
+        const originalBtnHtml = submitBtn ? submitBtn.dataset.defaultHtml || 'Login' : 'Login';
+
+        if (!window.CocoScanAuth || typeof window.CocoScanAuth.verifyOfflineCredentials !== 'function') {
+            showOfflineNoticePopup('Authentication module unavailable. Please connect to the internet.');
+            return;
+        }
+
+        const verification = await window.CocoScanAuth.verifyOfflineCredentials(email, password);
+
+        if (!verification.success) {
+            const errorMsg = verification.error || 'Invalid email or password.';
+            showOfflineNoticePopup(errorMsg);
+            return;
+        }
+
+        // Credentials verified successfully offline!
+        const user = verification.user;
+        const normalizedRole = window.CocoScanAuth.normalizeRole(user.role);
+
+        // Store active session metadata
+        localStorage.setItem('cocoscan_user_role', normalizedRole);
+        localStorage.setItem('cocoscan_user_email', user.email);
+        localStorage.setItem('cocoscan_user_name', user.name || 'User');
+        if (user.userId) localStorage.setItem('cocoscan_user_id', user.userId);
+        localStorage.setItem('cocoscan_offline_active', 'true');
+        document.cookie = "cocoscan_offline_active=true; path=/; max-age=86400; SameSite=Lax";
+        document.cookie = "cocoscan_user_role=" + encodeURIComponent(normalizedRole) + "; path=/; max-age=86400; SameSite=Lax";
+        document.cookie = "cocoscan_user_email=" + encodeURIComponent(user.email) + "; path=/; max-age=86400; SameSite=Lax";
+
+        // Activate user's offline dataset (metrics, charts, reports) into working state
+        if (typeof window.CocoScanAuth.activateUserOfflineSession === 'function') {
+            await window.CocoScanAuth.activateUserOfflineSession(user.email);
+        }
+
+        // Role-based post-login routing & experience
+        if (normalizedRole === 'farmer') {
             sessionStorage.setItem('cocoscan_show_offline_post_login_modal', 'true');
+            if (isFallback) {
+                showFeedbackToast("Network offline. Verified local credentials; switching to offline mode...", "warning");
+                setTimeout(() => {
+                    window.location.href = '/farmer/dashboard';
+                }, 600);
+            } else {
+                window.location.href = '/farmer/dashboard';
+            }
+        } else {
+            // Non-farmer roles (Admin, LGU, Agriculturist) require online connectivity for cloud data
+            // Display modal popup with Okay button that clears login form fields, resets textboxes, and returns to clean login screen
+            showOfflineNoticePopup(
+                "Offline credentials verified. Administrative tools require network connection.",
+                "Offline Notice",
+                "Administrative Access",
+                "fa-triangle-exclamation"
+            );
+        }
+    }
 
-            window.location.href = '/farmer/dashboard';
+    // Role-based Offline & Safe Login Form Handler
+    const loginForm = document.getElementById('login-form');
+    const submitBtn = document.getElementById('login-submit-btn');
+
+    loginForm?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const email = (document.getElementById('email')?.value || '').trim().toLowerCase();
+        const password = document.getElementById('password')?.value || '';
+
+        const originalBtnHtml = submitBtn ? submitBtn.dataset.defaultHtml || submitBtn.innerHTML : 'Login';
+        if (submitBtn && !submitBtn.dataset.defaultHtml) {
+            submitBtn.dataset.defaultHtml = originalBtnHtml;
+        }
+
+        if (!email || !password) {
+            showFeedbackToast('Please enter both email and password.', 'error');
+            if (loginForm) loginForm.dataset.submitting = 'false';
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-loading');
+                submitBtn.removeAttribute('aria-busy');
+                submitBtn.style.minWidth = '';
+                submitBtn.style.minHeight = '';
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+            return;
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Logging in...';
+        }
+
+        // 1. Immediate Offline Check: If device is completely offline
+        if (!navigator.onLine) {
+            await handleOfflineLogin(email, password, false);
+            return;
+        }
+
+        // 2. Online Mode with 5-Second Timeout for Render Cold Starts & Slow Connections
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+        }, 5000);
+
+        try {
+            const formData = new FormData(loginForm);
+            const response = await fetch("{{ url_for('login') }}", {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                body: formData,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            // Handle JSON response
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const result = await response.json();
+
+                if (result.success) {
+                    // Securely cache credentials locally in IndexedDB for offline authentication
+                    if (window.CocoScanAuth && typeof window.CocoScanAuth.cacheUserCredentials === 'function') {
+                        try {
+                            const u = result.user || {};
+                            await window.CocoScanAuth.cacheUserCredentials(
+                                email,
+                                password,
+                                u.role || 'farmer',
+                                u.name || 'User',
+                                u.id || null
+                            );
+                        } catch (cacheErr) {
+                            console.warn('[Login] Failed to cache user credentials in IndexedDB:', cacheErr);
+                        }
+                    }
+
+                    localStorage.removeItem('cocoscan_offline_active');
+                    document.cookie = "cocoscan_offline_active=; path=/; max-age=0";
+                    window.location.href = result.redirect_url || '/';
+                    return;
+                } else if (result.requires_2fa) {
+                    window.location.href = result.redirect_url || '/verify-2fa';
+                    return;
+                } else {
+                    const errorMsg = result.error || 'Invalid email or password.';
+                    showFeedbackToast(errorMsg, 'error');
+                    if (loginForm) loginForm.dataset.submitting = 'false';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove('btn-loading');
+                        submitBtn.removeAttribute('aria-busy');
+                        submitBtn.style.minWidth = '';
+                        submitBtn.style.minHeight = '';
+                        submitBtn.innerHTML = originalBtnHtml;
+                    }
+                    return;
+                }
+            }
+
+            // Fallback for HTML / 302 redirect responses
+            if (response.redirected) {
+                localStorage.removeItem('cocoscan_offline_active');
+                document.cookie = "cocoscan_offline_active=; path=/; max-age=0";
+                window.location.href = response.url;
+                return;
+            }
+
+            const text = await response.text();
+
+            if (response.ok) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const alertEl = doc.querySelector('[role="alert"] span');
+
+                if (doc.getElementById('login-form')) {
+                    const errorMsg = alertEl ? alertEl.textContent.trim() : 'Invalid email or password.';
+                    showFeedbackToast(errorMsg, 'error');
+                    if (loginForm) loginForm.dataset.submitting = 'false';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove('btn-loading');
+                        submitBtn.removeAttribute('aria-busy');
+                        submitBtn.style.minWidth = '';
+                        submitBtn.style.minHeight = '';
+                        submitBtn.innerHTML = originalBtnHtml;
+                    }
+                    return;
+                } else {
+                    localStorage.removeItem('cocoscan_offline_active');
+                    document.cookie = "cocoscan_offline_active=; path=/; max-age=0";
+                    window.location.href = response.url;
+                    return;
+                }
+            } else {
+                if (!navigator.onLine) {
+                    await handleOfflineLogin(email, password, true);
+                } else {
+                    showFeedbackToast('Server error during login. Please try again.', 'error');
+                    if (loginForm) loginForm.dataset.submitting = 'false';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove('btn-loading');
+                        submitBtn.removeAttribute('aria-busy');
+                        submitBtn.style.minWidth = '';
+                        submitBtn.style.minHeight = '';
+                        submitBtn.innerHTML = originalBtnHtml;
+                    }
+                }
+            }
+        } catch (err) {
+            clearTimeout(timeoutId);
+            console.warn('[Login Notice] Server response timed out or network error encountered:', err);
+
+            // Network failure or timeout -> attempt offline credential verification
+            await handleOfflineLogin(email, password, true);
         }
     });
 </script>

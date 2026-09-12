@@ -1263,6 +1263,24 @@
                 </div>
             </header>
 
+            <!-- Informational Offline Notice for My Reports -->
+            <div id="reports-offline-banner" class="reports-offline-notice" style="display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 16px; padding: 14px 20px; margin-bottom: 1.25rem; align-items: center; justify-content: space-between; gap: 14px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.12);">
+                <div style="display: flex; align-items: center; gap: 12px; color: #92400e;">
+                    <div style="width: 38px; height: 38px; background: rgba(217, 119, 6, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fa-solid fa-cloud-arrow-down" style="font-size: 1.2rem; color: #d97706;"></i>
+                    </div>
+                    <div>
+                        <strong style="font-size: 0.92rem; display: block; color: #78350f; font-weight: 700;">Offline Mode • Local Reports View</strong>
+                        <span style="font-size: 0.82rem; color: #92400e; line-height: 1.4; display: block;">Reports were synced and will load once an active internet connection has been established.</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="background: rgba(146, 64, 14, 0.1); color: #78350f; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap;">
+                        <i class="fa-solid fa-database"></i> Cached
+                    </span>
+                </div>
+            </div>
+
             <div class="search-controls-row">
                 <div class="filter-buttons-row"
                     style="display:flex; gap:8px; align-items:center; width:100%; position:relative; z-index:70; flex-wrap:wrap; justify-content:space-between;">
@@ -1386,6 +1404,30 @@
             }
         }
 
+        const isOffline = !navigator.onLine || localStorage.getItem('cocoscan_offline_active') === 'true';
+
+        // Cache reports data when online and restore from storage when offline
+        if (!isOffline && Array.isArray(reports) && reports.length > 0) {
+            if (window.CocoScanAuth && typeof window.CocoScanAuth.cacheFarmerReports === 'function') {
+                window.CocoScanAuth.cacheFarmerReports(reports);
+            } else {
+                try {
+                    localStorage.setItem('cocoscan_cached_farmer_reports', JSON.stringify(reports));
+                } catch (e) {
+                    console.warn('LocalStorage quota limit reached for full reports cache:', e);
+                }
+            }
+        } else if (isOffline || !reports || reports.length === 0) {
+            try {
+                const cachedReports = localStorage.getItem('cocoscan_cached_farmer_reports');
+                if (cachedReports) {
+                    reports = JSON.parse(cachedReports);
+                }
+            } catch (err) {
+                console.warn('Failed to restore cached reports:', err);
+            }
+        }
+
         let activeSearchQuery = "";
         let activeStatusFilter = "all";
         let activePestFilter = "all";
@@ -1397,12 +1439,43 @@
         const reportIdToOpen = reportLookupParams.get("report_id");
         const openMode = reportLookupParams.get("mode") || "";
 
-        document.addEventListener("DOMContentLoaded", () => {
+        function updateReportsOfflineBanner() {
+            const banner = document.getElementById('reports-offline-banner');
+            const isCurrentlyOffline = !navigator.onLine || localStorage.getItem('cocoscan_offline_active') === 'true';
+            if (banner) {
+                banner.style.display = isCurrentlyOffline ? 'flex' : 'none';
+            }
+        }
+
+        window.addEventListener('offline', () => {
+            updateReportsOfflineBanner();
+            renderReportsGrid();
+        });
+        window.addEventListener('online', () => {
+            updateReportsOfflineBanner();
+            renderReportsGrid();
+        });
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            updateReportsOfflineBanner();
+
             if (!navigator.onLine) {
                 const role = (localStorage.getItem('cocoscan_user_role') || '').toLowerCase();
-                if (role && role !== 'farmer') {
+                if (role && role !== 'farmer' && role !== 'offline_farmer') {
                     window.location.href = '/offline';
                     return;
+                }
+            }
+
+            // Asynchronously check IndexedDB for complete offline report history
+            if ((!Array.isArray(reports) || reports.length === 0) && window.CocoScanAuth && typeof window.CocoScanAuth.getCachedFarmerReports === 'function') {
+                try {
+                    const cached = await window.CocoScanAuth.getCachedFarmerReports();
+                    if (Array.isArray(cached) && cached.length > 0) {
+                        reports = cached;
+                    }
+                } catch (dbErr) {
+                    console.warn('Error retrieving IndexedDB reports cache:', dbErr);
                 }
             }
 
@@ -1410,6 +1483,8 @@
             renderReportsGrid();
             openReportFromQueryParams();
         });
+
+        updateReportsOfflineBanner();
 
 
 
@@ -1760,14 +1835,26 @@
             });
 
             if (processedRecords.length === 0) {
-                container.innerHTML = `
-                    <div class="premium-empty-state-card">
-                        <div class="empty-state-icon-circle">
-                            <i class="fa-solid fa-folder-open"></i>
-                        </div>
-                        <h3>No Reports Found</h3>
-                        <p>We couldn't find any records matching your criteria. Try adjustments to your text search queries or structural filters.</p>
-                    </div>`;
+                const isCurrentlyOffline = !navigator.onLine || localStorage.getItem('cocoscan_offline_active') === 'true';
+                if (isCurrentlyOffline && (!reports || reports.length === 0)) {
+                    container.innerHTML = `
+                        <div class="premium-empty-state-card">
+                            <div class="empty-state-icon-circle" style="background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.25);">
+                                <i class="fa-solid fa-cloud-arrow-down" style="color: #d97706;"></i>
+                            </div>
+                            <h3>Offline Reports Sync</h3>
+                            <p>Reports were synced and will load once an active internet connection has been established.</p>
+                        </div>`;
+                } else {
+                    container.innerHTML = `
+                        <div class="premium-empty-state-card">
+                            <div class="empty-state-icon-circle">
+                                <i class="fa-solid fa-folder-open"></i>
+                            </div>
+                            <h3>No Reports Found</h3>
+                            <p>We couldn't find any records matching your criteria. Try adjustments to your text search queries or structural filters.</p>
+                        </div>`;
+                }
                 updatePaginationController(0);
                 return;
             }

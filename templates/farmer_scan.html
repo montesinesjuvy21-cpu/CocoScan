@@ -1116,9 +1116,20 @@
                 const node = document.getElementById('recent-reports-data');
                 if (!node) return [];
                 const txt = node.textContent || node.innerText || '[]';
-                return JSON.parse(txt);
+                const parsed = JSON.parse(txt);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    localStorage.setItem('cocoscan_cached_recent_reports', JSON.stringify(parsed));
+                    return parsed;
+                }
+                const cached = localStorage.getItem('cocoscan_cached_recent_reports');
+                return cached ? JSON.parse(cached) : [];
             } catch (e) {
-                return [];
+                try {
+                    const cached = localStorage.getItem('cocoscan_cached_recent_reports');
+                    return cached ? JSON.parse(cached) : [];
+                } catch (err) {
+                    return [];
+                }
             }
         })();
 

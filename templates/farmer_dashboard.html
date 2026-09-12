@@ -15,11 +15,25 @@
 
 {% block metrics_grid %}
 
+<!-- Persistent Offline Notice Banner for Farmers -->
+<div id="farmer-offline-banner" style="display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 16px; padding: 14px 20px; margin-bottom: 1.5rem; align-items: center; justify-content: space-between; gap: 14px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.12);">
+    <div style="display: flex; align-items: center; gap: 12px; color: #92400e;">
+        <i class="fa-solid fa-cloud-arrow-down" style="font-size: 1.5rem; color: #d97706;"></i>
+        <div>
+            <strong style="font-size: 0.95rem; display: block; color: #78350f;">Offline Access Active</strong>
+            <span style="font-size: 0.82rem; color: #92400e;">You can perform field scans and save them to local drafts without an active internet connection.</span>
+        </div>
+    </div>
+    <a href="{{ url_for('farmer_scan') }}" style="background: #2A7B4C; color: #ffffff; padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(42, 123, 76, 0.2);">
+        <i class="fa-solid fa-camera"></i> Launch Scanner
+    </a>
+</div>
+
 <div class="metrics-row-wrapper">
     <div class="metric-card-node cases">
         <div class="metric-data">
             <h5>Total Reported Cases</h5>
-            <div class="metric-count">{{ metrics.total_cases }}</div>
+            <div class="metric-count" id="metric-total-cases">{{ metrics.total_cases }}</div>
             <p>All Time Submitted</p>
         </div>
         <div class="metric-icon-box"><i class="fa-solid fa-bug"></i></div>
@@ -29,7 +43,7 @@
         <div class="metric-card-node pending">
             <div class="metric-data">
                 <h5>Pending</h5>
-                <div class="metric-count">{{ metrics.pending_cases }}</div>
+                <div class="metric-count" id="metric-pending-cases">{{ metrics.pending_cases }}</div>
                 <p>Awaiting for Review</p>
             </div>
             <div class="metric-icon-box"><i class="fa-solid fa-triangle-exclamation"></i></div>
@@ -38,7 +52,7 @@
         <div class="metric-card-node resolved">
             <div class="metric-data">
                 <h5>Resolved</h5>
-                <div class="metric-count">{{ metrics.resolved_cases }}</div>
+                <div class="metric-count" id="metric-resolved-cases">{{ metrics.resolved_cases }}</div>
                 <p>Expert Solutions</p>
             </div>
             <div class="metric-icon-box"><i class="fa-solid fa-circle-check"></i></div>
@@ -129,30 +143,85 @@
         const shouldShow = sessionStorage.getItem('cocoscan_show_offline_post_login_modal');
         if (shouldShow === 'true') {
             sessionStorage.removeItem('cocoscan_show_offline_post_login_modal');
-            const modal = document.getElementById('farmer-offline-post-login-modal');
-            if (modal) {
-                modal.style.display = 'flex';
+            // ONLY display the modal if the user is ACTUALLY offline
+            if (!navigator.onLine) {
+                const modal = document.getElementById('farmer-offline-post-login-modal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                }
+            } else {
+                localStorage.removeItem('cocoscan_offline_active');
             }
         }
     }
 
     function updateFarmerOfflineUI() {
         const banner = document.getElementById('farmer-offline-banner');
-        if (!banner) return;
         if (!navigator.onLine) {
-            banner.style.display = 'flex';
+            if (banner) banner.style.display = 'flex';
         } else {
-            banner.style.display = 'none';
+            if (banner) banner.style.display = 'none';
+            closeFarmerOfflineModal();
+            localStorage.removeItem('cocoscan_offline_active');
         }
     }
 
-    window.addEventListener('offline', updateFarmerOfflineUI);
-    window.addEventListener('online', updateFarmerOfflineUI);
+    function syncOfflineMetrics() {
+        const isOffline = !navigator.onLine || localStorage.getItem('cocoscan_offline_active') === 'true';
+        const totalEl = document.getElementById('metric-total-cases');
+        const pendingEl = document.getElementById('metric-pending-cases');
+        const resolvedEl = document.getElementById('metric-resolved-cases');
+
+        const total = totalEl?.textContent?.trim() || '0';
+        const pending = pendingEl?.textContent?.trim() || '0';
+        const resolved = resolvedEl?.textContent?.trim() || '0';
+
+        if (!isOffline && window.CocoScanAuth) {
+            const metricsObj = {
+                total_cases: total,
+                pending_cases: pending,
+                resolved_cases: resolved,
+                affected_areas: '0'
+            };
+            window.CocoScanAuth.cacheDashboardMetrics(metricsObj);
+        } else if (isOffline) {
+            let cached = null;
+            if (window.CocoScanAuth && typeof window.CocoScanAuth.getCachedDashboardMetrics === 'function') {
+                cached = window.CocoScanAuth.getCachedDashboardMetrics();
+            }
+            if (!cached) {
+                try {
+                    const rawMetrics = localStorage.getItem('cocoscan_cached_metrics');
+                    if (rawMetrics) cached = JSON.parse(rawMetrics);
+                } catch (e) {}
+            }
+            if (cached) {
+                if (totalEl && cached.total_cases !== undefined) totalEl.textContent = cached.total_cases;
+                if (pendingEl && cached.pending_cases !== undefined) pendingEl.textContent = cached.pending_cases;
+                if (resolvedEl && cached.resolved_cases !== undefined) resolvedEl.textContent = cached.resolved_cases;
+            }
+        }
+    }
+
+    window.addEventListener('offline', () => {
+        updateFarmerOfflineUI();
+        syncOfflineMetrics();
+        if (typeof hydrateUserProfileGreeting === 'function') hydrateUserProfileGreeting();
+    });
+    window.addEventListener('online', () => {
+        updateFarmerOfflineUI();
+        syncOfflineMetrics();
+        if (typeof hydrateUserProfileGreeting === 'function') hydrateUserProfileGreeting();
+    });
     document.addEventListener('DOMContentLoaded', () => {
         updateFarmerOfflineUI();
         checkPostLoginOfflineNotice();
+        syncOfflineMetrics();
+        if (typeof hydrateUserProfileGreeting === 'function') hydrateUserProfileGreeting();
     });
     updateFarmerOfflineUI();
     checkPostLoginOfflineNotice();
+    syncOfflineMetrics();
+    if (typeof hydrateUserProfileGreeting === 'function') hydrateUserProfileGreeting();
 </script>
 {% endblock %}

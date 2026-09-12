@@ -165,17 +165,58 @@
         });
     }
 
-    // Save user role for offline access logic
+    // Save user role and profile name for offline access logic
     let currentUserRole = "";
+    let currentUserName = "";
+    let currentUserEmail = "";
+    let currentUserId = "";
     {% if current_user is defined and current_user.is_authenticated %}
     currentUserRole = "{{ current_user.role }}";
+    currentUserName = "{{ current_user.name }}";
+    currentUserEmail = "{{ current_user.email }}";
+    currentUserId = "{{ current_user.id }}";
     {% elif session is defined and session.get('user_role') %}
     currentUserRole = "{{ session.get('user_role') }}";
+    currentUserName = "{{ session.get('user_name') }}";
+    currentUserEmail = "{{ session.get('user_email') }}";
+    currentUserId = "{{ session.get('user_id') }}";
     {% elif session is defined and session.get('role') %}
     currentUserRole = "{{ session.get('role') }}";
+    currentUserName = "{{ session.get('name') }}";
+    currentUserEmail = "{{ session.get('email') }}";
+    currentUserId = "{{ session.get('id') }}";
     {% endif %}
-    if (currentUserRole) {
+    if (currentUserRole && currentUserRole !== 'offline_farmer') {
         localStorage.setItem('cocoscan_user_role', currentUserRole);
+    }
+    const isInvalidName = (n) => !n || ['none', 'none none', 'null', 'undefined', 'farmer', 'farmer (offline)', 'user', 'account', 'administrator', 'agriculturist', 'lgu'].includes(String(n).trim().toLowerCase()) || String(n).trim().toLowerCase().startsWith('none ');
+    if (currentUserName && !isInvalidName(currentUserName)) {
+        localStorage.setItem('cocoscan_user_name', currentUserName);
+        const firstName = currentUserName.trim().split(/\s+/)[0];
+        if (firstName && !isInvalidName(firstName)) {
+            localStorage.setItem('cocoscan_user_first_name', firstName);
+        }
+    }
+    if (currentUserEmail) {
+        localStorage.setItem('cocoscan_user_email', currentUserEmail);
+        if (!localStorage.getItem('cocoscan_user_first_name') && currentUserEmail.includes('@')) {
+            const firstSegment = currentUserEmail.split('@')[0].split(/[._-]/)[0].trim();
+            if (firstSegment && !isInvalidName(firstSegment)) {
+                localStorage.setItem('cocoscan_user_first_name', firstSegment.charAt(0).toUpperCase() + firstSegment.slice(1));
+            }
+        }
+    }
+    if (currentUserId && currentUserId !== 'offline_farmer') {
+        localStorage.setItem('cocoscan_user_id', currentUserId);
+    }
+
+    // Sync metadata with IndexedDB if logged in online
+    if (currentUserEmail && window.CocoScanAuth && typeof window.CocoScanAuth.updateCachedUserMetadata === 'function') {
+        window.CocoScanAuth.updateCachedUserMetadata(currentUserEmail, {
+            role: currentUserRole,
+            name: currentUserName,
+            userId: currentUserId
+        }).catch(err => console.warn('[PWA] Metadata sync note:', err));
     }
 
     // 2. Install Prompt Handling
@@ -205,7 +246,7 @@
         });
     }
 
-    // 3. Discreet Sync Status Management (Exclusively for Farmers)
+    // 3. Discreet Sync Status Management (Exclusively for Farmers) & Non-Farmer Offline Redirection
     function formatLastSyncTime(dateStr) {
         if (!dateStr) return 'just now';
         try {
@@ -218,6 +259,36 @@
             }).format(dt);
         } catch (e) {
             return 'just now';
+        }
+    }
+
+    function enforceRoleOfflinePolicy() {
+        if (!navigator.onLine) {
+            const currentPath = window.location.pathname;
+            // Never redirect public authentication or offline informational pages
+            const isPublicAuthPage = currentPath === '/login' ||
+                                    currentPath === '/signup' ||
+                                    currentPath === '/forgot-password' ||
+                                    currentPath === '/reset-password' ||
+                                    currentPath === '/verify-2fa' ||
+                                    currentPath === '/' ||
+                                    currentPath.startsWith('/offline');
+
+            if (isPublicAuthPage) {
+                return;
+            }
+
+            const role = (localStorage.getItem('cocoscan_user_role') || currentUserRole || '').toLowerCase();
+            const isNonFarmer = role && role !== 'farmer' && role !== 'offline_farmer';
+            const isNonFarmerPage = currentPath.startsWith('/admin') ||
+                                    currentPath.startsWith('/agriculturist') ||
+                                    currentPath.startsWith('/lgu') ||
+                                    currentPath.startsWith('/overview') ||
+                                    currentPath.startsWith('/map') ||
+                                    currentPath.startsWith('/analytics');
+            if (isNonFarmer || isNonFarmerPage) {
+                window.location.href = '/offline';
+            }
         }
     }
 
@@ -257,6 +328,7 @@
     }
 
     window.addEventListener('offline', () => {
+        enforceRoleOfflinePolicy();
         updateDashboardSyncStatus();
     });
 
@@ -264,10 +336,12 @@
         updateDashboardSyncStatus();
     });
 
-    // Initialize sync status on load without annoying floating popups
+    // Initialize sync status and offline enforcement on load
     document.addEventListener('DOMContentLoaded', () => {
+        enforceRoleOfflinePolicy();
         updateDashboardSyncStatus();
     });
+    enforceRoleOfflinePolicy();
     updateDashboardSyncStatus();
 })();
 </script>

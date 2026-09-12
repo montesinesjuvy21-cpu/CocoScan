@@ -869,7 +869,7 @@
                     <div class="user-avatar-circle"><i class="fa-solid fa-user"
                             style="color:#fff; font-size: 0.95rem;"></i></div>
                     <div class="user-identity-text">
-                        <h4>{{ user_name or 'Account' }}</h4>
+                        <h4 id="sidebar-user-name">{{ user_name or 'Account' }}</h4>
                         <p>{% if (sidebar_role|lower) == 'admin' %}PCA Administrator{% elif (sidebar_role|lower) in ['agriculturist', 'agri_expert'] %}PCA Agriculturist{% elif (sidebar_role|lower) == 'lgu' %}LGU Officer{% elif (sidebar_role|lower) == 'farmer' %}Farmer{% else %}{{ sidebar_role|title }}{% endif %}</p>
                     </div>
                 </div>
@@ -888,11 +888,47 @@
         {{ (chart_data if chart_data is defined and chart_data else {}) | tojson }}
     </script>
     <script>
-        document.addEventListener("DOMContentLoaded", async () => {
+        async function hydrateUserProfileGreeting() {
             const hour = new Date().getHours();
             const banner = document.getElementById("greeting-banner");
-            const fullName = "{{ user_name or '' }}".trim();
-            const firstName = fullName.split(" ")[0] || "{% block js_role_name %}User{% endblock %}";
+            const sidebarNameEl = document.getElementById('sidebar-user-name');
+            const rawServerName = "{{ user_name or '' }}".trim();
+            const roleDefault = "{% block js_role_name %}Farmer{% endblock %}";
+
+            let firstName = "";
+            let fullName = "";
+
+            if (window.CocoScanAuth && typeof window.CocoScanAuth.resolveSafeFirstName === 'function') {
+                firstName = window.CocoScanAuth.resolveSafeFirstName(rawServerName, roleDefault);
+                fullName = window.CocoScanAuth.resolveSafeProfileName(rawServerName, roleDefault);
+            } else {
+                const isInvalid = (n) => !n || ['none', 'none none', 'null', 'undefined', 'farmer', 'farmer (offline)', 'user', 'account', 'administrator', 'agriculturist', 'lgu'].includes(String(n).trim().toLowerCase()) || String(n).trim().toLowerCase().startsWith('none ');
+                const cachedFirst = localStorage.getItem('cocoscan_user_first_name');
+                const cachedFull = localStorage.getItem('cocoscan_user_name');
+                const cachedEmail = localStorage.getItem('cocoscan_user_email');
+
+                if (!isInvalid(cachedFirst)) {
+                    firstName = cachedFirst;
+                }
+                if (!isInvalid(cachedFull)) {
+                    fullName = cachedFull;
+                    if (!firstName) firstName = cachedFull.split(/\s+/)[0];
+                }
+                if (!firstName && !isInvalid(rawServerName)) {
+                    fullName = rawServerName;
+                    firstName = rawServerName.split(/\s+/)[0];
+                }
+                if (!firstName && cachedEmail && cachedEmail.includes('@')) {
+                    const derived = cachedEmail.split('@')[0].split(/[._-]/)[0].trim();
+                    if (derived) firstName = derived.charAt(0).toUpperCase() + derived.slice(1);
+                }
+                if (!firstName) firstName = roleDefault;
+                if (!fullName) fullName = firstName;
+            }
+
+            if (sidebarNameEl && fullName) {
+                sidebarNameEl.textContent = fullName;
+            }
 
             let welcome = "Dashboard";
             if (hour < 12) welcome = `Good Morning, ${firstName}!`;
@@ -900,8 +936,42 @@
             else welcome = `Good Evening, ${firstName}!`;
             if (banner) banner.textContent = welcome;
 
-            initCharts();
+            if (window.CocoScanAuth && typeof window.CocoScanAuth.getCachedUser === 'function') {
+                const email = localStorage.getItem('cocoscan_user_email');
+                if (email) {
+                    try {
+                        const user = await window.CocoScanAuth.getCachedUser(email);
+                        if (user && user.name && !window.CocoScanAuth.isInvalidProfileName(user.name)) {
+                            const dbFirstName = user.name.split(/\s+/)[0];
+                            if (dbFirstName && !window.CocoScanAuth.isInvalidProfileName(dbFirstName)) {
+                                localStorage.setItem('cocoscan_user_name', user.name);
+                                localStorage.setItem('cocoscan_user_first_name', dbFirstName);
+                                if (sidebarNameEl) sidebarNameEl.textContent = user.name;
+                                if (banner) {
+                                    if (hour < 12) banner.textContent = `Good Morning, ${dbFirstName}!`;
+                                    else if (hour < 18) banner.textContent = `Good Afternoon, ${dbFirstName}!`;
+                                    else banner.textContent = `Good Evening, ${dbFirstName}!`;
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
 
+        window.hydrateUserProfileGreeting = hydrateUserProfileGreeting;
+
+        window.addEventListener('offline', () => {
+            hydrateUserProfileGreeting();
+        });
+
+        window.addEventListener('online', () => {
+            hydrateUserProfileGreeting();
+        });
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            hydrateUserProfileGreeting();
+            initCharts();
         });
 
         function toggleSidebarMenu() {

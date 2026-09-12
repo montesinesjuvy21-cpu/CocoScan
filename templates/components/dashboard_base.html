@@ -872,7 +872,7 @@
                     <div class="user-avatar-circle"><i class="fa-solid fa-user"
                             style="color:#fff; font-size: 0.95rem;"></i></div>
                     <div class="user-identity-text">
-                        <h4>{{ user_name or 'Account' }}</h4>
+                        <h4 id="sidebar-user-name">{{ user_name or 'Account' }}</h4>
                         <p>{% block user_role %}User{% endblock %}</p>
                     </div>
                 </div>
@@ -913,7 +913,7 @@
                 <div class="metric-card-node cases">
                     <div class="metric-data">
                         <h5>Total Reported</h5>
-                        <div class="metric-count">{{ metrics.total_cases }}</div>
+                        <div class="metric-count" id="metric-total-cases">{{ metrics.total_cases }}</div>
                         <p>This Month</p>
                     </div>
                     <div class="metric-icon-box"><i class="fa-solid fa-bug"></i></div>
@@ -922,7 +922,7 @@
                 <div class="metric-card-node pending">
                     <div class="metric-data">
                         <h5>Pending</h5>
-                        <div class="metric-count">{{ metrics.pending_cases }}</div>
+                        <div class="metric-count" id="metric-pending-cases">{{ metrics.pending_cases }}</div>
                         <p>Attention Required</p>
                     </div>
                     <div class="metric-icon-box"><i class="fa-solid fa-triangle-exclamation"></i></div>
@@ -931,7 +931,7 @@
                 <div class="metric-card-node resolved">
                     <div class="metric-data">
                         <h5>Resolved</h5>
-                        <div class="metric-count">{{ metrics.resolved_cases }}</div>
+                        <div class="metric-count" id="metric-resolved-cases">{{ metrics.resolved_cases }}</div>
                         <p>This Month</p>
                     </div>
                     <div class="metric-icon-box"><i class="fa-solid fa-circle-check"></i></div>
@@ -940,7 +940,7 @@
                 <div class="metric-card-node affected">
                     <div class="metric-data">
                         <h5>Affected Areas</h5>
-                        <div class="metric-count">{{ metrics.affected_areas }}</div>
+                        <div class="metric-count" id="metric-affected-areas">{{ metrics.affected_areas }}</div>
                         <p>Farms Logged</p>
                     </div>
                     <div class="metric-icon-box"><i class="fa-solid fa-location-dot"></i></div>
@@ -966,11 +966,75 @@
         {{ (chart_data if chart_data is defined and chart_data else {}) | tojson }}
     </script>
     <script>
-        document.addEventListener("DOMContentLoaded", async () => {
+        function hydrateDashboardMetricsOffline() {
+            const isOffline = !navigator.onLine || localStorage.getItem('cocoscan_offline_active') === 'true';
+            const totalEl = document.getElementById('metric-total-cases');
+            const pendingEl = document.getElementById('metric-pending-cases');
+            const resolvedEl = document.getElementById('metric-resolved-cases');
+            const affectedEl = document.getElementById('metric-affected-areas');
+
+            if (window.CocoScanAuth) {
+                if (!isOffline) {
+                    const onlineMetrics = {
+                        total_cases: totalEl?.textContent?.trim() || '0',
+                        pending_cases: pendingEl?.textContent?.trim() || '0',
+                        resolved_cases: resolvedEl?.textContent?.trim() || '0',
+                        affected_areas: affectedEl?.textContent?.trim() || '0'
+                    };
+                    window.CocoScanAuth.cacheDashboardMetrics(onlineMetrics);
+                } else {
+                    const cached = window.CocoScanAuth.getCachedDashboardMetrics();
+                    if (cached) {
+                        if (totalEl && cached.total_cases !== undefined) totalEl.textContent = cached.total_cases;
+                        if (pendingEl && cached.pending_cases !== undefined) pendingEl.textContent = cached.pending_cases;
+                        if (resolvedEl && cached.resolved_cases !== undefined) resolvedEl.textContent = cached.resolved_cases;
+                        if (affectedEl && cached.affected_areas !== undefined) affectedEl.textContent = cached.affected_areas;
+                    }
+                }
+            }
+        }
+
+        async function hydrateUserProfileGreeting() {
             const hour = new Date().getHours();
             const banner = document.getElementById("greeting-banner");
-            const fullName = "{{ user_name or '' }}".trim();
-            const firstName = fullName.split(" ")[0] || "{% block js_role_name %}User{% endblock %}";
+            const sidebarNameEl = document.getElementById('sidebar-user-name');
+            const rawServerName = "{{ user_name or '' }}".trim();
+            const roleDefault = "{% block js_role_name %}Farmer{% endblock %}";
+
+            let firstName = "";
+            let fullName = "";
+
+            if (window.CocoScanAuth && typeof window.CocoScanAuth.resolveSafeFirstName === 'function') {
+                firstName = window.CocoScanAuth.resolveSafeFirstName(rawServerName, roleDefault);
+                fullName = window.CocoScanAuth.resolveSafeProfileName(rawServerName, roleDefault);
+            } else {
+                const isInvalid = (n) => !n || ['none', 'none none', 'null', 'undefined', 'farmer', 'farmer (offline)', 'user', 'account', 'administrator', 'agriculturist', 'lgu'].includes(String(n).trim().toLowerCase()) || String(n).trim().toLowerCase().startsWith('none ');
+                const cachedFirst = localStorage.getItem('cocoscan_user_first_name');
+                const cachedFull = localStorage.getItem('cocoscan_user_name');
+                const cachedEmail = localStorage.getItem('cocoscan_user_email');
+
+                if (!isInvalid(cachedFirst)) {
+                    firstName = cachedFirst;
+                }
+                if (!isInvalid(cachedFull)) {
+                    fullName = cachedFull;
+                    if (!firstName) firstName = cachedFull.split(/\s+/)[0];
+                }
+                if (!firstName && !isInvalid(rawServerName)) {
+                    fullName = rawServerName;
+                    firstName = rawServerName.split(/\s+/)[0];
+                }
+                if (!firstName && cachedEmail && cachedEmail.includes('@')) {
+                    const derived = cachedEmail.split('@')[0].split(/[._-]/)[0].trim();
+                    if (derived) firstName = derived.charAt(0).toUpperCase() + derived.slice(1);
+                }
+                if (!firstName) firstName = roleDefault;
+                if (!fullName) fullName = firstName;
+            }
+
+            if (sidebarNameEl && fullName) {
+                sidebarNameEl.textContent = fullName;
+            }
 
             let welcome = "Dashboard";
             if (hour < 12) welcome = `Good Morning, ${firstName}!`;
@@ -978,8 +1042,46 @@
             else welcome = `Good Evening, ${firstName}!`;
             if (banner) banner.textContent = welcome;
 
-            initCharts();
+            // Asynchronously check IndexedDB for any cached profile details to ensure full fidelity
+            if (window.CocoScanAuth && typeof window.CocoScanAuth.getCachedUser === 'function') {
+                const email = localStorage.getItem('cocoscan_user_email');
+                if (email) {
+                    try {
+                        const user = await window.CocoScanAuth.getCachedUser(email);
+                        if (user && user.name && !window.CocoScanAuth.isInvalidProfileName(user.name)) {
+                            const dbFirstName = user.name.split(/\s+/)[0];
+                            if (dbFirstName && !window.CocoScanAuth.isInvalidProfileName(dbFirstName)) {
+                                localStorage.setItem('cocoscan_user_name', user.name);
+                                localStorage.setItem('cocoscan_user_first_name', dbFirstName);
+                                if (sidebarNameEl) sidebarNameEl.textContent = user.name;
+                                if (banner) {
+                                    if (hour < 12) banner.textContent = `Good Morning, ${dbFirstName}!`;
+                                    else if (hour < 18) banner.textContent = `Good Afternoon, ${dbFirstName}!`;
+                                    else banner.textContent = `Good Evening, ${dbFirstName}!`;
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
 
+        window.hydrateUserProfileGreeting = hydrateUserProfileGreeting;
+
+        window.addEventListener('offline', () => {
+            hydrateUserProfileGreeting();
+            hydrateDashboardMetricsOffline();
+        });
+
+        window.addEventListener('online', () => {
+            hydrateUserProfileGreeting();
+            hydrateDashboardMetricsOffline();
+        });
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            hydrateUserProfileGreeting();
+            hydrateDashboardMetricsOffline();
+            initCharts();
         });
 
         function toggleSidebarMenu() {
@@ -1019,6 +1121,38 @@
                 chartPayload = JSON.parse(rawData);
             } catch (e) {
                 console.error("Failed to parse chart data", e);
+            }
+
+            const isOffline = !navigator.onLine || localStorage.getItem('cocoscan_offline_active') === 'true';
+
+            // Cache valid chart payload online, and restore from storage offline
+            const hasServerData = chartPayload && (
+                (Array.isArray(chartPayload.trend_datasets) && chartPayload.trend_datasets.length > 0 && chartPayload.trend_datasets.some(d => Array.isArray(d.data) && d.data.some(v => v > 0))) ||
+                (Array.isArray(chartPayload.distribution_data) && chartPayload.distribution_data.length > 0 && chartPayload.distribution_data.some(v => v > 0))
+            );
+
+            if (!isOffline && hasServerData) {
+                if (window.CocoScanAuth && typeof window.CocoScanAuth.cacheChartData === 'function') {
+                    window.CocoScanAuth.cacheChartData(chartPayload);
+                } else {
+                    localStorage.setItem('cocoscan_cached_charts', JSON.stringify(chartPayload));
+                }
+            } else if (isOffline || !hasServerData) {
+                if (window.CocoScanAuth && typeof window.CocoScanAuth.getCachedChartData === 'function') {
+                    const cached = window.CocoScanAuth.getCachedChartData();
+                    if (cached && (Array.isArray(cached.trend_datasets) || Array.isArray(cached.distribution_data))) {
+                        chartPayload = cached;
+                    }
+                } else {
+                    try {
+                        const cachedRaw = localStorage.getItem('cocoscan_cached_charts');
+                        if (cachedRaw) {
+                            chartPayload = JSON.parse(cachedRaw);
+                        }
+                    } catch (err) {
+                        console.warn('Failed to restore cached chart data:', err);
+                    }
+                }
             }
 
             if (window.chartInstances && window.chartInstances.length) {

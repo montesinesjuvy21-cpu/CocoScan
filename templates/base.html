@@ -156,6 +156,29 @@
             box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
         }
 
+        /* Prevent unwanted yellow/blue browser autofill backgrounds across all webkit browsers */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active,
+        select:-webkit-autofill,
+        select:-webkit-autofill:hover,
+        select:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0 1000px #f9fafb inset !important;
+            box-shadow: 0 0 0 1000px #f9fafb inset !important;
+            -webkit-text-fill-color: var(--text-dark, #1F2937) !important;
+            color: var(--text-dark, #1F2937) !important;
+            caret-color: var(--text-dark, #1F2937) !important;
+            border-color: var(--border-color, #E5E7EB) !important;
+            transition: background-color 50000s ease-in-out 0s, color 50000s ease-in-out 0s !important;
+        }
+
+        input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0 1000px #ffffff inset, 0 0 0 3px rgba(45, 106, 79, 0.15) !important;
+            box-shadow: 0 0 0 1000px #ffffff inset, 0 0 0 3px rgba(45, 106, 79, 0.15) !important;
+            border-color: var(--primary-green, #2A7B4C) !important;
+        }
+
         /* Buttons */
         .btn-primary {
             position: relative;
@@ -175,6 +198,15 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-primary:focus,
+        .btn-primary:focus-visible,
+        .btn-primary:active {
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.25);
         }
 
         .btn-primary:hover {

@@ -10,6 +10,7 @@
     <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/static/js/auth_storage.js"></script>
     <style>
         :root {
             --bg-dark-green: #081C10;
@@ -39,33 +40,33 @@
         }
 
         .offline-portal-card {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             width: 100%;
-            max-width: 460px;
-            padding: 3rem 2.5rem;
+            max-width: 480px;
+            padding: 2.75rem 2.25rem;
             border-radius: var(--radius-main);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            animation: fadeIn 0.5s ease-out;
+            animation: fadeIn 0.4s ease-out;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
+            from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         .icon-pulse-wrapper {
-            width: 90px;
-            height: 90px;
+            width: 86px;
+            height: 86px;
             background: rgba(42, 123, 76, 0.1);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1.5rem;
+            margin: 0 auto 1.25rem;
             position: relative;
         }
 
@@ -81,7 +82,7 @@
 
         @keyframes pulseWave {
             0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.4); opacity: 0; }
+            100% { transform: scale(1.35); opacity: 0; }
         }
 
         .icon-pulse-wrapper i {
@@ -90,18 +91,19 @@
         }
 
         h1 {
-            font-size: 1.6rem;
+            font-size: 1.55rem;
             font-weight: 800;
             color: #081C10;
             margin-bottom: 0.5rem;
             letter-spacing: -0.02em;
+            line-height: 1.25;
         }
 
         p.description {
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             color: var(--text-muted);
-            line-height: 1.5;
-            margin-bottom: 2rem;
+            line-height: 1.55;
+            margin-bottom: 1.5rem;
         }
 
         .pwa-badge {
@@ -114,13 +116,37 @@
             border-radius: 50px;
             font-size: 0.8rem;
             font-weight: 600;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .countdown-banner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #b91c1c;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 4px 0 6px 0;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .countdown-timer-value {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #991b1b;
+            min-width: 24px;
+            display: inline-block;
         }
 
         .actions-stack {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
         .btn {
@@ -129,23 +155,20 @@
             justify-content: center;
             gap: 10px;
             width: 100%;
-            padding: 14px 20px;
+            padding: 13px 20px;
             border-radius: 14px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             text-decoration: none;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             border: none;
+            box-sizing: border-box;
         }
 
         .btn i {
             color: inherit;
             transition: transform 0.2s ease;
-        }
-
-        .btn:hover i {
-            color: inherit;
         }
 
         .btn-primary {
@@ -182,27 +205,40 @@
         }
 
         .status-footer {
-            margin-top: 2rem;
-            padding-top: 1.5rem;
+            margin-top: 1.75rem;
+            padding-top: 1.25rem;
             border-top: 1px solid #f1f5f9;
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            line-height: 1.5;
         }
 
         .status-dot {
             display: inline-block;
             width: 8px;
             height: 8px;
-            background-color: #f59e0b;
+            background-color: #ef4444;
             border-radius: 50%;
-            margin-right: 6px;
+            flex-shrink: 0;
+        }
+
+        .countdown-timer-value {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #b91c1c;
+            min-width: 20px;
+            display: inline-block;
         }
     </style>
 </head>
 <body>
     <div class="offline-portal-card">
         <div class="icon-pulse-wrapper">
-            <i class="fa-solid fa-cloud-arrow-down"></i>
+            <i class="fa-solid fa-cloud-arrow-down" id="portal-icon"></i>
         </div>
 
         <div id="offline-badge" class="pwa-badge" style="display: none;">
@@ -219,13 +255,14 @@
         </div>
 
         <div class="status-footer">
-            <span class="status-dot"></span> <span id="offline-footer-text">CocoScan will automatically reload and reconnect when your internet connection is restored.</span>
+            <span class="status-dot"></span> <span id="offline-footer-text">Auto-logging out in <strong id="countdown-timer-display" class="countdown-timer-value">30</strong>s if connection is not restored</span>
         </div>
     </div>
 
     <script>
         (function() {
-            const role = (localStorage.getItem('cocoscan_user_role') || '').toLowerCase();
+            const rawRole = localStorage.getItem('cocoscan_user_role') || '';
+            const role = (window.CocoScanAuth ? window.CocoScanAuth.normalizeRole(rawRole) : rawRole.toLowerCase()).trim();
             const isFarmer = role === 'farmer';
 
             const title = document.getElementById('offline-title');
@@ -233,11 +270,100 @@
             const badge = document.getElementById('offline-badge');
             const actions = document.getElementById('offline-actions');
             const footerText = document.getElementById('offline-footer-text');
+            const statusDot = document.querySelector('.status-dot');
+
+            let logoutTimerInterval = null;
+            let remainingSeconds = 30;
+
+            function getTargetDashboardUrl() {
+                if (window.CocoScanAuth && typeof window.CocoScanAuth.getRoleDashboardUrl === 'function') {
+                    return window.CocoScanAuth.getRoleDashboardUrl(role);
+                }
+                if (role === 'farmer') return '/farmer/dashboard';
+                if (role === 'agri_expert') return '/agriculturist/dashboard';
+                if (role === 'admin') return '/admin/dashboard';
+                if (role === 'lgu') return '/lgu/dashboard';
+                return '/login';
+            }
+
+            function clearCountdownTimer() {
+                if (logoutTimerInterval) {
+                    clearInterval(logoutTimerInterval);
+                    logoutTimerInterval = null;
+                }
+            }
+
+            function performAutoLogout() {
+                clearCountdownTimer();
+                if (window.CocoScanAuth && typeof window.CocoScanAuth.clearActiveSession === 'function') {
+                    window.CocoScanAuth.clearActiveSession();
+                } else {
+                    localStorage.removeItem('cocoscan_offline_active');
+                    localStorage.removeItem('cocoscan_user_role');
+                    localStorage.removeItem('cocoscan_user_email');
+                    localStorage.removeItem('cocoscan_user_name');
+                    localStorage.removeItem('cocoscan_user_first_name');
+                    localStorage.removeItem('cocoscan_user_id');
+                }
+                window.location.href = '/logout';
+            }
+
+            function startNonFarmerLogoutCountdown() {
+                clearCountdownTimer();
+                remainingSeconds = 30;
+                if (footerText) {
+                    footerText.innerHTML = `Auto-logging out in <strong id="countdown-timer-display" class="countdown-timer-value">${remainingSeconds}</strong>s if connection is not restored`;
+                }
+
+                logoutTimerInterval = setInterval(() => {
+                    remainingSeconds -= 1;
+                    const liveDisplay = document.getElementById('countdown-timer-display');
+                    if (liveDisplay) {
+                        liveDisplay.textContent = Math.max(0, remainingSeconds);
+                    }
+                    if (remainingSeconds <= 0) {
+                        performAutoLogout();
+                    }
+                }, 1000);
+            }
+
+            function attemptReconnect() {
+                const btn = document.getElementById('retry-btn') || document.querySelector('#offline-actions .btn-primary');
+                if (btn) {
+                    const originalHtml = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Checking connection...';
+
+                    setTimeout(() => {
+                        if (navigator.onLine) {
+                            clearCountdownTimer();
+                            btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Connection restored!';
+                            setTimeout(() => {
+                                window.location.href = getTargetDashboardUrl();
+                            }, 400);
+                        } else {
+                            btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Still Offline';
+                            setTimeout(() => {
+                                btn.disabled = false;
+                                btn.innerHTML = originalHtml;
+                            }, 1400);
+                        }
+                    }, 500);
+                } else if (navigator.onLine) {
+                    clearCountdownTimer();
+                    window.location.href = getTargetDashboardUrl();
+                }
+            }
+
+            window.attemptReconnect = attemptReconnect;
+            window.performAutoLogout = performAutoLogout;
 
             if (isFarmer) {
+                clearCountdownTimer();
                 if (title) title.textContent = "You're Offline";
                 if (desc) desc.textContent = "Your network connection is unavailable right now. Thanks to CocoScan PWA, you can still perform leaf scans in the field and view locally saved drafts without an internet connection.";
                 if (badge) badge.style.display = "inline-flex";
+                if (statusDot) statusDot.style.backgroundColor = '#2A7B4C';
                 if (footerText) footerText.textContent = "Field scans will be automatically saved to your local storage until signal is restored.";
                 if (actions) {
                     actions.innerHTML = `
@@ -247,34 +373,41 @@
                         <a href="/farmer/drafts" class="btn btn-secondary">
                             <i class="fa-solid fa-folder-open"></i> View Saved Offline Drafts
                         </a>
-                        <button type="button" onclick="window.location.reload()" class="btn btn-outline">
+                        <a href="/farmer/dashboard" class="btn btn-outline" style="background: rgba(0,0,0,0.04);">
+                            <i class="fa-solid fa-gauge"></i> Return to Farmer Dashboard
+                        </a>
+                        <button type="button" id="retry-btn" onclick="attemptReconnect()" class="btn btn-outline">
                             <i class="fa-solid fa-rotate-right"></i> Retry Connection
                         </button>
-                        <button type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/login'; }" class="btn btn-outline" style="margin-top: -4px;">
-                            <i class="fa-solid fa-arrow-left"></i> Go Back
-                        </button>
+                        <a href="/login" class="btn btn-outline" style="font-size: 0.88rem;">
+                            <i class="fa-solid fa-right-from-bracket"></i> Switch Account
+                        </a>
                     `;
                 }
             } else {
+                // Non-Farmer Standard Generic Offline Message
                 if (title) title.textContent = "Can't load right now, you're offline";
                 if (desc) desc.textContent = "This portal and administrative features require an active internet connection. Please check your network and reconnect to continue.";
+
                 if (badge) badge.style.display = "none";
-                if (footerText) footerText.textContent = "CocoScan will automatically reload and reconnect when your internet connection is restored.";
+                if (statusDot) statusDot.style.backgroundColor = '#ef4444';
+                
                 if (actions) {
                     actions.innerHTML = `
-                        <button type="button" onclick="window.location.reload()" class="btn btn-primary">
+                        <button type="button" id="retry-btn" onclick="attemptReconnect()" class="btn btn-primary">
                             <i class="fa-solid fa-rotate-right"></i> Retry Connection
-                        </button>
-                        <button type="button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/login'; }" class="btn btn-secondary">
-                            <i class="fa-solid fa-arrow-left"></i> Go Back
                         </button>
                     `;
                 }
+
+                // Start 30-Second Countdown Auto-Logout Timer for Non-Farmers
+                startNonFarmerLogoutCountdown();
             }
 
-            // When online status is restored, automatically reload
+            // When online status is restored, cancel timer and automatically redirect to proper dashboard
             window.addEventListener('online', () => {
-                window.location.reload();
+                clearCountdownTimer();
+                window.location.href = getTargetDashboardUrl();
             });
         })();
     </script>

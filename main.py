@@ -5,7 +5,7 @@ import logging
 import json
 from datetime import datetime, UTC
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory
-from app.route_utils import require_role, fetch_user_reports
+from app.route_utils import require_role, fetch_user_reports, resolve_user_fullname
 import base64
 from io import BytesIO
 from werkzeug.utils import secure_filename
@@ -786,17 +786,28 @@ def login():
         login_keywords = ['session', 'log in', 'login', 'account', 'approval', 'register', 'password', 'verification', 'credentials', 'signed out', 'logged out', 'inactivity', 'attempt']
         filtered_flashes = [
             (cat, msg) for cat, msg in flashes 
-            if any(k in str(msg).lower() for k in login_keywords)
+            if any(k in str(msg).lower() for k in login_keywords) and 'unauthorized access path' not in str(msg).lower()
         ]
         if filtered_flashes:
             session['_flashes'] = filtered_flashes
         return render_template('login.html')
 
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
+        wants_json = request.is_json or ('application/json' in (request.headers.get('Accept') or '')) or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if request.is_json:
+            json_data = request.get_json(silent=True) or {}
+            email = str(json_data.get('email', '')).strip().lower()
+            password = str(json_data.get('password', ''))
+            remember_me_val = json_data.get('remember_me')
+        else:
+            email = request.form.get('email', '').strip().lower()
+            password = request.form.get('password', '')
+            remember_me_val = request.form.get('remember_me')
 
         if not email or not password:
+            if wants_json:
+                return jsonify({'success': False, 'error': "Please enter both email and password."}), 400
             flash("Please enter both email and password.", "error")
             return render_template('login.html')
 
@@ -804,14 +815,20 @@ def login():
         is_locked, rem_sec, lock_reason = security_service.check_account_lockout(email)
         if is_locked:
             rem_mins = max(1, (rem_sec + 59) // 60)
-            flash(f"{lock_reason} Please try again in ~{rem_mins} minute(s).", "error")
+            err_msg = f"{lock_reason} Please try again in ~{rem_mins} minute(s)."
+            if wants_json:
+                return jsonify({'success': False, 'error': err_msg}), 403
+            flash(err_msg, "error")
             return render_template('login.html')
 
         try:
-            validated_email, validated_password = validate_login_form(request.form)
+            form_payload = {'email': email, 'password': password} if request.is_json else request.form
+            validated_email, validated_password = validate_login_form(form_payload)
             email = validated_email.strip().lower()
             password = validated_password
         except ValidationError as val_err:
+            if wants_json:
+                return jsonify({'success': False, 'error': str(val_err)}), 400
             flash(str(val_err), "error")
             return render_template('login.html')
         except (ValueError, TypeError):
@@ -822,36 +839,42 @@ def login():
             
             if not user_query.data:
                 new_cnt, locked_until, lock_reason = security_service.record_login_failure(email, _get_real_ip())
-                if locked_until:
-                    flash(f"{lock_reason}", "error")
-                else:
-                    flash(f"Account not found or invalid credentials. ({new_cnt}/3 failed attempts)", "error")
+                err_msg = f"{lock_reason}" if locked_until else f"Account not found or invalid credentials. ({new_cnt}/3 failed attempts)"
+                if wants_json:
+                    return jsonify({'success': False, 'error': err_msg}), 401
+                flash(err_msg, "error")
                 return render_template('login.html')
                 
             user_data = user_query.data[0]
             
             if not verify_password(password, user_data.get('password_hash', '')):
                 new_cnt, locked_until, lock_reason = security_service.record_login_failure(email, _get_real_ip())
-                if locked_until:
-                    flash(f"{lock_reason}", "error")
-                else:
-                    flash(f"Invalid credentials. ({new_cnt}/3 failed attempts)", "error")
+                err_msg = f"{lock_reason}" if locked_until else f"Invalid credentials. ({new_cnt}/3 failed attempts)"
+                if wants_json:
+                    return jsonify({'success': False, 'error': err_msg}), 401
+                flash(err_msg, "error")
                 return render_template('login.html')
                 
             user_status = user_data.get('status', 'Under Review')
             
             if user_status == 'Under Review':
-                flash("Your account is pending administrative approval. You will receive an email once activated.", "warning")
+                msg = "Your account is pending administrative approval. You will receive an email once activated."
+                if wants_json:
+                    return jsonify({'success': False, 'error': msg, 'status': 'under_review'}), 403
+                flash(msg, "warning")
                 return render_template('login.html')
             elif user_status == 'Rejected':
-                flash("Your application for this account has been declined. Please contact support.", "error")
+                msg = "Your application for this account has been declined. Please contact support."
+                if wants_json:
+                    return jsonify({'success': False, 'error': msg, 'status': 'rejected'}), 403
+                flash(msg, "error")
                 return render_template('login.html')
 
             # Reset login failures on successful credential check
             security_service.reset_login_failures(email)
             user_role = normalize_role(user_data.get('role'))
-            user_name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
-            remember_me = request.form.get('remember_me') in ['true', 'on', '1', 'yes', True]
+            user_name = resolve_user_fullname(user_data, email=email, default="Farmer" if user_role == 'farmer' else "User")
+            remember_me = remember_me_val in ['true', 'on', '1', 'yes', True]
 
             # 7-day 2FA check for lgu, admin, agri_expert
             if user_role in ['lgu', 'admin', 'agri_expert']:
@@ -868,14 +891,25 @@ def login():
                     if otp_result.get("sent"):
                         session['otp_expires_at'] = otp_result.get("expires_at")
                         session['otp_resend_available_at'] = time.time() + otp_result.get("resend_cooldown_seconds", security_service.OTP_RESEND_COOLDOWN_SECONDS)
+                        if wants_json:
+                            return jsonify({
+                                'success': False,
+                                'requires_2fa': True,
+                                'redirect_url': url_for('verify_2fa'),
+                                'message': f"A 6-digit verification code has been sent to {email}."
+                            }), 200
                         flash(f"A 6-digit verification code has been sent to {email}.", "info")
                         return redirect(url_for('verify_2fa'))
 
                     if otp_result.get("fallback_allowed"):
                         logger.warning(f"OTP delivery failed for {email}; allowing login to proceed without email verification.")
-                        flash("We couldn't deliver the verification email right now, so the sign-in flow continued without it. Please contact support if this continues.", "warning")
+                        if not wants_json:
+                            flash("We couldn't deliver the verification email right now, so the sign-in flow continued without it. Please contact support if this continues.", "warning")
                     else:
-                        flash("We couldn't send a verification code to your email. Please try again in a moment.", "error")
+                        err_msg = "We couldn't send a verification code to your email. Please try again in a moment."
+                        if wants_json:
+                            return jsonify({'success': False, 'error': err_msg}), 500
+                        flash(err_msg, "error")
                         return render_template('login.html')
 
             session.clear()
@@ -885,7 +919,25 @@ def login():
             session['user_name'] = user_name
             session['last_active'] = time.time()
             
-            resp = redirect(get_role_dashboard_url(session['user_role']))
+            redirect_url = get_role_dashboard_url(session['user_role'])
+            
+            if wants_json:
+                resp = jsonify({
+                    'success': True,
+                    'redirect_url': redirect_url,
+                    'user': {
+                        'id': user_data['id'],
+                        'email': email,
+                        'role': user_role,
+                        'name': user_name
+                    }
+                })
+            else:
+                resp = redirect(redirect_url)
+                
+            resp.delete_cookie('cocoscan_offline_active')
+            resp.set_cookie('cocoscan_user_role', user_role, max_age=86400, samesite='Lax')
+            resp.set_cookie('cocoscan_user_email', email, max_age=86400, samesite='Lax')
             
             if remember_me:
                 session['remember_me'] = True
@@ -916,7 +968,10 @@ def login():
 
         except Exception as db_err:
             logger.error(f"Authentication system pipeline breakdown: {str(db_err)}")
-            flash("An unexpected error occurred during login. Please try again later.", "error")
+            err_msg = "An unexpected error occurred during login. Please try again later."
+            if wants_json:
+                return jsonify({'success': False, 'error': err_msg}), 500
+            flash(err_msg, "error")
             return render_template('login.html')
             
     return render_template('login.html')
@@ -1519,14 +1574,40 @@ def _build_report_modal_payload(item, *, supporting_images=None, weather=None, d
 def farmer_dashboard():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
+    user_email = session.get('user_email') or request.cookies.get('cocoscan_user_email')
     
     try:
-        # Fetch the real profile name details from cloud instance
-        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
-        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Farmer"
-        
-        reports_response = supabase.table('reports').select('*, visit_chats(count)').eq('user_id', user_id).order('created_at', desc=True).execute()
-        reports = getattr(reports_response, 'data', []) or []
+        user_name = resolve_user_fullname(session.get('user_name'), email=user_email, default="Farmer")
+        reports = []
+
+        # If user_id is missing or is offline_farmer, auto-resolve real user from Supabase if online
+        if (not user_id or user_id == 'offline_farmer') and user_email:
+            try:
+                user_lookup = supabase.table("users").select("*").eq("email", user_email).execute()
+                if user_lookup.data:
+                    u = user_lookup.data[0]
+                    user_id = u['id']
+                    session['user_id'] = u['id']
+                    session['user_email'] = u['email']
+                    session['user_role'] = normalize_role(u.get('role', 'farmer'))
+                    user_name = resolve_user_fullname(u, email=u.get('email'), default="Farmer")
+                    session['user_name'] = user_name
+                    session.pop('offline_mode', None)
+            except Exception:
+                pass
+
+        if user_id and user_id != 'offline_farmer':
+            try:
+                user_query = supabase.table("users").select("first_name, last_name, email").eq("id", user_id).execute()
+                if user_query.data:
+                    user_name = resolve_user_fullname(user_query.data[0], email=user_email, default=user_name)
+                    session['user_name'] = user_name
+                
+                reports_response = supabase.table('reports').select('*, visit_chats(count)').eq('user_id', user_id).order('created_at', desc=True).execute()
+                reports = getattr(reports_response, 'data', []) or []
+            except Exception as net_err:
+                logger.warning(f"Supabase unavailable during dashboard load: {net_err}")
+                reports = []
 
         total_cases = len(reports)
         pending_cases = sum(1 for report in reports if is_pending_report_status(report.get('status')))
@@ -1545,38 +1626,71 @@ def farmer_dashboard():
         
     except Exception as e:
         logger.error(f"Dashboard routing exception: {str(e)}")
-        return render_template('500.html'), 503
+        fallback_name = resolve_user_fullname(session.get('user_name'), email=user_email, default="Farmer")
+        return render_template(
+            'farmer_dashboard.html',
+            user_name=fallback_name,
+            metrics={"total_cases": 0, "pending_cases": 0, "resolved_cases": 0},
+            weather={"is_down": True, "temp": "--", "humidity": "--", "rainfall": "--", "description": "Offline", "icon_class": "fa-cloud-slash"},
+            risk={"level": "Low", "text": "Environmental risk data offline.", "icon": "fa-shield", "color": "#16a34a"},
+            chart_data=build_dashboard_chart_payload([])
+        )
 
 @app.route('/farmer/scan')
 @require_role('farmer')
 def farmer_scan():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
+    user_email = session.get('user_email') or request.cookies.get('cocoscan_user_email')
     
     try:
-        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
-        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Farmer"
-
-        reports_response = supabase.table('reports').select('*, visit_chats(count)').eq('user_id', user_id).order('created_at', desc=True).execute()
+        user_name = resolve_user_fullname(session.get('user_name'), email=user_email, default="Farmer")
         recent_reports = []
-        for item in getattr(reports_response, 'data', []) or []:
-            created_raw = item.get('submitted_at') or item.get('created_at') or ''
-            created_label = format_report_timestamp(created_raw)
 
-            recent_reports.append({
-                'id': item.get('id'),
-                'pest': item.get('pest_type') or 'Unknown Pest',
-                'confidence': f"{int(float(item.get('confidence', 0)))}%" if item.get('confidence') else '90%',
-                'raw_timestamp': created_label,
-                'time_string': created_label,
-                'timestamp': created_label,
-                'status': normalize_report_status(item.get('status'), default='Pending')
-            })
+        if (not user_id or user_id == 'offline_farmer') and user_email:
+            try:
+                user_lookup = supabase.table("users").select("*").eq("email", user_email).execute()
+                if user_lookup.data:
+                    u = user_lookup.data[0]
+                    user_id = u['id']
+                    session['user_id'] = u['id']
+                    session['user_email'] = u['email']
+                    session['user_role'] = normalize_role(u.get('role', 'farmer'))
+                    user_name = resolve_user_fullname(u, email=u.get('email'), default="Farmer")
+                    session['user_name'] = user_name
+                    session.pop('offline_mode', None)
+            except Exception:
+                pass
+
+        if user_id and user_id != 'offline_farmer':
+            try:
+                user_query = supabase.table("users").select("first_name, last_name, email").eq("id", user_id).execute()
+                if user_query.data:
+                    user_name = resolve_user_fullname(user_query.data[0], email=user_email, default=user_name)
+                    session['user_name'] = user_name
+
+                reports_response = supabase.table('reports').select('*, visit_chats(count)').eq('user_id', user_id).order('created_at', desc=True).execute()
+                for item in getattr(reports_response, 'data', []) or []:
+                    created_raw = item.get('submitted_at') or item.get('created_at') or ''
+                    created_label = format_report_timestamp(created_raw)
+
+                    recent_reports.append({
+                        'id': item.get('id'),
+                        'pest': item.get('pest_type') or 'Unknown Pest',
+                        'confidence': f"{int(float(item.get('confidence', 0)))}%" if item.get('confidence') else '90%',
+                        'raw_timestamp': created_label,
+                        'time_string': created_label,
+                        'timestamp': created_label,
+                        'status': normalize_report_status(item.get('status'), default='Pending')
+                    })
+            except Exception as net_err:
+                logger.warning(f"Supabase unavailable during scan page load: {net_err}")
 
         return render_template('farmer_scan.html', user_name=user_name, recent_reports=recent_reports[:6])
     except Exception as e:
         logger.error(f"Scan Pest routing exception: {str(e)}")
-        return render_template('500.html'), 503
+        fallback_name = resolve_user_fullname(session.get('user_name'), email=user_email, default="Farmer")
+        return render_template('farmer_scan.html', user_name=fallback_name, recent_reports=[])
 
 @app.route('/farmer/predict', methods=['POST'])
 @require_role('farmer')
@@ -1664,61 +1778,99 @@ def farmer_predict():
 def farmer_reports():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
+    user_email = session.get('user_email') or request.cookies.get('cocoscan_user_email')
     
-    user_name = "Farmer"
+    user_name = resolve_user_fullname(session.get('user_name'), email=user_email, default="Farmer")
     reports_data = []
 
-    try:
-        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
-        if getattr(user_query, "data", None):
-            user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() or "Farmer"
-    except Exception as e:
-        logger.warning(f"Unable to load farmer profile for reports page: {str(e)}")
+    if (not user_id or user_id == 'offline_farmer') and user_email:
+        try:
+            user_lookup = supabase.table("users").select("*").eq("email", user_email).execute()
+            if user_lookup.data:
+                u = user_lookup.data[0]
+                user_id = u['id']
+                session['user_id'] = u['id']
+                session['user_email'] = u['email']
+                session['user_role'] = normalize_role(u.get('role', 'farmer'))
+                user_name = resolve_user_fullname(u, email=u.get('email'), default="Farmer")
+                session['user_name'] = user_name
+                session.pop('offline_mode', None)
+        except Exception:
+            pass
 
-    try:
-        reports_response = supabase.table("reports").select("*, visit_chats(count)").eq("user_id", user_id).order("created_at", desc=True).execute()
-        report_rows = getattr(reports_response, "data", []) or []
-        logger.info(f"[FARMER_REPORTS] User {user_id}: Query returned {len(report_rows)} reports")
-        for idx, r in enumerate(report_rows[:3]):
-            logger.info(f"[FARMER_REPORTS]   [{idx}] ID={r.get('id')}, user_id={r.get('user_id')}, pest={r.get('pest_type')}")
-        report_rows = _enrich_reports_with_reviewer_info(report_rows)
-        supporting_map = _fetch_report_supporting_images([item.get("id") for item in report_rows])
+    if user_id and user_id != 'offline_farmer':
+        try:
+            user_query = supabase.table("users").select("first_name, last_name, email").eq("id", user_id).execute()
+            if getattr(user_query, "data", None):
+                user_name = resolve_user_fullname(user_query.data[0], email=user_email, default=user_name)
+                session['user_name'] = user_name
+        except Exception as e:
+            logger.warning(f"Unable to load farmer profile for reports page: {str(e)}")
 
-        for item in report_rows:
-            payload = _build_report_modal_payload(
-                item,
-                supporting_images=supporting_map.get(str(item.get("id")), []),
-                default_status="Pending Assessment",
-            )
+        try:
+            reports_response = supabase.table("reports").select("*, visit_chats(count)").eq("user_id", user_id).order("created_at", desc=True).execute()
+            report_rows = getattr(reports_response, "data", []) or []
+            logger.info(f"[FARMER_REPORTS] User {user_id}: Query returned {len(report_rows)} reports")
+            for idx, r in enumerate(report_rows[:3]):
+                logger.info(f"[FARMER_REPORTS]   [{idx}] ID={r.get('id')}, user_id={r.get('user_id')}, pest={r.get('pest_type')}")
+            report_rows = _enrich_reports_with_reviewer_info(report_rows)
+            supporting_map = _fetch_report_supporting_images([item.get("id") for item in report_rows])
 
-            reports_data.append({
-                **payload,
-                "img": payload["primary_image"],
-                "full_location": payload["location_text"],
-                "timestamp": payload["timestamp"],
-                "date": payload["date"],
-            })
-    except Exception as e:
-        logger.warning(f"Unable to load reports data for reports page: {str(e)}")
+            for item in report_rows:
+                payload = _build_report_modal_payload(
+                    item,
+                    supporting_images=supporting_map.get(str(item.get("id")), []),
+                    default_status="Pending Assessment",
+                )
+
+                reports_data.append({
+                    **payload,
+                    "img": payload["primary_image"],
+                    "full_location": payload["location_text"],
+                    "timestamp": payload["timestamp"],
+                    "date": payload["date"],
+                })
+        except Exception as e:
+            logger.warning(f"Unable to load reports data for reports page: {str(e)}")
 
     try:
         return render_template('farmer_reports.html', user_name=user_name, reports_data=reports_data)
     except Exception as e:
         logger.exception("Failed to render farmer reports page")
-        return render_template('farmer_reports.html', user_name=user_name, reports_data=[])
+        fallback_name = resolve_user_fullname(session.get('user_name'), email=user_email, default="Farmer")
+        return render_template('farmer_reports.html', user_name=fallback_name, reports_data=[])
 
 @app.route('/farmer/drafts')
 @require_role('farmer')
 def farmer_drafts():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
-    user_name = "Farmer"
-    try:
-        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
-        if getattr(user_query, 'data', None):
-            user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() or "Farmer"
-    except Exception as e:
-        logger.warning(f"Unable to load farmer profile for drafts page: {str(e)}")
+    user_email = session.get('user_email') or request.cookies.get('cocoscan_user_email')
+    user_name = resolve_user_fullname(session.get('user_name'), email=user_email, default="Farmer")
+
+    if (not user_id or user_id == 'offline_farmer') and user_email:
+        try:
+            user_lookup = supabase.table("users").select("*").eq("email", user_email).execute()
+            if user_lookup.data:
+                u = user_lookup.data[0]
+                user_id = u['id']
+                session['user_id'] = u['id']
+                session['user_email'] = u['email']
+                session['user_role'] = normalize_role(u.get('role', 'farmer'))
+                user_name = resolve_user_fullname(u, email=u.get('email'), default="Farmer")
+                session['user_name'] = user_name
+                session.pop('offline_mode', None)
+        except Exception:
+            pass
+
+    if user_id and user_id != 'offline_farmer':
+        try:
+            user_query = supabase.table("users").select("first_name, last_name, email").eq("id", user_id).execute()
+            if getattr(user_query, 'data', None):
+                user_name = resolve_user_fullname(user_query.data[0], email=user_email, default=user_name)
+                session['user_name'] = user_name
+        except Exception as e:
+            logger.warning(f"Unable to load farmer profile for drafts page: {str(e)}")
 
     return render_template('farmer_drafts.html', user_name=user_name)
 
@@ -1728,11 +1880,12 @@ def farmer_drafts():
 def agri_dashboard():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
+    user_email = session.get('user_email') or request.cookies.get('cocoscan_user_email')
     
     try:
         # Fetch the real profile name details
-        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
-        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "Agriculturist"
+        user_query = supabase.table("users").select("first_name, last_name, email").eq("id", user_id).execute()
+        user_name = resolve_user_fullname(user_query.data[0] if user_query.data else {}, email=user_email, default="Agriculturist")
         
         reports_response = supabase.table('reports').select('*, visit_chats(count)').order('created_at', desc=True).execute()
         reports = getattr(reports_response, 'data', []) or []
@@ -1763,8 +1916,9 @@ def agri_dashboard():
 def agriculturist_analytics():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
+    user_email = session.get('user_email') or request.cookies.get('cocoscan_user_email')
     
-    user_name = session.get('user_name', 'Agriculturist')
+    user_name = resolve_user_fullname(session.get('user_name'), email=user_email, default="Agriculturist")
     return render_template('shared_analytics.html', user_name=user_name, user_role=user_role)
 
 @app.route('/lgu/dashboard')
@@ -1772,10 +1926,11 @@ def agriculturist_analytics():
 def lgu_dashboard():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
+    user_email = session.get('user_email') or request.cookies.get('cocoscan_user_email')
     
     try:
-        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
-        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "LGU Officer"
+        user_query = supabase.table("users").select("first_name, last_name, email").eq("id", user_id).execute()
+        user_name = resolve_user_fullname(user_query.data[0] if user_query.data else {}, email=user_email, default="LGU Officer")
         
         reports_response = supabase.table('reports').select('*, visit_chats(count)').order('created_at', desc=True).execute()
         reports = getattr(reports_response, 'data', []) or []
@@ -1806,10 +1961,11 @@ def lgu_dashboard():
 def lgu_analytics():
     user_id = session.get('user_id')
     user_role = normalize_role(session.get('user_role'))
+    user_email = session.get('user_email') or request.cookies.get('cocoscan_user_email')
     
     try:
-        user_query = supabase.table("users").select("first_name, last_name").eq("id", user_id).execute()
-        user_name = f"{user_query.data[0].get('first_name', '')} {user_query.data[0].get('last_name', '')}".strip() if user_query.data else "LGU Officer"
+        user_query = supabase.table("users").select("first_name, last_name, email").eq("id", user_id).execute()
+        user_name = resolve_user_fullname(user_query.data[0] if user_query.data else {}, email=user_email, default="LGU Officer")
 
         reports_response = supabase.table('reports').select('*, visit_chats(count)').order('created_at', desc=True).execute()
         reports = getattr(reports_response, 'data', []) or []
@@ -3137,7 +3293,7 @@ def admin_dashboard():
 
     return render_template(
         'admin_dashboard.html',
-        user_name=session.get('user_name', 'Admin'),
+        user_name=resolve_user_fullname(session.get('user_name'), email=session.get('user_email'), default="Administrator"),
         metrics=metrics,
         chart_data=chart_data,
         weather=weather,
@@ -3579,6 +3735,9 @@ def verify_2fa():
             session['last_active'] = time.time()
             
             resp = redirect(get_role_dashboard_url(role))
+            resp.delete_cookie('cocoscan_offline_active')
+            resp.set_cookie('cocoscan_user_role', role, max_age=86400, samesite='Lax')
+            resp.set_cookie('cocoscan_user_email', email, max_age=86400, samesite='Lax')
             
             if remember_me:
                 session['remember_me'] = True
@@ -3691,6 +3850,9 @@ def logout():
     session.clear()
     resp = redirect(url_for('login'))
     resp.delete_cookie(REMEMBER_COOKIE_NAME)
+    resp.delete_cookie('cocoscan_offline_active')
+    resp.delete_cookie('cocoscan_user_email')
+    resp.delete_cookie('cocoscan_user_role')
     return resp
 
 @app.errorhandler(404)
