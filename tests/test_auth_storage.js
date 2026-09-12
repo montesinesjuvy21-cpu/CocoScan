@@ -11,7 +11,8 @@ if (!global.window.crypto) {
 // Mock IndexedDB
 const mockDB = {
     credentials: new Map(),
-    user_data: new Map()
+    user_data: new Map(),
+    remember_session: new Map()
 };
 
 global.window.indexedDB = {
@@ -35,10 +36,19 @@ global.window.indexedDB = {
                                 put: function(val) {
                                     const putReq = {};
                                     setTimeout(() => {
-                                        mockDB[storeName].set(val.email, val);
+                                        const key = val.key || val.email;
+                                        mockDB[storeName].set(key, val);
                                         if (putReq.onsuccess) putReq.onsuccess({ target: putReq });
                                     }, 5);
                                     return putReq;
+                                },
+                                delete: function(key) {
+                                    const delReq = {};
+                                    setTimeout(() => {
+                                        mockDB[storeName].delete(key);
+                                        if (delReq.onsuccess) delReq.onsuccess({ target: delReq });
+                                    }, 5);
+                                    return delReq;
                                 }
                             };
                         }
@@ -335,6 +345,60 @@ async function runTests() {
     assert.strictEqual(window.localStorage.getItem('cocoscan_user_email'), null);
     assert.strictEqual(window.localStorage.getItem('cocoscan_offline_active'), null);
     console.log('✓ Clear active session tested');
+
+    // 18. Test Farmer-exclusive Offline Remember Me Session
+    // A) Setting remember me for farmer succeeds
+    const setSuccess = await window.CocoScanAuth.setRememberMeSession(
+        'farmer1@cocoscan.local',
+        'farmer',
+        'Juan Dela Cruz',
+        'user-uuid-1',
+        Date.now() + (90 * 86400 * 1000)
+    );
+    assert.strictEqual(setSuccess, true);
+    assert.strictEqual(window.localStorage.getItem('cocoscan_remember_me'), 'true');
+    assert.strictEqual(window.localStorage.getItem('cocoscan_user_role'), 'farmer');
+
+    // B) Valid offline remember session check
+    const hasValid = await window.CocoScanAuth.hasValidOfflineRememberSession();
+    assert.strictEqual(hasValid, true);
+
+    const retrievedSession = await window.CocoScanAuth.getRememberMeSession();
+    assert(retrievedSession !== null);
+    assert.strictEqual(retrievedSession.email, 'farmer1@cocoscan.local');
+    assert.strictEqual(retrievedSession.role, 'farmer');
+    assert.strictEqual(retrievedSession.name, 'Juan Dela Cruz');
+    console.log('✓ Farmer offline Remember Me session storage and validation tested');
+
+    // C) Non-farmers rejected from setting remember me
+    const adminSet = await window.CocoScanAuth.setRememberMeSession(
+        'admin1@cocoscan.local',
+        'admin',
+        'Admin User'
+    );
+    assert.strictEqual(adminSet, false);
+    console.log('✓ Non-farmer roles correctly rejected from offline Remember Me');
+
+    // D) Inactive > 30 days session auto-expires
+    const expiredRecord = {
+        key: 'active_farmer_session',
+        email: 'inactive_farmer@cocoscan.local',
+        role: 'farmer',
+        name: 'Inactive Farmer',
+        expiresAt: Date.now() + (60 * 86400 * 1000), // still within 90 days
+        lastUsedAt: Date.now() - (31 * 86400 * 1000), // but inactive > 30 days
+        createdAt: Date.now() - (31 * 86400 * 1000)
+    };
+    mockDB.remember_session.set('active_farmer_session', expiredRecord);
+    const expiredCheck = await window.CocoScanAuth.getRememberMeSession();
+    assert.strictEqual(expiredCheck, null);
+    console.log('✓ Inactive (> 30 days) offline Remember Me session auto-expiration tested');
+
+    // E) Clearing remember me session
+    await window.CocoScanAuth.clearRememberMeSession();
+    assert.strictEqual(window.localStorage.getItem('cocoscan_remember_me'), null);
+    assert.strictEqual(await window.CocoScanAuth.hasValidOfflineRememberSession(), false);
+    console.log('✓ Clear offline Remember Me session tested');
 
     console.log('\n ALL JAVASCRIPT AUTH STORAGE TESTS PASSED SUCCESSFULLY!');
 }

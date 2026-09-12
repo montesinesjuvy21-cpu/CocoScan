@@ -155,7 +155,31 @@
             splashCard.style.transform = 'scale(0.98)';
         }
         
-        setTimeout(() => {
+        setTimeout(async () => {
+            const isServerAuthenticated = {{ 'true' if is_authenticated else 'false' }};
+            const serverDashboardUrl = "{{ dashboard_url | default('/farmer/dashboard') }}";
+
+            if (isServerAuthenticated) {
+                window.location.href = serverDashboardUrl;
+                return;
+            }
+
+            // Offline check: If offline and farmer has a remembered session in IndexedDB or localStorage
+            if (!navigator.onLine && window.CocoScanAuth && typeof window.CocoScanAuth.getRememberMeSession === 'function') {
+                try {
+                    const rememberedSession = await window.CocoScanAuth.getRememberMeSession();
+                    if (rememberedSession && rememberedSession.role === 'farmer' && rememberedSession.email) {
+                        if (typeof window.CocoScanAuth.activateUserOfflineSession === 'function') {
+                            await window.CocoScanAuth.activateUserOfflineSession(rememberedSession.email);
+                        }
+                        window.location.href = "/farmer/dashboard";
+                        return;
+                    }
+                } catch (e) {
+                    console.debug('[Splash] Offline remember check note:', e);
+                }
+            }
+
             if (!navigator.onLine && localStorage.getItem('cocoscan_user_role') === 'farmer') {
                 window.location.href = "/farmer/dashboard";
             } else {

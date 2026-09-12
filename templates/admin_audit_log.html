@@ -197,47 +197,65 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         margin-top: 24px;
         width: 100%;
+        flex-wrap: wrap;
     }
 
     .page-btn {
-        min-width: 36px;
-        height: 36px;
-        border-radius: 10px;
+        min-width: 38px;
+        height: 38px;
+        border-radius: 8px;
         border: 1px solid var(--border-light);
         background-color: var(--bg-card);
         color: var(--text-dark);
         font-size: 0.85rem;
         font-weight: 600;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         transition: all 0.2s ease;
-        padding: 8px 12px;
+        padding: 0 12px;
         text-align: center;
         text-decoration: none;
+        user-select: none;
     }
 
     .page-btn:hover:not(:disabled) {
         background-color: #eef5f2;
         color: var(--brand-dark);
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
     }
 
     .page-btn.active-page {
         background-color: #1a4d32;
         color: #ffffff;
         border-color: #1a4d32;
+        box-shadow: 0 2px 6px rgba(26, 77, 50, 0.25);
     }
 
     .page-btn:disabled,
     .page-btn.disabled,
     .page-btn[aria-disabled="true"] {
-        opacity: 0.4;
+        opacity: 0.35;
         cursor: not-allowed;
         pointer-events: none;
+    }
+
+    .page-ellipsis {
+        min-width: 24px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 0.95rem;
+        user-select: none;
+        letter-spacing: 2px;
     }
 
     .pagination-meta {
@@ -245,7 +263,8 @@
         text-align: center;
         margin-top: 10px;
         color: var(--text-muted);
-        font-size: 0.95rem;
+        font-size: 0.875rem;
+        font-weight: 500;
     }
 </style>
 {% endblock %}
@@ -391,14 +410,44 @@
         <div class="pagination-container">
             <a href="{{ url_for('admin_audit_log', page=current_page-1, action_filter=current_action, search=search) }}"
                 class="page-btn {% if current_page == 1 %}disabled{% endif %}"
-                aria-disabled="{{ 1 if current_page == 1 else 0 }}">← Previous</a>
-            {% for p in range(1, total_pages + 1) %}
-            <a href="{{ url_for('admin_audit_log', page=p, action_filter=current_action, search=search) }}"
-                class="page-btn {% if current_page == p %}active-page{% endif %}">{{ p }}</a>
-            {% endfor %}
+                aria-disabled="{{ 1 if current_page == 1 else 0 }}">&larr; Previous</a>
+
+            {% if total_pages <= 7 %}
+                {% for p in range(1, total_pages + 1) %}
+                <a href="{{ url_for('admin_audit_log', page=p, action_filter=current_action, search=search) }}"
+                    class="page-btn {% if current_page == p %}active-page{% endif %}">{{ p }}</a>
+                {% endfor %}
+            {% else %}
+                {# Always show page 1 #}
+                <a href="{{ url_for('admin_audit_log', page=1, action_filter=current_action, search=search) }}"
+                    class="page-btn {% if current_page == 1 %}active-page{% endif %}">1</a>
+
+                {% if current_page > 4 %}
+                    <span class="page-ellipsis">…</span>
+                {% endif %}
+
+                {% set start_p = 2 if current_page <= 4 else (total_pages - 4 if current_page >= total_pages - 3 else current_page - 1) %}
+                {% set end_p = 5 if current_page <= 4 else (total_pages - 1 if current_page >= total_pages - 3 else current_page + 1) %}
+
+                {% for p in range(start_p, end_p + 1) %}
+                    {% if p > 1 and p < total_pages %}
+                    <a href="{{ url_for('admin_audit_log', page=p, action_filter=current_action, search=search) }}"
+                        class="page-btn {% if current_page == p %}active-page{% endif %}">{{ p }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if current_page < total_pages - 3 %}
+                    <span class="page-ellipsis">…</span>
+                {% endif %}
+
+                {# Always show last page #}
+                <a href="{{ url_for('admin_audit_log', page=total_pages, action_filter=current_action, search=search) }}"
+                    class="page-btn {% if current_page == total_pages %}active-page{% endif %}">{{ total_pages }}</a>
+            {% endif %}
+
             <a href="{{ url_for('admin_audit_log', page=current_page+1, action_filter=current_action, search=search) }}"
                 class="page-btn {% if current_page == total_pages %}disabled{% endif %}"
-                aria-disabled="{{ 1 if current_page == total_pages else 0 }}">Next →</a>
+                aria-disabled="{{ 1 if current_page == total_pages else 0 }}">Next &rarr;</a>
         </div>
         {% endif %}
     </div>

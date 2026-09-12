@@ -119,6 +119,25 @@
         cursor: pointer;
     }
 
+    /* Instant Navigation Top Progress Indicator */
+    #instant-nav-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0%;
+        height: 3px;
+        background: linear-gradient(90deg, #4ac68f, #2A7B4C, #528265);
+        z-index: 999999;
+        pointer-events: none;
+        transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        opacity: 0;
+    }
+
+    #instant-nav-bar.active {
+        opacity: 1;
+        width: 85%;
+    }
+
     @media (max-width: 600px) {
         #pwa-install-banner {
             bottom: 12px;
@@ -128,6 +147,9 @@
         }
     }
 </style>
+
+<!-- Instant Navigation Top Indicator -->
+<div id="instant-nav-bar"></div>
 
 <!-- PWA Install Banner DOM -->
 <div id="pwa-install-banner">
@@ -336,12 +358,79 @@
         updateDashboardSyncStatus();
     });
 
-    // Initialize sync status and offline enforcement on load
+    // 4. Instant Link Prefetcher & Fast Navigation Engine
+    const prefetchedUrls = new Set();
+    function prefetchUrl(url) {
+        if (!url || prefetchedUrls.has(url)) return;
+        try {
+            const parsed = new URL(url, window.location.origin);
+            if (parsed.origin !== window.location.origin) return;
+            if (parsed.pathname === window.location.pathname && parsed.search === window.location.search) return;
+            if (parsed.pathname.startsWith('/logout') || parsed.pathname.includes('/delete') || parsed.pathname.includes('/submit')) return;
+
+            prefetchedUrls.add(parsed.href);
+
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = parsed.href;
+            link.as = 'document';
+            document.head.appendChild(link);
+        } catch (e) {}
+    }
+
+    function initInstantNavigation() {
+        const navBar = document.getElementById('instant-nav-bar');
+
+        // Prefetch on pointerenter (hover) and touchstart
+        document.addEventListener('pointerenter', (e) => {
+            const target = e.target.closest('a');
+            if (target && target.href && !target.hasAttribute('download') && target.target !== '_blank') {
+                prefetchUrl(target.href);
+            }
+        }, { passive: true, capture: true });
+
+        document.addEventListener('touchstart', (e) => {
+            const target = e.target.closest('a');
+            if (target && target.href && !target.hasAttribute('download') && target.target !== '_blank') {
+                prefetchUrl(target.href);
+            }
+        }, { passive: true, capture: true });
+
+        // Instant visual feedback on sidebar navigation clicks
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('.menu-item-link, .bottom-nav-item, a[href^="/"]');
+            if (!target || !target.href) return;
+
+            const parsed = new URL(target.href, window.location.origin);
+            if (parsed.origin !== window.location.origin) return;
+            if (parsed.pathname.startsWith('/logout') || parsed.pathname.includes('/delete') || target.hasAttribute('download') || target.target === '_blank') return;
+
+            if (parsed.pathname !== window.location.pathname) {
+                if (navBar) {
+                    navBar.classList.add('active');
+                }
+                if (target.classList.contains('menu-item-link')) {
+                    document.querySelectorAll('.menu-item-link').forEach(el => el.classList.remove('active'));
+                    target.classList.add('active');
+                }
+                const sidebar = document.getElementById('sidebar');
+                const backdrop = document.getElementById('backdrop');
+                if (sidebar && sidebar.classList.contains('show-mobile')) {
+                    sidebar.classList.remove('show-mobile');
+                    if (backdrop) backdrop.classList.remove('active');
+                }
+            }
+        }, { capture: true });
+    }
+
+    // Initialize sync status, instant navigation, and offline enforcement on load
     document.addEventListener('DOMContentLoaded', () => {
         enforceRoleOfflinePolicy();
         updateDashboardSyncStatus();
+        initInstantNavigation();
     });
     enforceRoleOfflinePolicy();
     updateDashboardSyncStatus();
+    initInstantNavigation();
 })();
 </script>

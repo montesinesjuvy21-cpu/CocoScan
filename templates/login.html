@@ -59,11 +59,7 @@
             </div>
         </div>
 
-        <div class="login-options-row">
-            <label class="remember-me-label" for="remember_me">
-                <input type="checkbox" id="remember_me" name="remember_me" value="true">
-                <span>Remember Me</span>
-            </label>
+        <div class="login-options-row" style="display: flex; justify-content: flex-end;">
             <a href="{{ url_for('forgot_password') }}" class="forgot-password">Forgot Password?</a>
         </div>
 
@@ -72,6 +68,30 @@
 
     <div class="auth-footer">
         New to CocoScan? <a href="{{ url_for('signup') }}">Sign Up here</a>
+    </div>
+</div>
+
+<!-- Farmer Remember Me Confirmation Modal Popup (Post-Authentication) -->
+<div id="farmer-remember-modal" class="offline-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="farmer-remember-title">
+    <div class="offline-modal-card" style="max-width: 440px;">
+        <div class="offline-modal-icon-wrap" style="background: rgba(42, 123, 76, 0.12); color: #2A7B4C;">
+            <i class="fa-solid fa-clock-rotate-left" style="font-size: 2rem;"></i>
+        </div>
+        <div class="offline-modal-badge" style="background: rgba(42, 123, 76, 0.12); color: #2A7B4C; border-color: rgba(42, 123, 76, 0.25);">
+            <i class="fa-solid fa-shield-halved"></i> Quick Access
+        </div>
+        <h3 class="offline-modal-title" id="farmer-remember-title" style="margin-top: 10px;">Stay Logged In?</h3>
+        <p class="offline-modal-message" id="farmer-remember-message" style="line-height: 1.55; color: #4b5563; font-size: 0.92rem; margin: 12px 0 20px 0;">
+            Selecting this option securely keeps you logged in on this device for <strong>90 days</strong> without needing to re-enter your credentials. For your security, your session will automatically expire after <strong>30 days of inactivity</strong>.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+            <button type="button" class="btn-primary" id="farmer-remember-yes-btn" onclick="submitFarmerRememberChoice('yes')" style="padding: 12px 16px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i class="fa-solid fa-check"></i> Yes, Stay Logged In (90 Days)
+            </button>
+            <button type="button" class="btn-secondary" id="farmer-remember-no-btn" onclick="submitFarmerRememberChoice('no')" style="padding: 11px 16px; font-size: 0.9rem; background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                No, Just This Session
+            </button>
+        </div>
     </div>
 </div>
 
@@ -234,6 +254,26 @@
 
 {% block scripts %}
 <script>
+    // Immediate Offline Remember Me Helper: Automatically resume farmer session if offline
+    (async function checkOfflineRememberedSession() {
+        if (!navigator.onLine && window.CocoScanAuth && typeof window.CocoScanAuth.getRememberMeSession === 'function') {
+            try {
+                const rememberedSession = await window.CocoScanAuth.getRememberMeSession();
+                if (rememberedSession && rememberedSession.role === 'farmer' && rememberedSession.email) {
+                    showFeedbackToast("Active offline session detected. Resuming Farmer Dashboard...", "info");
+                    if (typeof window.CocoScanAuth.activateUserOfflineSession === 'function') {
+                        await window.CocoScanAuth.activateUserOfflineSession(rememberedSession.email);
+                    }
+                    setTimeout(() => {
+                        window.location.href = '/farmer/dashboard';
+                    }, 500);
+                }
+            } catch (e) {
+                console.debug('[Login] Offline remember check note:', e);
+            }
+        }
+    })();
+
     function togglePasswordVisibility(inputId, icon) {
         const input = document.getElementById(inputId);
         if (input.type === 'password') {
@@ -543,6 +583,21 @@
 
                     localStorage.removeItem('cocoscan_offline_active');
                     document.cookie = "cocoscan_offline_active=; path=/; max-age=0";
+
+                    // If farmer login is confirmed, prompt for Remember Me (90-day persistence)
+                    if (result.is_farmer && result.prompt_remember) {
+                        window.pendingFarmerRedirectUrl = result.redirect_url || '/farmer/dashboard';
+                        window.pendingFarmerUser = result.user || { email: email, role: 'farmer', name: 'Farmer' };
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.classList.remove('btn-loading');
+                            submitBtn.removeAttribute('aria-busy');
+                            submitBtn.innerHTML = originalBtnHtml;
+                        }
+                        showFarmerRememberModal();
+                        return;
+                    }
+
                     window.location.href = result.redirect_url || '/';
                     return;
                 } else if (result.requires_2fa) {
@@ -622,5 +677,67 @@
             await handleOfflineLogin(email, password, true);
         }
     });
+
+    // Farmer-exclusive Post-Authentication Remember Me Modal Functions
+    function showFarmerRememberModal() {
+        const modal = document.getElementById('farmer-remember-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+    }
+
+    async function submitFarmerRememberChoice(choice) {
+        const modal = document.getElementById('farmer-remember-modal');
+        const yesBtn = document.getElementById('farmer-remember-yes-btn');
+        const noBtn = document.getElementById('farmer-remember-no-btn');
+        const fallbackUrl = window.pendingFarmerRedirectUrl || '/farmer/dashboard';
+
+        if (yesBtn) yesBtn.disabled = true;
+        if (noBtn) noBtn.disabled = true;
+
+        if (choice === 'yes' && yesBtn) {
+            yesBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Saving...';
+        } else if (choice === 'no' && noBtn) {
+            noBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Continuing...';
+        }
+
+        if (choice === 'yes') {
+            const u = window.pendingFarmerUser || {};
+            if (window.CocoScanAuth && typeof window.CocoScanAuth.setRememberMeSession === 'function') {
+                try {
+                    await window.CocoScanAuth.setRememberMeSession(u.email || '', 'farmer', u.name || '', u.id || null);
+                } catch (storeErr) {
+                    console.warn('[RememberMe] Local offline session caching note:', storeErr);
+                }
+            }
+        } else if (choice === 'no') {
+            if (window.CocoScanAuth && typeof window.CocoScanAuth.clearRememberMeSession === 'function') {
+                try {
+                    await window.CocoScanAuth.clearRememberMeSession();
+                } catch (clearErr) {
+                    console.debug('[RememberMe] Local session clear note:', clearErr);
+                }
+            }
+        }
+
+        try {
+            const res = await fetch('/api/auth/remember-me', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ choice: choice })
+            });
+            const data = await res.json();
+            localStorage.removeItem('cocoscan_offline_active');
+            document.cookie = "cocoscan_offline_active=; path=/; max-age=0";
+            window.location.href = data.redirect_url || fallbackUrl;
+        } catch (e) {
+            localStorage.removeItem('cocoscan_offline_active');
+            document.cookie = "cocoscan_offline_active=; path=/; max-age=0";
+            window.location.href = fallbackUrl;
+        }
+    }
 </script>
 {% endblock %}

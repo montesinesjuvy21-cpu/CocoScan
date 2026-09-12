@@ -4,7 +4,7 @@ import traceback
 import logging
 import json
 from datetime import datetime, UTC
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory, make_response
 from app.route_utils import require_role, fetch_user_reports, resolve_user_fullname
 import base64
 from io import BytesIO
@@ -46,6 +46,7 @@ from app.session_utils import (
     RoleBasedSessionInterface,
     INACTIVITY_TIMEOUT_SECONDS,
     REMEMBER_COOKIE_NAME,
+    is_farmer_role,
     get_remember_me_lifetime_seconds
 )
 
@@ -152,68 +153,73 @@ def get_role_dashboard_url(role: str) -> str:
 def check_session_timeout():
     if not request.endpoint:
         return
-    if request.endpoint.startswith('static') or request.endpoint.startswith('api_') or request.endpoint in ['login', 'signup', 'forgot_password', 'verify_forgot_otp', 'reset_password', 'verify_2fa', 'resend_2fa', 'logout', 'offline', 'manifest', 'service_worker']:
+    if request.endpoint.startswith('static') or request.endpoint.startswith('api_') or request.endpoint in ['login', 'signup', 'forgot_password', 'verify_forgot_otp', 'reset_password', 'verify_2fa', 'resend_2fa', 'logout', 'offline', 'manifest', 'service_worker', 'api_farmer_remember_me']:
         return
 
     now = time.time()
     user_id = session.get('user_id')
     
-    # 1) If user is not in session, check if a persistent Remember Me cookie exists to restore session
+    # 1) If user is not in session, check if a persistent Remember Me cookie exists to restore Farmer session
     if not user_id:
         remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
         if remember_token:
             user_data = security_service.validate_remember_token(remember_token)
-            if user_data:
+            if user_data and is_farmer_role(user_data.get('role')):
                 session['user_id'] = user_data['user_id']
                 session['user_email'] = user_data['email']
-                session['user_role'] = normalize_role(user_data['role'])
+                session['user_role'] = 'farmer'
                 session['user_name'] = user_data['user_name']
                 session['remember_me'] = True
                 session['last_active'] = now
                 session['session_expires_at'] = user_data['expires_at']
                 session.permanent = True
                 session.modified = True
-                security_service.log_audit(user_data['email'], user_data['role'], "SESSION_RESTORED", "Session automatically restored via Remember Me token", _get_real_ip())
+                security_service.log_audit(user_data['email'], 'farmer', "SESSION_RESTORED", "Farmer session automatically restored via Remember Me token", _get_real_ip())
                 return None
+            else:
+                # Token is invalid, expired, inactive >30 days, or non-farmer -> delete cookie
+                if not request.path.startswith('/login') and not request.path.startswith('/static'):
+                    resp = redirect(url_for('login'))
+                    resp.delete_cookie(REMEMBER_COOKIE_NAME)
+                    return resp
 
     # 2) If user is in session:
     if 'user_id' in session:
         user_email = session.get('user_email', '')
-        user_role = session.get('user_role', '')
-        remember_me = session.get('remember_me', False)
+        user_role = normalize_role(session.get('user_role', ''))
+        remember_me = session.get('remember_me', False) and is_farmer_role(user_role)
         
-        # Check hard role expiration date if set
+        # Check hard 90-day expiration date if set for farmer
         session_expires_at = session.get('session_expires_at')
         if session_expires_at and now > session_expires_at:
             remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
             if remember_token:
                 security_service.revoke_remember_token(remember_token)
             session.clear()
-            security_service.log_audit(user_email, user_role, "SESSION_EXPIRED", "Remembered session expired after maximum duration", _get_real_ip())
+            security_service.log_audit(user_email, user_role, "SESSION_EXPIRED", "Remembered session expired after maximum 90 days duration", _get_real_ip())
             flash("Your session has expired. Please log in again.", "warning")
             resp = redirect(url_for('login'))
             resp.delete_cookie(REMEMBER_COOKIE_NAME)
             return resp
             
-        # Check inactivity timeout (15 minutes)
+        # Check standard 15-minute inactivity timeout
         last_active = session.get('last_active', now)
         if now - last_active > INACTIVITY_TIMEOUT_SECONDS:
             remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
-            if remember_me and remember_token:
+            if remember_me and remember_token and is_farmer_role(user_role):
                 token_data = security_service.validate_remember_token(remember_token)
                 if token_data:
-                    # Token still valid in DB, refresh activity window seamlessly
+                    # Token still valid in DB (active within 30 days & not expired 90d), refresh activity seamlessly
                     session['last_active'] = now
                     session['session_expires_at'] = token_data['expires_at']
                     return None
             
-            # Non-remembered or expired token: expire session
+            # Non-remembered, non-farmer, or inactive > 30 days: expire session
             session.clear()
             security_service.log_audit(user_email, user_role, "SESSION_TIMEOUT", "Session expired due to 15 minutes of inactivity", _get_real_ip())
             flash("Your session has expired due to 15 minutes of inactivity. Please log in again.", "warning")
             resp = redirect(url_for('login'))
-            if not remember_me:
-                resp.delete_cookie(REMEMBER_COOKIE_NAME)
+            resp.delete_cookie(REMEMBER_COOKIE_NAME)
             return resp
             
         session['last_active'] = now
@@ -775,12 +781,77 @@ def sourcemap_fallback(filename=None):
 @app.route('/')
 def splash():
     """Renders the initial welcome splash screen loader entry point"""
-    return render_template('splash.html')
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    
+    # 1. Restore farmer session from persistent Remember Me cookie if needed
+    if not user_id:
+        remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
+        if remember_token:
+            user_data = security_service.validate_remember_token(remember_token)
+            if user_data and is_farmer_role(user_data.get('role')):
+                session['user_id'] = user_data['user_id']
+                session['user_email'] = user_data['email']
+                session['user_role'] = 'farmer'
+                session['user_name'] = user_data['user_name']
+                session['remember_me'] = True
+                session['last_active'] = time.time()
+                session['session_expires_at'] = user_data['expires_at']
+                session.permanent = True
+                session.modified = True
+                user_id = user_data['user_id']
+                user_role = 'farmer'
+                security_service.log_audit(user_data['email'], 'farmer', "SESSION_RESTORED", "Farmer session automatically restored via Remember Me token on splash entry", _get_real_ip())
+
+    is_authenticated = bool(user_id and user_id != 'offline_farmer')
+    dashboard_url = get_role_dashboard_url(user_role) if is_authenticated else url_for('login')
+    
+    resp = make_response(render_template('splash.html', is_authenticated=is_authenticated, dashboard_url=dashboard_url))
+    if is_authenticated and user_role == 'farmer':
+        session_expires_at = session.get('session_expires_at')
+        max_age = max(1, int(session_expires_at - time.time())) if session_expires_at else 90 * 86400
+        resp.set_cookie('cocoscan_user_role', 'farmer', max_age=max_age, samesite='Lax')
+        resp.set_cookie('cocoscan_user_email', session.get('user_email', ''), max_age=max_age, samesite='Lax')
+    return resp
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page route: Authenticates users against Supabase credentials with lockout & 2FA protection"""
     if request.method == 'GET':
+        user_id = session.get('user_id')
+        user_role = normalize_role(session.get('user_role'))
+
+        # If already authenticated with a valid role, redirect directly to dashboard
+        if user_id and user_id != 'offline_farmer':
+            return redirect(get_role_dashboard_url(user_role))
+
+        # Check for persistent Remember Me cookie to restore Farmer session
+        remember_token = request.cookies.get(REMEMBER_COOKIE_NAME)
+        if remember_token:
+            user_data = security_service.validate_remember_token(remember_token)
+            if user_data and is_farmer_role(user_data.get('role')):
+                session.clear()
+                session['user_id'] = user_data['user_id']
+                session['user_email'] = user_data['email']
+                session['user_role'] = 'farmer'
+                session['user_name'] = user_data['user_name']
+                session['remember_me'] = True
+                session['last_active'] = time.time()
+                session['session_expires_at'] = user_data['expires_at']
+                session.permanent = True
+                session.modified = True
+                security_service.log_audit(user_data['email'], 'farmer', "SESSION_RESTORED", "Farmer session automatically restored via Remember Me token on login entry", _get_real_ip())
+                
+                resp = redirect(url_for('farmer_dashboard'))
+                max_age = max(1, int(user_data['expires_at'] - time.time()))
+                resp.set_cookie('cocoscan_user_role', 'farmer', max_age=max_age, samesite='Lax')
+                resp.set_cookie('cocoscan_user_email', user_data['email'], max_age=max_age, samesite='Lax')
+                return resp
+            else:
+                resp = make_response(render_template('login.html'))
+                resp.delete_cookie(REMEMBER_COOKIE_NAME)
+                return resp
+
         # Filter flashed messages so only login/account-relevant notices appear on the login screen
         flashes = session.pop('_flashes', [])
         login_keywords = ['session', 'log in', 'login', 'account', 'approval', 'register', 'password', 'verification', 'credentials', 'signed out', 'logged out', 'inactivity', 'attempt']
@@ -874,7 +945,6 @@ def login():
             security_service.reset_login_failures(email)
             user_role = normalize_role(user_data.get('role'))
             user_name = resolve_user_fullname(user_data, email=email, default="Farmer" if user_role == 'farmer' else "User")
-            remember_me = remember_me_val in ['true', 'on', '1', 'yes', True]
 
             # 7-day 2FA check for lgu, admin, agri_expert
             if user_role in ['lgu', 'admin', 'agri_expert']:
@@ -885,7 +955,7 @@ def login():
                         "email": email,
                         "role": user_role,
                         "name": user_name,
-                        "remember_me": remember_me
+                        "remember_me": False
                     }
                     otp_result = security_service.generate_and_send_otp(email, purpose="2FA Verification")
                     if otp_result.get("sent"):
@@ -918,12 +988,19 @@ def login():
             session['user_role'] = user_role
             session['user_name'] = user_name
             session['last_active'] = time.time()
+            session['remember_me'] = False
+            session.permanent = False
+            session['session_expires_at'] = None
+            session.modified = True
             
             redirect_url = get_role_dashboard_url(session['user_role'])
+            is_farmer = is_farmer_role(user_role)
             
             if wants_json:
                 resp = jsonify({
                     'success': True,
+                    'is_farmer': is_farmer,
+                    'prompt_remember': is_farmer,
                     'redirect_url': redirect_url,
                     'user': {
                         'id': user_data['id'],
@@ -939,28 +1016,10 @@ def login():
             resp.set_cookie('cocoscan_user_role', user_role, max_age=86400, samesite='Lax')
             resp.set_cookie('cocoscan_user_email', email, max_age=86400, samesite='Lax')
             
-            if remember_me:
-                session['remember_me'] = True
-                session.permanent = True
-                raw_token, expires_at = security_service.create_remember_token(user_data['id'], email, user_role, user_name)
-                session['session_expires_at'] = expires_at
-                max_age = max(1, int(expires_at - time.time()))
-                resp.set_cookie(
-                    REMEMBER_COOKIE_NAME,
-                    raw_token,
-                    max_age=max_age,
-                    httponly=True,
-                    samesite='Lax',
-                    secure=request.is_secure
-                )
-            else:
-                session['remember_me'] = False
-                session.permanent = False
-                session['session_expires_at'] = None
+            # Non-farmers never have remember cookies; clean up any legacy cookie
+            if not is_farmer:
                 resp.delete_cookie(REMEMBER_COOKIE_NAME)
                 
-            session.modified = True
-            
             security_service.log_audit(email, user_role, "LOGIN", "User successfully logged in", _get_real_ip())
             logger.info(f"User {email} successfully logged in with role: {session['user_role']}")
             
@@ -973,6 +1032,57 @@ def login():
                 return jsonify({'success': False, 'error': err_msg}), 500
             flash(err_msg, "error")
             return render_template('login.html')
+
+
+@app.route('/api/auth/remember-me', methods=['POST'])
+def api_farmer_remember_me():
+    """Post-authentication Remember Me decision endpoint exclusively for Farmers."""
+    user_id = session.get('user_id')
+    user_role = normalize_role(session.get('user_role'))
+    user_email = session.get('user_email')
+    user_name = session.get('user_name', 'Farmer')
+
+    if not user_id or not is_farmer_role(user_role) or not user_email:
+        return jsonify({'success': False, 'error': 'Unauthorized or ineligible for Remember Me'}), 403
+
+    data = request.get_json(silent=True) or request.form
+    choice = str(data.get('choice') or '').strip().lower()
+
+    redirect_url = url_for('farmer_dashboard')
+    resp = jsonify({'success': True, 'redirect_url': redirect_url})
+
+    if choice in ['yes', 'true', '1']:
+        try:
+            raw_token, expires_at = security_service.create_remember_token(user_id, user_email, 'farmer', user_name)
+            session['remember_me'] = True
+            session.permanent = True
+            session['session_expires_at'] = expires_at
+            session.modified = True
+
+            max_age = max(1, int(expires_at - time.time()))
+            resp.set_cookie(
+                REMEMBER_COOKIE_NAME,
+                raw_token,
+                max_age=max_age,
+                httponly=True,
+                samesite='Lax',
+                secure=request.is_secure
+            )
+            resp.set_cookie('cocoscan_user_role', 'farmer', max_age=max_age, samesite='Lax')
+            resp.set_cookie('cocoscan_user_email', user_email, max_age=max_age, samesite='Lax')
+            security_service.log_audit(user_email, 'farmer', "REMEMBER_ME_OPT_IN", "Farmer opted in to 90-day persistent session", _get_real_ip())
+            logger.info(f"Farmer {user_email} opted in to 90-day Remember Me token with 30-day inactivity expiration.")
+        except Exception as e:
+            logger.error(f"Failed to create farmer remember token: {str(e)}")
+    else:
+        session['remember_me'] = False
+        session.permanent = False
+        session['session_expires_at'] = None
+        session.modified = True
+        resp.delete_cookie(REMEMBER_COOKIE_NAME)
+        security_service.log_audit(user_email, 'farmer', "REMEMBER_ME_OPT_OUT", "Farmer declined persistent session", _get_real_ip())
+
+    return resp
             
     return render_template('login.html')
 

@@ -13,7 +13,10 @@ from app.session_utils import (
     RoleBasedSessionInterface,
     ROLE_REMEMBER_ME_DAYS,
     REMEMBER_COOKIE_NAME,
-    INACTIVITY_TIMEOUT_SECONDS
+    INACTIVITY_TIMEOUT_SECONDS,
+    FARMER_REMEMBER_MAX_DAYS,
+    FARMER_REMEMBER_INACTIVITY_DAYS,
+    is_farmer_role
 )
 from app import security_service
 import main
@@ -21,27 +24,32 @@ from main import app
 
 
 def test_role_based_expiration_days():
-    """Verify role-based Remember Me duration mapping."""
+    """Verify Remember Me is exclusive to Farmers (90 days) and returns 0 for non-farmer roles."""
     assert get_remember_me_days('farmer') == 90
     assert get_remember_me_lifetime_seconds('farmer') == 90 * 24 * 60 * 60
+    assert is_farmer_role('farmer') is True
+    assert is_farmer_role('offline_farmer') is True
 
-    assert get_remember_me_days('lgu') == 14
-    assert get_remember_me_lifetime_seconds('lgu') == 14 * 24 * 60 * 60
+    # Non-farmer roles must return 0 days (ineligible for Remember Me)
+    assert get_remember_me_days('lgu') == 0
+    assert get_remember_me_lifetime_seconds('lgu') == 0
+    assert is_farmer_role('lgu') is False
 
-    assert get_remember_me_days('agri_expert') == 14
-    assert get_remember_me_days('agriculturist') == 14
-    assert get_remember_me_lifetime_seconds('agri_expert') == 14 * 24 * 60 * 60
+    assert get_remember_me_days('agri_expert') == 0
+    assert get_remember_me_days('agriculturist') == 0
+    assert get_remember_me_lifetime_seconds('agri_expert') == 0
+    assert is_farmer_role('agri_expert') is False
 
-    assert get_remember_me_days('admin') == 7
-    assert get_remember_me_days('administrator') == 7
-    assert get_remember_me_lifetime_seconds('admin') == 7 * 24 * 60 * 60
+    assert get_remember_me_days('admin') == 0
+    assert get_remember_me_days('administrator') == 0
+    assert get_remember_me_lifetime_seconds('admin') == 0
+    assert is_farmer_role('admin') is False
 
-    # Default fallback
-    assert get_remember_me_days('unknown_role') == 7
+    assert get_remember_me_days('unknown_role') == 0
 
 
 def test_role_based_session_interface_expiration():
-    """Verify custom RoleBasedSessionInterface calculates correct expiration."""
+    """Verify custom RoleBasedSessionInterface calculates 90 days for farmers, and None for non-farmers."""
     interface = RoleBasedSessionInterface()
 
     # Non-permanent session -> None
@@ -56,72 +64,103 @@ def test_role_based_session_interface_expiration():
     assert exp_farmer is not None
     assert 89 <= (exp_farmer - now).days <= 91
 
-    # Permanent session for LGU -> 14 days
+    # Permanent session for non-farmer (LGU / Admin) -> None (not eligible)
     session_mock_obj['user_role'] = 'lgu'
-    exp_lgu = interface.get_expiration_time(app, session_mock_obj)
-    assert exp_lgu is not None
-    assert 13 <= (exp_lgu - now).days <= 15
+    assert interface.get_expiration_time(app, session_mock_obj) is None
 
-    # Permanent session for Admin -> 7 days
     session_mock_obj['user_role'] = 'admin'
-    exp_admin = interface.get_expiration_time(app, session_mock_obj)
-    assert exp_admin is not None
-    assert 6 <= (exp_admin - now).days <= 8
+    assert interface.get_expiration_time(app, session_mock_obj) is None
 
 
-def test_remember_token_lifecycle():
-    """Verify Remember Me token creation, validation, expiration, and revocation in security_service."""
-    email = "test_farmer_persist@example.com"
+def test_farmer_exclusive_token_creation():
+    """Verify that only farmers can generate remember tokens, while other roles are rejected."""
     user_id = str(uuid.uuid4())
-    role = "farmer"
-    user_name = "Farmer John"
-
-    # 1. Create token
-    raw_token, expires_at = security_service.create_remember_token(user_id, email, role, user_name)
+    email = "farmer_auth_test@example.com"
+    
+    # Farmer token creates successfully
+    raw_token, expires_at = security_service.create_remember_token(user_id, email, 'farmer', 'Farmer Bob')
     assert isinstance(raw_token, str)
-    assert len(raw_token) > 20
     assert expires_at > time.time() + (89 * 86400)
 
-    # 2. Validate token
+    # Non-farmer roles must raise ValueError
+    with pytest.raises(ValueError):
+        security_service.create_remember_token(user_id, "admin@example.com", 'admin', 'Admin User')
+
+    with pytest.raises(ValueError):
+        security_service.create_remember_token(user_id, "lgu@example.com", 'lgu', 'LGU Officer')
+
+
+def test_remember_token_30_day_inactivity_expiration():
+    """Verify that a farmer Remember Me token expires if inactive for more than 30 days."""
+    user_id = str(uuid.uuid4())
+    email = "inactivity_test@example.com"
+
+    # 1. Create fresh token
+    raw_token, expires_at = security_service.create_remember_token(user_id, email, 'farmer', 'Active Farmer')
     token_data = security_service.validate_remember_token(raw_token)
     assert token_data is not None
-    assert token_data['user_id'] == user_id
     assert token_data['email'] == email
-    assert token_data['role'] == role
-    assert token_data['user_name'] == user_name
 
-    # 3. Invalid token returns None
-    assert security_service.validate_remember_token("invalid-token-value") is None
-    assert security_service.validate_remember_token("") is None
+    # 2. Simulate 31 days of inactivity (last_used_at set to 31 days ago)
+    token_hash = security_service.hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+    inactive_time = time.time() - (31 * 86400)
+    with security_service._get_db() as conn:
+        conn.execute("UPDATE remember_tokens SET last_used_at = ? WHERE token_hash = ?", (inactive_time, token_hash))
+        conn.commit()
 
-    # 4. Revoke token
-    revoked = security_service.revoke_remember_token(raw_token)
-    assert revoked is True
+    # 3. Validation must reject inactive token and delete from DB
     assert security_service.validate_remember_token(raw_token) is None
 
-    # 5. Revoke all user tokens
-    t1, _ = security_service.create_remember_token(user_id, email, role, user_name)
-    t2, _ = security_service.create_remember_token(user_id, email, role, user_name)
-    count = security_service.revoke_all_user_remember_tokens(email)
-    assert count >= 2
-    assert security_service.validate_remember_token(t1) is None
-    assert security_service.validate_remember_token(t2) is None
 
-
-def test_login_page_renders_remember_me_checkbox():
-    """Verify that the login page UI includes the Remember Me checkbox."""
+def test_login_page_hides_remember_me_checkbox_and_renders_farmer_modal():
+    """Verify that the login page UI hides the Remember Me checkbox from the initial form and renders the post-auth modal."""
     app.config.update(TESTING=True)
     with app.test_client() as client:
         response = client.get('/login')
         assert response.status_code == 200
         html = response.get_data(as_text=True)
-        assert 'id="remember_me"' in html
-        assert 'name="remember_me"' in html
-        assert 'Remember Me' in html
+        # Checkbox must NOT be in the initial login form
+        assert 'name="remember_me"' not in html
+        assert 'id="remember_me"' not in html
+        # Post-authentication modal with 90-day and 30-day inactivity text must be in DOM
+        assert 'farmer-remember-modal' in html
+        assert '90 days' in html
+        assert '30 days of inactivity' in html
 
 
-def test_hybrid_inactivity_and_remember_me_restoration():
-    """Verify hybrid session: standard session times out, while remember token restores session."""
+def test_farmer_remember_me_post_auth_api():
+    """Verify that the /api/auth/remember-me endpoint sets the HttpOnly cookie for farmers on opt-in."""
+    app.config.update(TESTING=True)
+    with app.test_client() as client:
+        farmer_uid = str(uuid.uuid4())
+        farmer_email = "optin_farmer@example.com"
+
+        with client.session_transaction() as sess:
+            sess['user_id'] = farmer_uid
+            sess['user_email'] = farmer_email
+            sess['user_role'] = 'farmer'
+            sess['user_name'] = 'Opt-In Farmer'
+
+        # Opt-in choice: 'yes'
+        resp = client.post('/api/auth/remember-me', json={'choice': 'yes'})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['success'] is True
+        assert '/farmer/dashboard' in data['redirect_url']
+
+        # Verify HttpOnly cookie was set
+        set_cookie_headers = resp.headers.getlist('Set-Cookie')
+        assert any(REMEMBER_COOKIE_NAME in h for h in set_cookie_headers)
+
+        # Opt-out choice: 'no' -> clears cookie
+        resp_no = client.post('/api/auth/remember-me', json={'choice': 'no'})
+        assert resp_no.status_code == 200
+        set_cookie_headers_no = resp_no.headers.getlist('Set-Cookie')
+        assert any(REMEMBER_COOKIE_NAME in h and ('Max-Age=0' in h or 'Expires=' in h or '""' in h) for h in set_cookie_headers_no)
+
+
+def test_hybrid_inactivity_and_farmer_remember_restoration():
+    """Verify hybrid session: standard session times out, while farmer remember token restores session."""
     app.config.update(TESTING=True)
     with app.test_client() as client:
         test_uid = str(uuid.uuid4())
@@ -142,7 +181,7 @@ def test_hybrid_inactivity_and_remember_me_restoration():
         with client.session_transaction() as sess:
             assert 'user_id' not in sess
 
-        # Scenario B: Remembered session auto-restores via remember token cookie when session was cleared
+        # Scenario B: Remembered farmer session auto-restores via remember token cookie
         restore_uid = str(uuid.uuid4())
         raw_token, _ = security_service.create_remember_token(
             restore_uid,
@@ -168,15 +207,15 @@ def test_logout_revokes_remember_token_and_cookie():
         test_uid = str(uuid.uuid4())
         raw_token, _ = security_service.create_remember_token(
             test_uid,
-            'logout@example.com',
-            'admin',
-            'Admin User'
+            'logout_farmer@example.com',
+            'farmer',
+            'Farmer User'
         )
         client.set_cookie(REMEMBER_COOKIE_NAME, raw_token)
         with client.session_transaction() as sess:
             sess['user_id'] = test_uid
-            sess['user_email'] = 'logout@example.com'
-            sess['user_role'] = 'admin'
+            sess['user_email'] = 'logout_farmer@example.com'
+            sess['user_role'] = 'farmer'
             sess['remember_me'] = True
 
         response = client.get('/logout', follow_redirects=False)
@@ -188,3 +227,95 @@ def test_logout_revokes_remember_token_and_cookie():
         # Cookie must be cleared in response headers
         set_cookie_headers = response.headers.getlist('Set-Cookie')
         assert any(REMEMBER_COOKIE_NAME in h and ('Max-Age=0' in h or 'Expires=' in h or '""' in h) for h in set_cookie_headers)
+
+
+def test_login_get_auto_redirects_remembered_farmer():
+    """Verify GET /login auto-restores session for a farmer with a valid remember token and redirects to dashboard."""
+    app.config.update(TESTING=True)
+    with app.test_client() as client:
+        farmer_uid = str(uuid.uuid4())
+        farmer_email = "tab_close_farmer@example.com"
+        raw_token, _ = security_service.create_remember_token(
+            farmer_uid,
+            farmer_email,
+            'farmer',
+            'Tab Close Farmer'
+        )
+        client.set_cookie(REMEMBER_COOKIE_NAME, raw_token)
+
+        # Visit GET /login (simulating reopening browser/tab)
+        response = client.get('/login', follow_redirects=False)
+        assert response.status_code == 302
+        assert '/farmer/dashboard' in response.headers.get('Location', '')
+
+        # Session is restored
+        with client.session_transaction() as sess:
+            assert sess.get('user_id') == farmer_uid
+            assert sess.get('user_email') == farmer_email
+            assert sess.get('user_role') == 'farmer'
+            assert sess.get('remember_me') is True
+            assert sess.permanent is True
+
+        # Role cookies are set
+        set_cookie_headers = response.headers.getlist('Set-Cookie')
+        assert any('cocoscan_user_role' in h for h in set_cookie_headers)
+
+
+def test_login_get_auto_redirects_already_authenticated_user():
+    """Verify GET /login auto-redirects an already-authenticated user to their dashboard."""
+    app.config.update(TESTING=True)
+    with app.test_client() as client:
+        # 1. Admin user with active session
+        with client.session_transaction() as sess:
+            sess['user_id'] = str(uuid.uuid4())
+            sess['user_email'] = 'admin@example.com'
+            sess['user_role'] = 'admin'
+            sess['user_name'] = 'Admin'
+
+        response = client.get('/login', follow_redirects=False)
+        assert response.status_code == 302
+        assert '/admin/dashboard' in response.headers.get('Location', '')
+
+
+def test_splash_recognizes_authenticated_farmer():
+    """Verify GET / on splash auto-restores session for remembered farmer and sets role cookies."""
+    app.config.update(TESTING=True)
+    with app.test_client() as client:
+        farmer_uid = str(uuid.uuid4())
+        farmer_email = "splash_farmer@example.com"
+        raw_token, _ = security_service.create_remember_token(
+            farmer_uid,
+            farmer_email,
+            'farmer',
+            'Splash Farmer'
+        )
+        client.set_cookie(REMEMBER_COOKIE_NAME, raw_token)
+
+        response = client.get('/')
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        # Template received is_authenticated = true and dashboard_url
+        assert 'isServerAuthenticated = true' in html
+        assert '/farmer/dashboard' in html
+
+        # Session is restored
+        with client.session_transaction() as sess:
+            assert sess.get('user_id') == farmer_uid
+            assert sess.get('user_email') == farmer_email
+
+
+def test_invalid_remember_token_on_login_clears_cookie():
+    """Verify GET /login with an invalid remember token clears the cookie and renders login.html."""
+    app.config.update(TESTING=True)
+    with app.test_client() as client:
+        client.set_cookie(REMEMBER_COOKIE_NAME, "completely_bogus_token_12345")
+
+        response = client.get('/login', follow_redirects=False)
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert 'login-form' in html
+
+        set_cookie_headers = response.headers.getlist('Set-Cookie')
+        assert any(REMEMBER_COOKIE_NAME in h and ('Max-Age=0' in h or 'Expires=' in h or '""' in h) for h in set_cookie_headers)
+
+

@@ -5,10 +5,13 @@
  */
 
 const AUTH_DB_NAME = 'cocoscan_auth_db';
-const AUTH_DB_VERSION = 2;
+const AUTH_DB_VERSION = 3;
 const AUTH_STORE_NAME = 'credentials';
 const USER_DATA_STORE_NAME = 'user_data';
+const REMEMBER_STORE_NAME = 'remember_session';
 const PBKDF2_ITERATIONS = 100000;
+const FARMER_REMEMBER_MAX_MS = 90 * 24 * 60 * 60 * 1000;
+const FARMER_REMEMBER_INACTIVITY_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Open or upgrade the CocoScan Auth IndexedDB database
@@ -33,6 +36,9 @@ function openAuthDB() {
             if (!db.objectStoreNames.contains(USER_DATA_STORE_NAME)) {
                 const userDataStore = db.createObjectStore(USER_DATA_STORE_NAME, { keyPath: 'email' });
                 userDataStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+            }
+            if (!db.objectStoreNames.contains(REMEMBER_STORE_NAME)) {
+                db.createObjectStore(REMEMBER_STORE_NAME, { keyPath: 'key' });
             }
         };
 
@@ -799,9 +805,199 @@ async function activateUserOfflineSession(email) {
 }
 
 /**
+ * Store a persistent Remember Me session for Farmers in IndexedDB and LocalStorage
+ * @param {string} email 
+ * @param {string} role 
+ * @param {string} name 
+ * @param {string} userId 
+ * @param {number|string} expiresAt 
+ * @returns {Promise<boolean>}
+ */
+async function setRememberMeSession(email, role = 'farmer', name = '', userId = null, expiresAt = null) {
+    if (!email) return false;
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedRole = normalizeAuthRole(role);
+    if (normalizedRole !== 'farmer') return false;
+
+    const safeName = sanitizeProfileName(name, normalizedEmail, 'Farmer');
+    const now = Date.now();
+    let expiresTimestamp = now + FARMER_REMEMBER_MAX_MS;
+    if (expiresAt) {
+        if (typeof expiresAt === 'number') {
+            expiresTimestamp = expiresAt > 1e11 ? expiresAt : (expiresAt * 1000);
+        } else if (typeof expiresAt === 'string') {
+            const parsed = new Date(expiresAt).getTime();
+            if (parsed) expiresTimestamp = parsed;
+        }
+    }
+
+    const sessionPayload = {
+        key: 'active_farmer_session',
+        email: normalizedEmail,
+        role: 'farmer',
+        name: safeName,
+        userId: userId || null,
+        expiresAt: expiresTimestamp,
+        lastUsedAt: now,
+        createdAt: now
+    };
+
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('cocoscan_remember_me', 'true');
+        localStorage.setItem('cocoscan_user_role', 'farmer');
+        localStorage.setItem('cocoscan_user_email', normalizedEmail);
+        localStorage.setItem('cocoscan_user_name', safeName);
+        const firstPart = safeName && !isInvalidProfileName(safeName) ? safeName.split(/\s+/)[0] : '';
+        if (firstPart && !isInvalidProfileName(firstPart)) {
+            localStorage.setItem('cocoscan_user_first_name', firstPart);
+        }
+        if (userId) localStorage.setItem('cocoscan_user_id', String(userId));
+        localStorage.setItem('cocoscan_remember_expires_at', String(expiresTimestamp));
+        localStorage.setItem('cocoscan_remember_last_used', String(now));
+        localStorage.setItem('cocoscan_offline_active', 'true');
+    }
+    if (typeof document !== 'undefined') {
+        const maxAgeSeconds = Math.max(1, Math.floor((expiresTimestamp - now) / 1000));
+        document.cookie = "cocoscan_offline_active=true; path=/; max-age=" + maxAgeSeconds + "; SameSite=Lax";
+        document.cookie = "cocoscan_user_role=farmer; path=/; max-age=" + maxAgeSeconds + "; SameSite=Lax";
+        document.cookie = "cocoscan_user_email=" + encodeURIComponent(normalizedEmail) + "; path=/; max-age=" + maxAgeSeconds + "; SameSite=Lax";
+    }
+
+    try {
+        const db = await openAuthDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([REMEMBER_STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(REMEMBER_STORE_NAME);
+            const putReq = store.put(sessionPayload);
+            putReq.onsuccess = () => resolve(true);
+            putReq.onerror = (e) => reject(e.target.error);
+        });
+    } catch (err) {
+        console.warn('[AuthDB] IndexedDB remember session save note:', err);
+        return true;
+    }
+}
+
+/**
+ * Retrieve and validate the persistent offline Remember Me session for Farmers
+ * Enforces 90-day maximum lifetime and 30-day sliding inactivity expiration.
+ * @returns {Promise<Object|null>}
+ */
+async function getRememberMeSession() {
+    const now = Date.now();
+    let sessionRecord = null;
+
+    try {
+        const db = await openAuthDB();
+        sessionRecord = await new Promise((resolve) => {
+            const transaction = db.transaction([REMEMBER_STORE_NAME], 'readonly');
+            const store = transaction.objectStore(REMEMBER_STORE_NAME);
+            const getReq = store.get('active_farmer_session');
+            getReq.onsuccess = () => resolve(getReq.result || null);
+            getReq.onerror = () => resolve(null);
+        });
+    } catch (e) {
+        console.debug('[AuthDB] IndexedDB remember session retrieval note:', e);
+    }
+
+    if (!sessionRecord && typeof localStorage !== 'undefined' && localStorage.getItem('cocoscan_remember_me') === 'true') {
+        const role = localStorage.getItem('cocoscan_user_role');
+        const email = localStorage.getItem('cocoscan_user_email');
+        if (role === 'farmer' && email) {
+            sessionRecord = {
+                key: 'active_farmer_session',
+                email: email,
+                role: 'farmer',
+                name: localStorage.getItem('cocoscan_user_name') || 'Farmer',
+                userId: localStorage.getItem('cocoscan_user_id') || null,
+                expiresAt: parseInt(localStorage.getItem('cocoscan_remember_expires_at') || '0', 10) || (now + FARMER_REMEMBER_MAX_MS),
+                lastUsedAt: parseInt(localStorage.getItem('cocoscan_remember_last_used') || '0', 10) || now
+            };
+        }
+    }
+
+    if (!sessionRecord) return null;
+
+    // Enforce Farmer-only eligibility
+    if (normalizeAuthRole(sessionRecord.role) !== 'farmer') {
+        await clearRememberMeSession();
+        return null;
+    }
+
+    // Enforce 90-day absolute expiration
+    if (sessionRecord.expiresAt && sessionRecord.expiresAt <= now) {
+        await clearRememberMeSession();
+        return null;
+    }
+
+    // Enforce 30-day sliding inactivity expiration
+    const lastUsed = sessionRecord.lastUsedAt || sessionRecord.createdAt || now;
+    if ((now - lastUsed) > FARMER_REMEMBER_INACTIVITY_MS) {
+        await clearRememberMeSession();
+        return null;
+    }
+
+    // Update lastUsedAt to refresh 30-day sliding window on active use
+    sessionRecord.lastUsedAt = now;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('cocoscan_remember_last_used', String(now));
+        localStorage.setItem('cocoscan_offline_active', 'true');
+    }
+
+    try {
+        const db = await openAuthDB();
+        await new Promise((resolve) => {
+            const transaction = db.transaction([REMEMBER_STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(REMEMBER_STORE_NAME);
+            const putReq = store.put(sessionRecord);
+            putReq.onsuccess = () => resolve(true);
+            putReq.onerror = () => resolve(false);
+        });
+    } catch (e) {
+        // ignore background storage update errors
+    }
+
+    return sessionRecord;
+}
+
+/**
+ * Clear the persistent offline Remember Me session
+ * @returns {Promise<boolean>}
+ */
+async function clearRememberMeSession() {
+    if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('cocoscan_remember_me');
+        localStorage.removeItem('cocoscan_remember_expires_at');
+        localStorage.removeItem('cocoscan_remember_last_used');
+    }
+    try {
+        const db = await openAuthDB();
+        return new Promise((resolve) => {
+            const transaction = db.transaction([REMEMBER_STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(REMEMBER_STORE_NAME);
+            const delReq = store.delete('active_farmer_session');
+            delReq.onsuccess = () => resolve(true);
+            delReq.onerror = () => resolve(false);
+        });
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Fast boolean check whether a valid persistent offline Farmer Remember Me session exists
+ * @returns {Promise<boolean>}
+ */
+async function hasValidOfflineRememberSession() {
+    const session = await getRememberMeSession();
+    return Boolean(session && session.role === 'farmer' && session.email);
+}
+
+/**
  * Cleanly clear active session state for account switching without deleting cached offline credentials or data
  */
 function clearActiveSession() {
+    clearRememberMeSession();
     if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('cocoscan_offline_active');
         localStorage.removeItem('cocoscan_user_role');
@@ -826,6 +1022,10 @@ if (typeof window !== 'undefined') {
         verifyOfflineCredentials,
         getCachedUser,
         updateCachedUserMetadata,
+        setRememberMeSession,
+        getRememberMeSession,
+        clearRememberMeSession,
+        hasValidOfflineRememberSession,
         normalizeRole: normalizeAuthRole,
         getRoleDashboardUrl: getAuthRoleDashboardUrl,
         isInvalidProfileName,

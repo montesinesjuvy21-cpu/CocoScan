@@ -79,7 +79,7 @@ def init_security_db():
             )
         """)
 
-        # Table for Remember Me persistent tokens
+        # Table for Remember Me persistent tokens (Farmer-only with 30-day inactivity tracking)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS remember_tokens (
                 token_hash TEXT PRIMARY KEY,
@@ -88,9 +88,14 @@ def init_security_db():
                 role TEXT,
                 user_name TEXT,
                 created_at REAL,
-                expires_at REAL
+                expires_at REAL,
+                last_used_at REAL
             )
         """)
+        try:
+            cursor.execute("ALTER TABLE remember_tokens ADD COLUMN last_used_at REAL")
+        except sqlite3.OperationalError:
+            pass
         
         conn.commit()
 
@@ -634,31 +639,34 @@ def get_audit_logs(page: int = 1, per_page: int = 10, search: str = "", action_f
     }
 
 
-# --- REMEMBER ME TOKEN MANAGEMENT METHODS ---
+# --- REMEMBER ME TOKEN MANAGEMENT METHODS (EXCLUSIVELY FOR FARMERS) ---
 
-def create_remember_token(user_id: str, email: str, role: str, user_name: str = "") -> tuple[str, float]:
+def create_remember_token(user_id: str, email: str, role: str = "farmer", user_name: str = "") -> tuple[str, float]:
     """
-    Creates a secure Remember Me persistent token with role-based expiration:
-    - Farmers: 90 days
-    - LGU & Agriculturists: 14 days
-    - Admins: 7 days
+    Creates a secure Remember Me persistent token exclusively for Farmers:
+    - 90 days maximum lifetime
+    - 30 days sliding inactivity window
     Returns: (raw_token: str, expires_at: float)
     """
-    from app.session_utils import get_remember_me_lifetime_seconds
+    from app.session_utils import is_farmer_role, FARMER_REMEMBER_MAX_SECONDS
+    from app.route_utils import normalize_role
+    
+    norm_role = normalize_role(role)
+    if not is_farmer_role(norm_role):
+        raise ValueError(f"Remember Me is restricted exclusively to Farmers. Role '{role}' is not eligible.")
     
     email = (email or "").strip().lower()
-    lifetime_seconds = get_remember_me_lifetime_seconds(role)
     now = time.time()
-    expires_at = now + lifetime_seconds
+    expires_at = now + FARMER_REMEMBER_MAX_SECONDS
     
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
     
     with _get_db() as conn:
         conn.execute("""
-            INSERT OR REPLACE INTO remember_tokens (token_hash, user_id, email, role, user_name, created_at, expires_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (token_hash, str(user_id), email, str(role), str(user_name or ""), now, expires_at))
+            INSERT OR REPLACE INTO remember_tokens (token_hash, user_id, email, role, user_name, created_at, expires_at, last_used_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (token_hash, str(user_id), email, 'farmer', str(user_name or ""), now, expires_at, now))
         conn.commit()
         
     return raw_token, expires_at
@@ -667,12 +675,17 @@ def create_remember_token(user_id: str, email: str, role: str, user_name: str = 
 def validate_remember_token(raw_token: str) -> dict | None:
     """
     Validates a Remember Me token from cookie.
-    If valid and not expired, returns user payload dictionary.
-    If invalid or expired, deletes from DB and returns None.
+    - Enforces Farmer-only eligibility.
+    - Enforces 90-day maximum lifetime.
+    - Enforces 30-day sliding inactivity expiration.
+    - Updates last_used_at timestamp on successful validation.
     """
     if not raw_token or not isinstance(raw_token, str):
         return None
         
+    from app.session_utils import is_farmer_role, FARMER_REMEMBER_INACTIVITY_SECONDS
+    from app.route_utils import normalize_role
+    
     token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
     now = time.time()
     
@@ -681,19 +694,38 @@ def validate_remember_token(raw_token: str) -> dict | None:
         if not row:
             return None
             
-        if row["expires_at"] <= now:
-            # Token has expired
+        # 1. Role validation: Must be a Farmer
+        if not is_farmer_role(row["role"]):
             conn.execute("DELETE FROM remember_tokens WHERE token_hash = ?", (token_hash,))
             conn.commit()
             return None
             
+        # 2. Maximum absolute lifetime (90 days)
+        if row["expires_at"] <= now:
+            conn.execute("DELETE FROM remember_tokens WHERE token_hash = ?", (token_hash,))
+            conn.commit()
+            return None
+            
+        # 3. Sliding inactivity expiration (30 days)
+        row_keys = row.keys() if hasattr(row, 'keys') else []
+        last_used = row["last_used_at"] if "last_used_at" in row_keys and row["last_used_at"] is not None else row["created_at"]
+        if (now - last_used) > FARMER_REMEMBER_INACTIVITY_SECONDS:
+            conn.execute("DELETE FROM remember_tokens WHERE token_hash = ?", (token_hash,))
+            conn.commit()
+            return None
+            
+        # Update last_used_at timestamp to reset 30-day sliding window on active use
+        conn.execute("UPDATE remember_tokens SET last_used_at = ? WHERE token_hash = ?", (now, token_hash))
+        conn.commit()
+        
         return {
             "user_id": row["user_id"],
             "email": row["email"],
-            "role": row["role"],
+            "role": normalize_role(row["role"]),
             "user_name": row["user_name"],
             "created_at": row["created_at"],
-            "expires_at": row["expires_at"]
+            "expires_at": row["expires_at"],
+            "last_used_at": now
         }
 
 
@@ -721,10 +753,15 @@ def revoke_all_user_remember_tokens(email: str) -> int:
 
 
 def cleanup_expired_remember_tokens() -> int:
-    """Deletes all expired Remember Me tokens from the database."""
+    """Deletes all expired and inactive (>30 days) Remember Me tokens from the database."""
+    from app.session_utils import FARMER_REMEMBER_INACTIVITY_SECONDS
     now = time.time()
+    inactivity_cutoff = now - FARMER_REMEMBER_INACTIVITY_SECONDS
     with _get_db() as conn:
-        cursor = conn.execute("DELETE FROM remember_tokens WHERE expires_at <= ?", (now,))
+        cursor = conn.execute("""
+            DELETE FROM remember_tokens 
+            WHERE expires_at <= ? OR last_used_at <= ? OR role != 'farmer'
+        """, (now, inactivity_cutoff))
         conn.commit()
         return cursor.rowcount
 
